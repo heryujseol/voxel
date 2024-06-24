@@ -98,6 +98,9 @@
     <ClInclude Include="MeshGenerator.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Instance.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
@@ -146,7 +149,7 @@
     <FxCompile Include="MirrorMaskingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="TransparencyPS.hlsl">
+    <FxCompile Include="MirrorBlendingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="BlurPS.hlsl">

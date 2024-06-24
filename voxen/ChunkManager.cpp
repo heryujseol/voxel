@@ -4,6 +4,7 @@
 #include "DXUtils.h"
 #include "MeshGenerator.h"
 #include "Block.h"
+#include "Instance.h"
 
 #include <iostream>
 
@@ -32,10 +33,10 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 
 	m_constantBuffers.resize(poolSize);
 
-	m_instanceVertexBuffers.resize(Block::INSTANCE_TYPE_COUNT);
-	m_instanceIndexBuffers.resize(Block::INSTANCE_TYPE_COUNT);
-	m_instanceInfoBuffers.resize(Block::INSTANCE_TYPE_COUNT);
-	m_instanceInfoList.resize(Block::INSTANCE_TYPE_COUNT);
+	m_instanceVertexBuffers.resize(Instance::INSTANCE_TYPE_COUNT);
+	m_instanceIndexBuffers.resize(Instance::INSTANCE_TYPE_COUNT);
+	m_instanceInfoBuffers.resize(Instance::INSTANCE_TYPE_COUNT);
+	m_instanceInfoList.resize(Instance::INSTANCE_TYPE_COUNT);
 	if (!MakeInstanceVertexBuffer())
 		return false;
 	if (!MakeInstanceInfoBuffer())
@@ -135,11 +136,11 @@ void ChunkManager::RenderInstance()
 
 	UINT indexCountPerInstance[4] = { 12, 24, 6 };
 
-	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
+	for (int i = 0; i < Instance::INSTANCE_TYPE_COUNT; ++i) {
 		Graphics::context->IASetIndexBuffer(
 			m_instanceIndexBuffers[i].Get(), DXGI_FORMAT_R32_UINT, 0);
 
-		std::vector<UINT> strides = { sizeof(InstanceVertex), sizeof(InstanceInfo) };
+		std::vector<UINT> strides = { sizeof(InstanceVertex), sizeof(InstanceInfoVertex) };
 		std::vector<UINT> offsets = { 0, 0 };
 		std::vector<ID3D11Buffer*> buffers = { m_instanceVertexBuffers[i].Get(),
 			m_instanceInfoBuffers[i].Get() };
@@ -294,7 +295,7 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera)
 void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 {
 	// clear all info
-	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i)
+	for (int i = 0; i < Instance::INSTANCE_TYPE_COUNT; ++i)
 		m_instanceInfoList[i].clear();
 
 	// check instance in chunk managerList
@@ -307,31 +308,22 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 			continue;
 
 		// set info
-		const std::unordered_map<uint8_t, std::vector<Vector3>>& instanceMap = c->GetInstanceMap();
+		const std::map<std::tuple<int, int, int>, Instance>& instanceMap = c->GetInstanceMap();
 		for (auto& p : instanceMap) {
-			uint8_t type = p.first;
-			for (auto& pos : p.second) {
-				InstanceInfo info;
-				info.type = type;
+			InstanceInfoVertex info;
+			info.type = p.second.GetType();
 
-				// type
-				// noise position
-				// noise scale
-				// rotate?
-				info.instanceWorld =
-					Matrix::CreateTranslation(chunkOffset + pos + Vector3(0.5f)).Transpose();
+			info.instanceWorld = p.second.GetWorld().Transpose();
 
-				// Cross 형태 instance, Fence 형태 instance, Square 형태 instance
-				m_instanceInfoList[Block::GetInstanceType(type)].push_back(info);
-			}
+			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
 		}
 	}
 
-	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
+	for (int i = 0; i < Instance::INSTANCE_TYPE_COUNT; ++i) {
 		D3D11_BUFFER_DESC desc;
 		m_instanceInfoBuffers[i]->GetDesc(&desc);
 
-		UINT bufferInstanceCount = desc.ByteWidth / sizeof(InstanceInfo);
+		UINT bufferInstanceCount = desc.ByteWidth / sizeof(InstanceInfoVertex);
 		if (m_instanceInfoList[i].size() > bufferInstanceCount) {
 			m_instanceInfoBuffers[i].Reset();
 			m_instanceInfoBuffers[i] = nullptr;

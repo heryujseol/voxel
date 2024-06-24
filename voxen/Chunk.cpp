@@ -68,13 +68,6 @@ void Chunk::InitChunkData()
 				}
 
 				/////////////////////////////
-				// for instance testing
-				int choose[4] = { 128, 129, 130, 144 };
-				static int loop = 0;
-				if (height + 1 == ny && x % 3 == 0 && z % 3 == 0) {
-					m_blocks[x][y][z].SetType(choose[loop % 4]);
-					loop++;
-				}
 				// for tree leaf testing
 				if (height + 3 <= ny && ny <= height + 6 && 14 <= x && x <= 20 && 14 <= z &&
 					z <= 20) {
@@ -91,10 +84,26 @@ void Chunk::InitInstanceInfoData()
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
+				int nx = (int)m_position.x + x;
+				int ny = (int)m_position.y + y;
+				int nz = (int)m_position.z + z;
 
-				if (Block::IsInstance(type)) {
-					m_instanceMap[type].push_back(Vector3((float)x, (float)y, (float)z));
+				// instance testing
+				int choose[4] = { 128, 129, 130, 144 };
+				static int loop = 0;
+				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::AIR ||
+						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::WATER) &&
+					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType()) && nx % 3 == 0 &&
+					nz % 3 == 0) {
+					Instance instance;
+
+					uint8_t type = choose[loop++ % 4];
+					instance.SetType(type);
+
+					Vector3 pos = Vector3((float)nx, (float)ny, (float)nz) + Vector3(0.5f);
+					instance.SetWorld(Matrix::CreateTranslation(pos));
+
+					m_instanceMap[std::make_tuple(nx, ny, nz)] = instance;
 				}
 			}
 		}
@@ -130,7 +139,7 @@ void Chunk::InitWorldVerticesData()
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 				uint8_t type = m_blocks[x][y][z].GetType();
-				if (type == BLOCK_TYPE::AIR || Block::IsInstance(type))
+				if (type == BLOCK_TYPE::AIR)
 					continue;
 
 				llTypeMap[type] = true;

@@ -22,7 +22,8 @@ public:
 	static const int MAX_ASYNC_LOAD_COUNT = 1;
 	static const int MAX_INSTANCE_RENDER_DISTANCE = 160;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
-	static const int MAX_INSTANCE_BUFFER_COUNT = MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfo);
+	static const int MAX_INSTANCE_BUFFER_COUNT =
+		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
 
 	ChunkManager();
 	~ChunkManager();
@@ -78,6 +79,6 @@ private:
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceIndexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceInfoBuffers;
-	std::vector<std::vector<InstanceInfo>> m_instanceInfoList;
+	std::vector<std::vector<InstanceInfoVertex>> m_instanceInfoList;
 	std::vector<UINT> m_instanceIndexCount;
 };

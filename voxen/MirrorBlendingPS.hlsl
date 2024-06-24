@@ -117,17 +117,16 @@ float4 main(vsOutput input) : SV_TARGET
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     uint index = (input.type - 1) * 6 + input.face;
     
-    float3 normal = getNormal(input.face);
+    // absorption color
+    float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
     
-    if (normal.y > 0 && 62 - 1e4 <= input.posWorld.y && input.posWorld.y <= 62 + 1e4)
+    float3 normal = getNormal(input.face);
+    if (normal.y > 0 && 62 - 1e-4 <= input.posWorld.y && input.posWorld.y <= 62 + 1e-4)
     {
         float2 screenTexcoord = float2(input.posProj.x / 1920.0, input.posProj.y / 1080.0);
         
         // origin render color
         float3 originColor = basicRenderTex.Sample(linearClampSS, screenTexcoord).rgb;
-        
-        // absorption color
-        float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
         
         // reflect color
         float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
@@ -145,7 +144,7 @@ float4 main(vsOutput input) : SV_TARGET
         float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
         
         // blending 3 colors
-        float3 projColor = (1.0 - fresnelFactor) * (lerp(originColor, textureColor, absorptionFactor));
+        float3 projColor = (1.0 - fresnelFactor) * (lerp(originColor, textureColor.rgb, absorptionFactor));
         float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
         
         // alpha blend
@@ -156,7 +155,7 @@ float4 main(vsOutput input) : SV_TARGET
     }
     else
     {
-        discard;
-        return float4(0, 0, 0, 0);
+        //discard;
+        return textureColor;
     }
 }

@@ -46,7 +46,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> fogPS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
-	extern ComPtr<ID3D11PixelShader> transparencyPS;
+	extern ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	extern ComPtr<ID3D11PixelShader> blurXPS;
 	extern ComPtr<ID3D11PixelShader> blurYPS;
 

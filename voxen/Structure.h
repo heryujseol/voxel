@@ -26,7 +26,7 @@ struct InstanceVertex {
 	Vector2 texcoord;
 };
 
-struct InstanceInfo {
+struct InstanceInfoVertex {
 	Matrix instanceWorld;
 	uint32_t type;
 };

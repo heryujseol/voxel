@@ -91,7 +91,7 @@ namespace DXUtils {
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.ByteWidth = UINT(maxCount * sizeof(InstanceInfo));
+		desc.ByteWidth = UINT(maxCount * sizeof(InstanceInfoVertex));
 		desc.Usage = D3D11_USAGE_DYNAMIC;
 		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -117,12 +117,12 @@ namespace DXUtils {
 
 
 	static void UpdateInstanceBuffer(
-		ComPtr<ID3D11Buffer>& instanceBuffer, const std::vector<InstanceInfo>& instanceInfo)
+		ComPtr<ID3D11Buffer>& instanceBuffer, const std::vector<InstanceInfoVertex>& instanceInfo)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
 
 		Graphics::context->Map(instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-		memcpy(ms.pData, instanceInfo.data(), sizeof(InstanceInfo) * instanceInfo.size());
+		memcpy(ms.pData, instanceInfo.data(), sizeof(InstanceInfoVertex) * instanceInfo.size());
 		Graphics::context->Unmap(instanceBuffer.Get(), 0);
 	}
 

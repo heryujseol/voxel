@@ -41,7 +41,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> instancePS;
 	ComPtr<ID3D11PixelShader> fogPS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
-	ComPtr<ID3D11PixelShader> transparencyPS;
+	ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
 
@@ -736,9 +736,9 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// TransparencyPS
-	if (!DXUtils::CreatePixelShader(L"TransparencyPS.hlsl", transparencyPS)) {
-		std::cout << "failed create transparency ps" << std::endl;
+	// MirrorBlendingPS
+	if (!DXUtils::CreatePixelShader(L"MirrorBlendingPS.hlsl", mirrorBlendingPS)) {
+		std::cout << "failed create mirrorBlending ps" << std::endl;
 		return false;
 	}
 
@@ -1014,7 +1014,7 @@ void Graphics::InitGraphicsPSO()
 
 	// mirrorBlendPSO
 	mirrorBlendPSO = basicPSO;
-	mirrorBlendPSO.pixelShader = transparencyPS;
+	mirrorBlendPSO.pixelShader = mirrorBlendingPS;
 	mirrorBlendPSO.blendState = alphaBS;
 
 	// mirrorBlur PSO
