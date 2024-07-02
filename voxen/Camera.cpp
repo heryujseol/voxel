@@ -21,6 +21,8 @@ bool Camera::Initialize(Vector3 pos)
 	m_constantData.invProj = m_constantData.proj.Invert();
 	m_constantData.eyePos = m_eyePos;
 	m_constantData.eyeDir = m_forward;
+	m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+	m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 
 	CameraConstantData tempConstantData;
 	tempConstantData.view = m_constantData.view.Transpose();
@@ -28,6 +30,8 @@ bool Camera::Initialize(Vector3 pos)
 	tempConstantData.invProj = m_constantData.invProj.Transpose();
 	tempConstantData.eyePos = m_constantData.eyePos;
 	tempConstantData.eyeDir = m_constantData.eyeDir;
+	tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+	tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
 		std::cout << "failed create camera constant buffer" << std::endl;
 		return false;
@@ -75,6 +79,8 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 		tempConstantData.invProj = m_constantData.invProj.Transpose();
 		tempConstantData.eyePos = m_constantData.eyePos;
 		tempConstantData.eyeDir = m_constantData.eyeDir;
+		tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+		tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
 
 		tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;

@@ -7,12 +7,13 @@ struct vsOutput
 
 cbuffer CameraConstantBuffer : register(b0)
 {
-    matrix view;
-    matrix proj;
+    Matrix view;
+    Matrix proj;
     float3 eyePos;
-    float dummy;
+    float maxRenderDistance;
     float3 eyeDir;
-    float dummy1;
+    float lodRenderDistance;
+    Matrix invProj;
 }
 
 cbuffer SkyboxConstantBuffer : register(b1)
@@ -76,7 +77,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     
     // 거리가 멀면 horizon color 선택 
-    float horizonWeight = smoothstep(320.0, cloudScale, clamp(distance, 320.0, cloudScale));
+    float horizonWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
     float3 color = volumeColor * getFaceColor(input.face);
     color = lerp(color, horizonColor, horizonWeight);
     
@@ -102,7 +103,7 @@ float4 main(vsOutput input) : SV_TARGET
     }
     
     // distance alpha
-    float alphaWeight = smoothstep(320.0, cloudScale, clamp(distance, 320.0, cloudScale));
+    float alphaWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
     float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.8]
     
     return float4(color, alpha);

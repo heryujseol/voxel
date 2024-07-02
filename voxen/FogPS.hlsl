@@ -8,9 +8,9 @@ cbuffer CameraConstantBuffer : register(b0)
     Matrix view;
     Matrix proj;
     float3 eyePos;
-    float dummy1;
+    float maxRenderDistance;
     float3 eyeDir;
-    float dummy2;
+    float lodRenderDistance;
     Matrix invProj;
 }
 
@@ -68,8 +68,8 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
     //Beer-Lambert law
     float3 fogColor = normalHorizonColor;
-    float fogMin = 280.0;
-    float fogMax = 320.0;
+    float fogMin = lodRenderDistance;
+    float fogMax = maxRenderDistance;
     float fogStrength = 3.0;
         
     float4 posView = TexcoordToView(input.texcoord);

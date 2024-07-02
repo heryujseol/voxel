@@ -159,8 +159,8 @@ void App::Render()
 	RenderBasic();
 
 	// postEffect
-	//Graphics::SetPipelineStates(Graphics::fogPSO);
-	//m_postEffect.RenderFog();
+	Graphics::SetPipelineStates(Graphics::fogPSO);
+	m_postEffect.RenderFog();
 
 	// Mirror
 	RenderMirror();
