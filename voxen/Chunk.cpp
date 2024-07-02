@@ -142,12 +142,8 @@ void Chunk::InitWorldVerticesData()
 				if (type == BLOCK_TYPE::AIR)
 					continue;
 
-				llTypeMap[type] = true;
-				llColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-				llColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-				llColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
-
 				if (Block::IsTransparency(type)) {
+					tpTypeMap[type] = true;
 					// 타입이 같거나 불투명 블록이면 메쉬를 생성하지 않음
 					if (x - 1 >= 0 && type != m_blocks[x - 1][y][z].GetType() &&
 						!Block::IsOpaqua(m_blocks[x - 1][y][z].GetType())) {
@@ -175,10 +171,9 @@ void Chunk::InitWorldVerticesData()
 						!Block::IsOpaqua(m_blocks[x][y][z + 1].GetType())) {
 						tpCullColBit[Utils::GetIndexFrom3D(5, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 					}
-
-					tpTypeMap[type] = true;
 				}
 				else if (Block::IsSemiAlpha(type)) {
+					saTypeMap[type] = true;
 					// - -> + : 불투명이 아니면 페이스 존재 -> 같은 타입을 고려하지 않음
 					if (x + 1 < CHUNK_SIZE_P && !Block::IsOpaqua(m_blocks[x + 1][y][z].GetType())) {
 						saCullColBit[Utils::GetIndexFrom3D(1, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
@@ -201,14 +196,21 @@ void Chunk::InitWorldVerticesData()
 						saCullColBit[Utils::GetIndexFrom3D(4, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 					}
 
-					saTypeMap[type] = true;
+					llTypeMap[type] = true;
+					llColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					llColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					llColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 				else {
+					opTypeMap[type] = true;
 					opColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					opColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 					opColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 
-					opTypeMap[type] = true;
+					llTypeMap[type] = true;
+					llColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					llColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					llColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 			}
 		}

@@ -60,81 +60,78 @@ void ChunkManager::Update(Camera& camera)
 	UpdateInstanceInfoList(camera);
 }
 
-void ChunkManager::RenderOpaque()
+void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+	if (chunk->IsEmptyOpaque())
+		return;
 
-	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptyOpaque())
-			continue;
+	UINT id = chunk->GetID();
+	UINT stride = sizeof(VoxelVertex);
+	UINT offset = 0;
 
-		UINT id = c->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
+	Graphics::context->IASetIndexBuffer(m_opaqueIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_opaqueVertexBuffers[id].GetAddressOf(), &stride, &offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
-		Graphics::context->IASetIndexBuffer(
-			m_opaqueIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_opaqueVertexBuffers[id].GetAddressOf(), &stride, &offset);
-		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
-
-		Graphics::context->DrawIndexed((UINT)c->GetOpaqueIndices().size(), 0, 0);
-	}
+	Graphics::context->DrawIndexed((UINT)chunk->GetOpaqueIndices().size(), 0, 0);
 }
 
-void ChunkManager::RenderSemiAlpha()
+void ChunkManager::RenderSemiAlphaChunk(Chunk* chunk)
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+	if (chunk->IsEmptySemiAlpha())
+		return;
 
-	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptySemiAlpha())
-			continue;
+	UINT id = chunk->GetID();
+	UINT stride = sizeof(VoxelVertex);
+	UINT offset = 0;
 
-		UINT id = c->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
+	Graphics::context->IASetIndexBuffer(m_semiAlphaIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_semiAlphaVertexBuffers[id].GetAddressOf(), &stride, &offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
-		Graphics::context->IASetIndexBuffer(
-			m_semiAlphaIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_semiAlphaVertexBuffers[id].GetAddressOf(), &stride, &offset);
-		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
-
-		Graphics::context->DrawIndexed((UINT)c->GetSemiAlphaIndices().size(), 0, 0);
-	}
+	Graphics::context->DrawIndexed((UINT)chunk->GetSemiAlphaIndices().size(), 0, 0);
 }
 
-void ChunkManager::RenderTransparency()
+void ChunkManager::RenderLowLodChunk(Chunk* chunk)
 {
-	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptyTransparency())
-			continue;
+	if (chunk->IsEmptyLowLod())
+		return;
 
-		UINT id = c->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
+	UINT id = chunk->GetID();
+	UINT stride = sizeof(VoxelVertex);
+	UINT offset = 0;
 
-		Graphics::context->IASetIndexBuffer(
-			m_transparencyIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_transparencyVertexBuffers[id].GetAddressOf(), &stride, &offset);
-		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+	Graphics::context->IASetIndexBuffer(m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
-		Graphics::context->DrawIndexed((UINT)c->GetTransparencyIndices().size(), 0, 0);
-	}
+	Graphics::context->DrawIndexed((UINT)chunk->GetLowLodIndices().size(), 0, 0);
+}
+
+void ChunkManager::RenderTransparencyChunk(Chunk* chunk)
+{
+	if (chunk->IsEmptyTransparency())
+		return;
+
+	UINT id = chunk->GetID();
+	UINT stride = sizeof(VoxelVertex);
+	UINT offset = 0;
+
+	Graphics::context->IASetIndexBuffer(
+		m_transparencyIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_transparencyVertexBuffers[id].GetAddressOf(), &stride, &offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+
+	Graphics::context->DrawIndexed((UINT)chunk->GetTransparencyIndices().size(), 0, 0);
 }
 
 void ChunkManager::RenderInstance()
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
-	UINT indexCountPerInstance[4] = { 12, 24, 6 };
+	UINT indexCountPerInstance[3] = { 12, 24, 6 };
 
 	for (int i = 0; i < Instance::INSTANCE_TYPE_COUNT; ++i) {
 		Graphics::context->IASetIndexBuffer(
@@ -150,27 +147,52 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderMirrorLowLod()
+void ChunkManager::RenderBasic(Vector3 cameraPos)
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
+	for (auto& c : m_renderChunkList) {
+		Vector3 chunkOffset = c->GetPosition();
+		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
+		Vector3 diffPosition = chunkCenterPosition - cameraPos;
+
+		Graphics::SetPipelineStates(Graphics::basicPSO);
+		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE) {
+			RenderLowLodChunk(c);
+		}
+		else {
+			RenderOpaqueChunk(c);
+
+			Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
+			RenderSemiAlphaChunk(c);
+		}
+	}
+
+	Graphics::SetPipelineStates(Graphics::instancePSO);
+	RenderInstance();
+}
+
+void ChunkManager::RenderMirrorWorld()
+{
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
 	for (auto& c : m_renderMirrorChunkList) {
-		if (c->IsEmptyLowLod())
-			continue;
+		RenderLowLodChunk(c);
+	}
 
-		UINT id = c->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
+	Graphics::SetPipelineStates(Graphics::instanceMirrorPSO);
+	RenderInstance();
+}
 
-		Graphics::context->IASetIndexBuffer(
-			m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
-		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
-
-		Graphics::context->DrawIndexed((UINT)c->GetLowLodIndices().size(), 0, 0);
+void ChunkManager::RenderTransparency()
+{
+	for (auto& c : m_renderChunkList) {
+		RenderTransparencyChunk(c);
 	}
 }
 
@@ -304,7 +326,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 		Vector3 chunkOffset = c->GetPosition();
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - camera.GetPosition();
-		if (diffPosition.Length() > (float)MAX_INSTANCE_RENDER_DISTANCE)
+		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE)
 			continue;
 
 		// set info

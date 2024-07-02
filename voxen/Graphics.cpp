@@ -902,7 +902,7 @@ bool Graphics::InitDepthStencilStates()
 	ZeroMemory(&desc, sizeof(desc));
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
-	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS;
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
 	desc.StencilEnable = true;
 	desc.StencilReadMask = 0xFF;
 	desc.StencilWriteMask = 0xFF;

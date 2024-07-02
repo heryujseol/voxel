@@ -280,14 +280,7 @@ void App::RenderDepthOnly()
 	Graphics::context->ClearDepthStencilView(
 		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	Graphics::SetPipelineStates(Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-
-	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	m_chunkManager.RenderSemiAlpha();
-
-	Graphics::SetPipelineStates(Graphics::instancePSO);
-	m_chunkManager.RenderInstance();
+	m_chunkManager.RenderBasic(m_camera.GetPosition());
 }
 
 void App::RenderEnvMap()
@@ -317,18 +310,8 @@ void App::RenderBasic()
 
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	// opaque
-	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-
-	// semiAlpha
-	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	m_chunkManager.RenderSemiAlpha();
-
-	// instance
-	Graphics::SetPipelineStates(Graphics::instancePSO);
-	m_chunkManager.RenderInstance();
+	
+	m_chunkManager.RenderBasic(m_camera.GetPosition());
 }
 
 void App::RenderMirror()
@@ -362,10 +345,7 @@ void App::RenderMirror()
 
 	// mirror low lod world
 	Graphics::context->PSSetShaderResources(2, 1, Graphics::mirrorPlaneDepthSRV.GetAddressOf());
-	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
-	m_chunkManager.RenderMirrorLowLod();
-	Graphics::SetPipelineStates(Graphics::instanceMirrorPSO);
-	m_chunkManager.RenderInstance();
+	m_chunkManager.RenderMirrorWorld();
 
 	// blur mirror world
 	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);

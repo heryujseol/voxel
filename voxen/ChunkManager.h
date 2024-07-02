@@ -14,13 +14,12 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 11;
+	static const int CHUNK_COUNT = 2 * (Camera::MAX_RENDER_DISTANCE / Chunk::CHUNK_SIZE) + 1;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
 	static const int MAX_ASYNC_LOAD_COUNT = 1;
-	static const int MAX_INSTANCE_RENDER_DISTANCE = 160;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
 	static const int MAX_INSTANCE_BUFFER_COUNT =
 		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
@@ -31,11 +30,16 @@ public:
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
 
-	void RenderOpaque();
-	void RenderSemiAlpha();
-	void RenderTransparency();
+	void RenderOpaqueChunk(Chunk* chunk);
+	void RenderSemiAlphaChunk(Chunk* chunk);
+	void RenderLowLodChunk(Chunk* chunk);
+	void RenderTransparencyChunk(Chunk* chunk);
 	void RenderInstance();
-	void RenderMirrorLowLod();
+
+	void RenderBasic(Vector3 cameraPos);
+	void RenderMirrorWorld();
+	void RenderTransparency();
+	
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
