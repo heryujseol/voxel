@@ -150,7 +150,7 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderMirror()
+void ChunkManager::RenderMirrorLowLod()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };

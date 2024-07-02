@@ -35,7 +35,7 @@ public:
 	void RenderSemiAlpha();
 	void RenderTransparency();
 	void RenderInstance();
-	void RenderMirror();
+	void RenderMirrorLowLod();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);

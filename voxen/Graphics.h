@@ -44,6 +44,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
+	extern ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> fogPS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> mirrorBlendingPS;
@@ -178,6 +179,8 @@ namespace Graphics {
 	extern GraphicsPSO cloudMirrorPSO;
 	extern GraphicsPSO fogPSO;
 	extern GraphicsPSO instancePSO;
+	extern GraphicsPSO instanceMirrorPSO;
+	extern GraphicsPSO mirrorDepthPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
 	extern GraphicsPSO mirrorBlendPSO;
 	extern GraphicsPSO mirrorBlurPSO;

@@ -158,15 +158,12 @@ void App::Render()
 	// Basic
 	RenderBasic();
 
-	// Mirror
-	RenderMirror();
-
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-
 	// postEffect
 	//Graphics::SetPipelineStates(Graphics::fogPSO);
 	//m_postEffect.RenderFog();
+
+	// Mirror
+	RenderMirror();
 
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
@@ -178,7 +175,6 @@ void App::Render()
 	// cloud
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
-
 
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
@@ -344,7 +340,7 @@ void App::RenderMirror()
 	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::mirrorPlaneDepthDSV.Get());
 	Graphics::context->ClearDepthStencilView(
 		Graphics::mirrorPlaneDepthDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	Graphics::SetPipelineStates(Graphics::basicPSO);
+	Graphics::SetPipelineStates(Graphics::mirrorDepthPSO);
 	m_chunkManager.RenderTransparency();
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -367,11 +363,13 @@ void App::RenderMirror()
 	// mirror low lod world
 	Graphics::context->PSSetShaderResources(2, 1, Graphics::mirrorPlaneDepthSRV.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
-	m_chunkManager.RenderMirror();
+	m_chunkManager.RenderMirrorLowLod();
+	Graphics::SetPipelineStates(Graphics::instanceMirrorPSO);
+	m_chunkManager.RenderInstance();
 
 	// blur mirror world
 	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
-	m_postEffect.BlurMirror(3);
+	m_postEffect.BlurMirror(5);
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());

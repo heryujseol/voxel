@@ -68,10 +68,10 @@ void Chunk::InitChunkData()
 				}
 
 				/////////////////////////////
-				// for tree leaf testing
+				// for testing
 				if (height + 3 <= ny && ny <= height + 6 && 14 <= x && x <= 20 && 14 <= z &&
 					z <= 20) {
-					m_blocks[x][y][z].SetType(11);
+					m_blocks[x][y][z].SetType(10);
 				}
 				/////////////////////////////
 			}

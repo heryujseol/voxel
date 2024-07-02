@@ -39,6 +39,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
+	ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	ComPtr<ID3D11PixelShader> fogPS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	ComPtr<ID3D11PixelShader> mirrorBlendingPS;
@@ -153,6 +154,8 @@ namespace Graphics {
 	GraphicsPSO cloudMirrorPSO;
 	GraphicsPSO fogPSO;
 	GraphicsPSO instancePSO;
+	GraphicsPSO instanceMirrorPSO;
+	GraphicsPSO mirrorDepthPSO;
 	GraphicsPSO mirrorMaskingPSO;
 	GraphicsPSO mirrorBlendPSO;
 	GraphicsPSO mirrorBlurPSO;
@@ -730,6 +733,15 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
+	// InstancePS
+	macros.clear();
+	macros.push_back({ "USE_DEPTH_CLIP", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"InstancePS.hlsl", instanceDepthClipPS, macros.data())) {
+		std::cout << "failed create instance depth clip ps" << std::endl;
+		return false;
+	}
+
 	// MirrorMaskingPS
 	if (!DXUtils::CreatePixelShader(L"MirrorMaskingPS.hlsl", mirrorMaskingPS)) {
 		std::cout << "failed create mirrorMasking ps" << std::endl;
@@ -901,7 +913,7 @@ bool Graphics::InitDepthStencilStates()
 	desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	desc.BackFace.StencilFunc = D3D11_COMPARISON_NEVER;
+	desc.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
 	ret = Graphics::device->CreateDepthStencilState(&desc, mirrorDrawMaskedDSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create mirror draw masked DSS" << std::endl;
@@ -1005,6 +1017,16 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.vertexShader = instanceVS;
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
+
+	// instanceMirrorPSO
+	instanceMirrorPSO = instancePSO;
+	instanceMirrorPSO.pixelShader = instanceDepthClipPS;
+	instanceMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
+	instanceMirrorPSO.stencilRef = 1;
+
+	// mirrorDepthPSO
+	mirrorDepthPSO = basicPSO;
+	mirrorDepthPSO.pixelShader = mirrorMaskingPS;
 
 	// mirrorMaskingPSO
 	mirrorMaskingPSO = basicPSO;

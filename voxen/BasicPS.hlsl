@@ -122,7 +122,6 @@ float4 main(vsOutput input) : SV_TARGET
     float planeDepth = depthTex.Sample(linearClampSS, screenTexcoord).r;
     float pixelDepth = input.posProj.z;
 
-    // Discard pixel if its depth is less than the depth buffer's value
     if (pixelDepth < planeDepth)
     {
         discard;

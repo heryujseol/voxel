@@ -114,48 +114,47 @@ float3 texcoordToView(float2 texcoord)
 
 float4 main(vsOutput input) : SV_TARGET
 {
+    float3 normal = getNormal(input.face);
+    if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
+        discard;
+        
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     uint index = (input.type - 1) * 6 + input.face;
     
     // absorption color
     float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
     
-    float3 normal = getNormal(input.face);
-    if (normal.y > 0 && 62 - 1e-4 <= input.posWorld.y && input.posWorld.y <= 62 + 1e-4)
-    {
-        float2 screenTexcoord = float2(input.posProj.x / 1920.0, input.posProj.y / 1080.0);
+    float width, height, lod;
+    depthOnlyTex.GetDimensions(0, width, height, lod);
+    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
         
-        // origin render color
-        float3 originColor = basicRenderTex.Sample(linearClampSS, screenTexcoord).rgb;
+    // origin render color
+    float3 originColor = basicRenderTex.Sample(linearClampSS, screenTexcoord).rgb;
+    
+    // absorption factor
+    float objectDistance = length(texcoordToView(screenTexcoord));
+    float planeDistance = length(eyePos - input.posWorld);
+    float diffDistance = abs(objectDistance - planeDistance);
+    float absorptionCoeff = 0.1;
+    float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
+    
+    float3 projColor = lerp(originColor, textureColor.rgb, absorptionFactor);
+    
+    // reflect color
+    float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
         
-        // reflect color
-        float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
+    // fresnel factor
+    float3 toEye = normalize(eyePos - input.posWorld);
+    float3 reflectCoeff = float3(0.2, 0.2, 0.2);
+    float3 fresnelFactor = schlickFresnel(normal, toEye, reflectCoeff);
         
-        // fresnel factor
-        float3 toEye = normalize(eyePos - input.posWorld);
-        float3 reflectCoeff = float3(0.2, 0.2, 0.2);
-        float3 fresnelFactor = schlickFresnel(normal, toEye, reflectCoeff);
+    // blending 3 colors
+    projColor *= (1.0 - fresnelFactor);
+    float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
         
-        // absorption factor
-        float objectDistance = length(texcoordToView(screenTexcoord));
-        float planeDistance = length(eyePos - input.posWorld);
-        float diffDistance = abs(objectDistance - planeDistance);
-        float absorptionCoeff = 0.2;
-        float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
+    // alpha blend
+    float fresnelAvg = dot(fresnelFactor, float3(1, 1, 1)) / 3.0;
+    float alpha = lerp(1.0, mirrorColor.a, fresnelAvg);
         
-        // blending 3 colors
-        float3 projColor = (1.0 - fresnelFactor) * (lerp(originColor, textureColor.rgb, absorptionFactor));
-        float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
-        
-        // alpha blend
-        float fresnelAvg = dot(fresnelFactor, float3(1, 1, 1)) / 3.0;
-        float alpha = lerp(1.0, mirrorColor.a, fresnelAvg);
-        
-        return float4(blendColor, alpha);
-    }
-    else
-    {
-        //discard;
-        return textureColor;
-    }
+    return float4(blendColor, alpha);
 }
