@@ -1,33 +1,10 @@
+#include "Common.hlsli"
+
 struct vsOutput
 {
     float4 posProj : SV_Position;
     float3 posWorld : POSITION;
     uint face : FACE;
-};
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    Matrix view;
-    Matrix proj;
-    float3 eyePos;
-    float maxRenderDistance;
-    float3 eyeDir;
-    float lodRenderDistance;
-    Matrix invProj;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
 };
 
 cbuffer CloudConstantBuffer : register(b2)
@@ -36,9 +13,6 @@ cbuffer CloudConstantBuffer : register(b2)
     float3 volumeColor;
     float cloudScale;
 }
-
-static const float PI = 3.14159265;
-static const float invPI = 1.0 / 3.14159265;
 
 float3 getFaceColor(uint face)
 {
@@ -60,20 +34,11 @@ float3 getFaceColor(uint face)
     }
 }
 
-float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-    // L: toLight
-    // V: eyeDir
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float distance = length(input.posWorld.xz - eyePos.xz);
     
-    float sunDirWeight = HenyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+    float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
     float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     
     // 거리가 멀면 horizon color 선택 

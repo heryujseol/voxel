@@ -1,6 +1,4 @@
-SamplerState pointWrapSS : register(s0);
-SamplerState linearWrapSS : register(s1);
-SamplerState linearClampSS : register(s2);
+#include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
 #ifdef USE_DEPTH_CLIP

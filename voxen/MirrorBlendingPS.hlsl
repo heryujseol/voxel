@@ -1,21 +1,9 @@
+#include "Common.hlsli"
+
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D mirrorWorldTex : register(t1);
 Texture2D depthOnlyTex : register(t2);
 Texture2D basicRenderTex : register(t3);
-
-SamplerState pointWrapSS : register(s0);
-SamplerState linearClampSS : register(s2);
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    Matrix view;
-    Matrix proj;
-    float3 eyePos;
-    float dummy1;
-    float3 eyeDir;
-    float dummy2;
-    Matrix invProj;
-}
 
 struct vsOutput
 {
@@ -25,66 +13,6 @@ struct vsOutput
     uint face : FACE;
     uint type : TYPE;
 };
-
-float2 getVoxelTexcoord(float3 pos, uint face)
-{
-    float2 texcoord = float2(0.0, 0.0);
-    
-    if (face == 0) // left
-    {
-        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
-    }
-    else if (face == 1) // right
-    {
-        texcoord = float2(pos.z, -pos.y + 32.0);
-    }
-    else if (face == 2) // bottom
-    {
-        texcoord = float2(pos.x, pos.z);
-    }
-    else if (face == 3) // top
-    {
-        texcoord = float2(pos.x, -pos.z + 32.0);
-    }
-    else if (face == 4) // front
-    {
-        texcoord = float2(pos.x, -pos.y + 32.0);
-    }
-    else // back
-    {
-        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
-    }
-
-    return texcoord;
-}
-
-float3 getNormal(uint face)
-{
-    if (face == 0)
-    {
-        return float3(-1.0, 0.0, 0.0);
-    }
-    else if (face == 1)
-    {
-        return float3(1.0, 0.0, 0.0);
-    }
-    else if (face == 2)
-    {
-        return float3(0.0, -1.0, 0.0);
-    }
-    else if (face == 3)
-    {
-        return float3(0.0, 1.0, 0.0);
-    }
-    else if (face == 4)
-    {
-        return float3(0.0, 0.0, -1.0);
-    }
-    else
-    {
-        return float3(0.0, 0.0, 1.0);
-    }
-}
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
 {

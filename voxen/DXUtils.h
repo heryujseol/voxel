@@ -139,8 +139,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -176,8 +176,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -209,8 +209,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());

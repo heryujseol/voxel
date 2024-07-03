@@ -1,35 +1,11 @@
+#include "Common.hlsli"
+
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
-
-SamplerState pointWrapSS : register(s0);
-SamplerState linearWrapSS : register(s1);
-SamplerState linearClampSS : register(s2);
 
 #ifdef USE_DEPTH_CLIP
     Texture2D depthTex : register(t2);
 #endif
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-    float3 eyePos;
-    float dummy;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
-};
 
 struct vsOutput
 {
@@ -39,66 +15,6 @@ struct vsOutput
     uint face : FACE;
     uint type : TYPE;
 };
-
-float2 getVoxelTexcoord(float3 pos, uint face)
-{
-    float2 texcoord = float2(0.0, 0.0);
-    
-    if (face == 0) // left
-    {
-        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
-    }
-    else if (face == 1) // right
-    {
-        texcoord = float2(pos.z, -pos.y + 32.0);
-    }
-    else if (face == 2) // bottom
-    {
-        texcoord = float2(pos.x, pos.z);
-    }
-    else if (face == 3) // top
-    {
-        texcoord = float2(pos.x, -pos.z + 32.0);
-    }
-    else if (face == 4) // front
-    {
-        texcoord = float2(pos.x, -pos.y + 32.0);
-    }
-    else // back
-    {
-        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
-    }
-
-    return texcoord;
-}
-
-float3 getNormal(uint face)
-{
-    if (face == 0)
-    {
-        return float3(-1.0, 0.0, 0.0);
-    }
-    else if (face == 1)
-    {
-        return float3(1.0, 0.0, 0.0);
-    }
-    else if (face == 2)
-    {
-        return float3(0.0, -1.0, 0.0);
-    }
-    else if (face == 3)
-    {
-        return float3(0.0, 1.0, 0.0);
-    }
-    else if (face == 4)
-    {
-        return float3(0.0, 0.0, -1.0);
-    }
-    else
-    {
-        return float3(0.0, 0.0, 1.0);
-    }
-}
 
 float4 main(vsOutput input) : SV_TARGET
 {

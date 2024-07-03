@@ -1,40 +1,13 @@
+#include "Common.hlsli"
+
 Texture2D renderTex : register(t0); // Rendering results
 Texture2D depthOnlyTex : register(t1); // DepthOnly
-
-SamplerState linearClampSS : register(s2);
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    Matrix view;
-    Matrix proj;
-    float3 eyePos;
-    float maxRenderDistance;
-    float3 eyeDir;
-    float lodRenderDistance;
-    Matrix invProj;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
-};
 
 struct SamplingPixelShaderInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
-
-static const float PI = 3.14159265;
 
 float4 TexcoordToView(float2 texcoord)
 {
@@ -52,17 +25,6 @@ float4 TexcoordToView(float2 texcoord)
     
     return posView;
 }
-
-float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-	// L: toLight
-	// V: eyeDir
-	// https://www.shadertoy.com/view/7s3SRH
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
-}
-
 
 float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
@@ -82,7 +44,7 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
     
     if (11000 <= dateTime && dateTime <= 14000)
     {
-        float sunDirWeight = HenyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+        float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
         fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     }
         

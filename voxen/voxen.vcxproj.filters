@@ -105,6 +105,9 @@
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include="..\.gitignore" />
+    <None Include="Common.hlsli">
+      <Filter>쉐이더 파일</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicVS.hlsl">
