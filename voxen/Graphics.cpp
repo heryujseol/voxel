@@ -14,7 +14,6 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
-
 	ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
@@ -24,8 +23,12 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
-
 	ComPtr<ID3D11VertexShader> depthOnlyVS;
+	ComPtr<ID3D11VertexShader> basicShadowVS;
+	
+
+	// Geometry Shader
+	ComPtr<ID3D11GeometryShader> basicShadowGS;
 
 
 	// Pixel Shader
@@ -34,7 +37,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
-
 	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
 
@@ -43,7 +45,6 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> instanceRS;
-
 	ComPtr<ID3D11RasterizerState> postEffectRS;
 
 
@@ -51,12 +52,13 @@ namespace Graphics {
 	ComPtr<ID3D11SamplerState> pointClampSS;
 	ComPtr<ID3D11SamplerState> linearWrapSS;
 	ComPtr<ID3D11SamplerState> linearClampSS;
+	ComPtr<ID3D11SamplerState> shadowPointSS;
+	ComPtr<ID3D11SamplerState> shadowCompareSS;
 
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
 
-	ComPtr<ID3D11DepthStencilState> postEffectDSS;
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
@@ -75,6 +77,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> postEffectBuffer;
 	ComPtr<ID3D11RenderTargetView> postEffectRTV;
 
+	ComPtr<ID3D11Texture2D> shadowRenderBuffer[4];
+	ComPtr<ID3D11RenderTargetView> shadowRenderRTV[4];
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -82,6 +87,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	ComPtr<ID3D11Texture2D> shadowBuffer;
+	ComPtr<ID3D11DepthStencilView> shadowDSV;
 
 
 	// SRV & Buffer
@@ -101,12 +109,15 @@ namespace Graphics {
 
 	ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
+	ComPtr<ID3D11ShaderResourceView> shadowSRV;
+
 	ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
 	ComPtr<ID3D11ShaderResourceView> postEffectSRV;
 
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
+	D3D11_VIEWPORT shadowViewport;
 
 
 	// PSO
@@ -117,10 +128,12 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
-
 	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
+	GraphicsPSO basicDepthPSO;
+	GraphicsPSO instanceDepthPSO;
+	GraphicsPSO basicShadowPSO;
 }
 
 
@@ -229,6 +242,22 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 		return false;
 	}
 
+	// Shadow RTV
+	for (int i = 0; i < 4; i++) {
+		
+		if (!DXUtils::CreateTextureBuffer(
+				shadowRenderBuffer[i], width, height, false, format, bindFlag)) {
+			std::cout << "failed create render target buffer" << std::endl;
+			return false;
+		}
+		ret = Graphics::device->CreateRenderTargetView(
+			shadowRenderBuffer[i].Get(), nullptr, shadowRenderRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create render target view" << std::endl;
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -253,10 +282,10 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		return false;
 	}
 
-	// depthOnly
+	// depthOnly DSV
 	format = DXGI_FORMAT_R32_TYPELESS;
 	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, (UINT)72)) {
-		std::cout << "failed create depth stencil buffer" << std::endl;
+		std::cout << "failed create depthOnly depth stencil buffer" << std::endl;
 		return false;
 	}
 	
@@ -266,8 +295,29 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	ret = Graphics::device->CreateDepthStencilView(
 		depthOnlyBuffer.Get(), &dsvDesc, depthOnlyDSV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create depth stencil view" << std::endl;
-		std::cout << ret << std::endl;
+		std::cout << "failed create depthOnly depth stencil view" << std::endl;
+		return false;
+	}
+
+	// shadow DSV
+	UINT shadowWidth = 1080;
+	UINT shadowHeight = 1080;
+	if (!DXUtils::CreateTextureBuffer(
+			shadowBuffer, shadowWidth, shadowHeight, false, format, (UINT)72, 1, 4)) {
+		std::cout << "failed create shadow depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+	dsvDesc.Texture2DArray.ArraySize = 4;
+	dsvDesc.Texture2DArray.FirstArraySlice = 0;
+	ret = Graphics::device->CreateDepthStencilView(
+		shadowBuffer.Get(), &dsvDesc, shadowDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shadow depth stencil view" << std::endl;
 		return false;
 	}
 
@@ -346,6 +396,21 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 		return false;
 	}
 
+	// shadowSRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = 1;
+	srvDesc.Texture2DArray.FirstArraySlice = 0;
+	srvDesc.Texture2DArray.ArraySize = 4;
+	ret = Graphics::device->CreateShaderResourceView(
+		Graphics::shadowBuffer.Get(), &srvDesc, shadowSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from shadow srv" << std::endl;
+		return false;
+	}
+
 
 	// postEffectSRV
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -358,7 +423,7 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 	ret = Graphics::device->CreateShaderResourceView(
 		postEffectResolvedBuffer.Get(), 0, postEffectSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from cloud srv" << std::endl;
+		std::cout << "failed create shader resource view from post effect srv" << std::endl;
 		return false;
 	}
 
@@ -400,6 +465,12 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"BasicVS.hlsl", basicVS, basicIL, elementDesc)) {
+		std::cout << "failed create basic vs" << std::endl;
+		return false;
+	}
+
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"BasicShadowVS.hlsl", basicShadowVS, basicIL, elementDesc)) {
 		std::cout << "failed create basic vs" << std::endl;
 		return false;
 	}
@@ -465,7 +536,15 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() { return true; }
+bool Graphics::InitGeometryShaders()
+{
+	// BasicShadowGS
+	if (!DXUtils::CreateGeometryShader(L"BasicShadowGS.hlsl", basicShadowGS)) {
+		std::cout << "failed create basic shadow gs" << std::endl;
+		return false;
+	}
+	return true;
+}
 
 bool Graphics::InitPixelShaders()
 {
@@ -600,6 +679,27 @@ bool Graphics::InitSamplerStates()
 		return false;
 	}
 
+	// shadowPointSS
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.BorderColor[0] = 1.0f; // 큰 Z값
+	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	device->CreateSamplerState(&desc, shadowPointSS.GetAddressOf());
+
+	// shadowCompareSS
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.BorderColor[0] = 100.0f;
+	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shadowCompareSS" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -615,14 +715,6 @@ bool Graphics::InitDepthStencilStates()
 	HRESULT ret = Graphics::device->CreateDepthStencilState(&desc, basicDSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create basic DSS" << std::endl;
-		return false;
-	}
-
-	// PostEffect DDS
-	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
-	ret = Graphics::device->CreateDepthStencilState(&desc, postEffectDSS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create postEffect DSS" << std::endl;
 		return false;
 	}
 
@@ -663,6 +755,8 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
+	basicPSO.samplerStates.push_back(shadowPointSS.Get());
+	basicPSO.samplerStates.push_back(shadowCompareSS.Get());
 	basicPSO.depthStencilState = basicDSS;
 	basicPSO.blendState = nullptr;
 
@@ -689,12 +783,6 @@ void Graphics::InitGraphicsPSO()
 	cloudBlendPSO.pixelShader = samplingPS;
 	cloudBlendPSO.blendState = alphaBS;
 
-	// depthOnlyPSO
-	depthOnlyPSO = basicPSO;
-	depthOnlyPSO.inputLayout = depthOnlyIL;
-	depthOnlyPSO.vertexShader = depthOnlyVS;
-	depthOnlyPSO.pixelShader = depthOnlyPS;
-
 	// postEffectPSO
 	postEffectPSO = basicPSO;
 	postEffectPSO.vertexShader = samplingVS;
@@ -709,6 +797,20 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.vertexShader = instanceVS;
 	instancePSO.rasterizerState = instanceRS;
 	instancePSO.pixelShader = instancePS;
+
+	// basicDepthPSO
+	basicDepthPSO = basicPSO;
+	basicDepthPSO.pixelShader = depthOnlyPS;
+
+	// instanceDepthPSO
+	instanceDepthPSO = instancePSO;
+	instanceDepthPSO.pixelShader = depthOnlyPS;
+
+	// basicshadowPSO
+	basicShadowPSO = basicPSO;
+	basicShadowPSO.vertexShader = basicShadowVS;
+	basicShadowPSO.geometryShader = basicShadowGS;
+	basicShadowPSO.pixelShader = nullptr;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

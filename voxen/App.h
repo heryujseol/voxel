@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Skybox.h"
 #include "Cloud.h"
+#include "Light.h"
 #include "PostEffect.h"
 
 using namespace Microsoft::WRL;
@@ -35,12 +36,15 @@ private:
 
 	UINT m_width;
 	UINT m_height;
+	UINT m_shadowWidth;
+	UINT m_shadowHeight;
 	HWND m_hwnd;
 
 	ChunkManager m_chunkManager;
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;
+	Light m_light;
 	PostEffect m_postEffect;
 
 	bool m_keyPressed[256];

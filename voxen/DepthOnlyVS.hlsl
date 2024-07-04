@@ -1,12 +1,12 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-}
-
 cbuffer ChunkConstantBuffer : register(b1)
 {
     matrix world;
+}
+
+cbuffer LightConstantData : register(b2)
+{
+    Matrix view;
+    Matrix proj;
 }
 
 struct vsInput
@@ -27,7 +27,6 @@ vsOutput main(vsInput input)
     
     output.posProj = mul(float4(position, 1.0), world);
 
-    
     output.posProj = mul(float4(output.posProj.xyz, 0.0), view);
     output.posProj = mul(float4(output.posProj.xyz, 1.0), proj);
     

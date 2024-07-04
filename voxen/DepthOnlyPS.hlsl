@@ -1,4 +1,4 @@
-struct DepthOnlyPixelShaderInput
+struct vsOutput
 {
     float4 posProj : SV_POSITION;
 };

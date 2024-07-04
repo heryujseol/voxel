@@ -20,7 +20,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
 	extern ComPtr<ID3D11InputLayout> instanceIL;
-
 	extern ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
@@ -29,10 +28,13 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
-	
 	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
+	extern ComPtr<ID3D11VertexShader> basicShadowVS;
 
+
+	// Geometry Shader
+	extern ComPtr<ID3D11GeometryShader> basicShadowGS;
 
 
 	// Pixel Shader
@@ -55,13 +57,14 @@ namespace Graphics {
 	extern ComPtr<ID3D11SamplerState> pointClampSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
+	extern ComPtr<ID3D11SamplerState> shadowPointSS;
+	extern ComPtr<ID3D11SamplerState> shadowCompareSS;
+
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-
-	extern ComPtr<ID3D11DepthStencilState> postEffectDSS;
-
 	
+
 	// Blend State
 	extern ComPtr<ID3D11BlendState> alphaBS;
 
@@ -78,6 +81,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> postEffectBuffer;
 	extern ComPtr<ID3D11RenderTargetView> postEffectRTV;
+
+	extern ComPtr<ID3D11Texture2D> shadowRenderBuffer[4];
+	extern ComPtr<ID3D11RenderTargetView> shadowRenderRTV[4];
 	
 
 	// DSV & Buffer
@@ -86,6 +92,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	extern ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	extern ComPtr<ID3D11Texture2D> shadowBuffer;
+	extern ComPtr<ID3D11DepthStencilView> shadowDSV;
 
 
 	// SRV & Buffer
@@ -105,11 +114,14 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
+	extern ComPtr<ID3D11ShaderResourceView> shadowSRV;
+
 	extern ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> postEffectSRV;
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
+	extern D3D11_VIEWPORT shadowViewport;
 
 
 	// device, context, swapChain
@@ -142,8 +154,10 @@ namespace Graphics {
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudBlendPSO;
-
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
+	extern GraphicsPSO basicDepthPSO;
+	extern GraphicsPSO instanceDepthPSO;
+	extern GraphicsPSO basicShadowPSO;
 }

@@ -38,7 +38,7 @@ void PostEffect::Render()
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::postEffectSRV.Get(),
-		Graphics::depthOnlySRV.Get() };
+		Graphics::depthOnlySRV.Get()};
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);

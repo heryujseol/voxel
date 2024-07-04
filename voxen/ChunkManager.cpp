@@ -58,8 +58,8 @@ void ChunkManager::Update(Camera& camera)
 void ChunkManager::RenderOpaque()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get()};
+	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptyOpaque())
@@ -99,8 +99,8 @@ void ChunkManager::RenderInstance()
 void ChunkManager::RenderSemiAlpha()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptySemiAlpha())

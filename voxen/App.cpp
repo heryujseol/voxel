@@ -2,6 +2,8 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 
+#include "directxcollision.h"
+
 #include <iostream>
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -18,8 +20,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return g_app->EventHandler(hwnd, uMsg, wParam, lParam);
 }
 
-App::App()
-	: m_width(1920), m_height(1080), m_hwnd(), m_chunkManager(), m_camera(), m_skybox(),
+App::App() 
+	: m_width(1920), m_height(1080), m_shadowWidth(1080), m_shadowHeight(1080), m_hwnd(),
+	  m_chunkManager(),
+	  m_camera(),
+	  m_skybox(),
 	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
 	  m_keyPressed{
 		  false,
@@ -106,8 +111,6 @@ void App::Run()
 			ImGui::Begin("Scene Control");
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
-			Vector3 sun = m_skybox.GetSun();
-			ImGui::Text("SunDir : %.2f %.2f", sun.x, sun.y);
 			uint32_t time = m_skybox.GetTime();
 			ImGui::Text("time : %d", time);
 			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
@@ -132,10 +135,12 @@ void App::Update(float dt)
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
+		m_light.Update(dt, m_camera);
 	}
 	else {
 		m_skybox.Update(0.0f);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
+		m_light.Update(0.0f, m_camera);
 	}
 }
 
@@ -153,9 +158,36 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
 
-	//depthMap
+	// depthMap
 	DepthMapRender();
 
+	//// shadowMap
+	//	shadowSRV를 basic, instance sr 에 추가
+
+	DXUtils::UpdateViewport(Graphics::shadowViewport, 0, 0, m_shadowWidth, m_shadowHeight);
+	//Graphics::context->RSSetViewports(4, m_light.m_viewPorts);
+	Graphics::context->RSSetViewports(1, &Graphics::shadowViewport);
+
+	/*Graphics::context->OMSetRenderTargets(
+		4, Graphics::shadowRenderRTV->GetAddressOf(), Graphics::shadowDSV.Get());*/
+	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
+	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	//Graphics::context->VSSetConstantBuffers(2, 1, m_light.m_constantBuffer.GetAddressOf());
+	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_constantBuffer.GetAddressOf());
+
+	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
+	m_chunkManager.RenderOpaque();
+	if (!m_keyToggle['L'])
+		m_chunkManager.RenderSemiAlpha();
+
+	Graphics::SetPipelineStates(Graphics::instanceDepthPSO);
+	//Graphics::SetPipelineStates(Graphics::instancePSO);
+	m_chunkManager.RenderInstance();
+
+
+	//원래대로 되돌리기
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->OMSetRenderTargets(
@@ -286,6 +318,9 @@ bool App::InitScene()
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
 		return false;
 
+	if (!m_light.Initialize())
+		return false;
+
 	if (!m_postEffect.Initialize())
 		return false;
 
@@ -298,7 +333,7 @@ void App::DepthMapRender()
 	Graphics::context->ClearDepthStencilView(
 		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	Graphics::SetPipelineStates(Graphics::basicPSO);
+	Graphics::SetPipelineStates(Graphics::basicDepthPSO);
 	m_chunkManager.RenderOpaque();
 	if (!m_keyToggle['L'])
 		m_chunkManager.RenderSemiAlpha();
