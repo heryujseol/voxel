@@ -36,9 +36,9 @@ public:
 	void RenderTransparencyChunk(Chunk* chunk);
 	void RenderInstance();
 
-	void RenderBasic(Vector3 cameraPos);
+	void RenderBasic(Vector3 cameraPos, bool useMasking);
 	void RenderMirrorWorld();
-	void RenderTransparency();
+	void RenderTransparency(bool useBlending);
 	
 
 private:

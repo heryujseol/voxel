@@ -66,8 +66,10 @@ namespace Graphics {
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-	extern ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> basicMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> basicMaskingExceptDepthDSS;
 	extern ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
+	extern ComPtr<ID3D11DepthStencilState> postDrawMaskedDSS;
 
 	
 	// Blend State
@@ -81,8 +83,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> basicRTV;
 
-	extern ComPtr<ID3D11Texture2D> cloudRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> cloudRTV;
+	extern ComPtr<ID3D11Texture2D> backgroundRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> backgroundRTV;
 
 	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
@@ -97,6 +99,9 @@ namespace Graphics {
 	// DSV & Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> basicDSV;
+
+	extern ComPtr<ID3D11Texture2D> backgroundDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> backgroundDSV;
 
 	extern ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	extern ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
@@ -127,6 +132,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> cloudSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
+
+	extern ComPtr<ID3D11Texture2D> copiedDepthOnlyBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> copiedDepthOnlySRV;
 
 	extern ComPtr<ID3D11Texture2D> basicResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
@@ -171,8 +179,10 @@ namespace Graphics {
 	extern void SetPipelineStates(GraphicsPSO& pso);
 	extern GraphicsPSO basicPSO;
 	extern GraphicsPSO basicWirePSO;
-	extern GraphicsPSO basicNoneCullPSO;
 	extern GraphicsPSO basicMirrorPSO;
+	extern GraphicsPSO basicMaskingPSO;
+	extern GraphicsPSO semiAlphaPSO;
+	extern GraphicsPSO semiAlphaMaskingPSO;
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
@@ -180,8 +190,10 @@ namespace Graphics {
 	extern GraphicsPSO fogPSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
+	extern GraphicsPSO instanceMaskingPSO;
 	extern GraphicsPSO mirrorDepthPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
+	extern GraphicsPSO mirrorMaskingExceptDepthPSO;
 	extern GraphicsPSO mirrorBlendPSO;
 	extern GraphicsPSO mirrorBlurPSO;
 }

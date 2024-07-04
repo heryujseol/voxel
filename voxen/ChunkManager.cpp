@@ -147,7 +147,7 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderBasic(Vector3 cameraPos)
+void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
@@ -158,19 +158,20 @@ void ChunkManager::RenderBasic(Vector3 cameraPos)
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - cameraPos;
 
-		Graphics::SetPipelineStates(Graphics::basicPSO);
+		Graphics::SetPipelineStates(useMasking ? Graphics::basicMaskingPSO : Graphics::basicPSO);
 		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE) {
 			RenderLowLodChunk(c);
 		}
 		else {
 			RenderOpaqueChunk(c);
 
-			Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
+			Graphics::SetPipelineStates(
+				useMasking ? Graphics::semiAlphaMaskingPSO : Graphics::semiAlphaPSO);
 			RenderSemiAlphaChunk(c);
 		}
 	}
 
-	Graphics::SetPipelineStates(Graphics::instancePSO);
+	Graphics::SetPipelineStates(useMasking ? Graphics::instanceMaskingPSO : Graphics::instancePSO);
 	RenderInstance();
 }
 
@@ -189,8 +190,18 @@ void ChunkManager::RenderMirrorWorld()
 	RenderInstance();
 }
 
-void ChunkManager::RenderTransparency()
+void ChunkManager::RenderTransparency(bool useBlending)
 {
+	if (useBlending) {
+		std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+			Graphics::mirrorWorldSRV.Get(), Graphics::depthOnlySRV.Get(),
+			Graphics::basicResolvedSRV.Get() };
+		Graphics::context->PSSetShaderResources(0, 4, pptr.data());
+	}
+	else {
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
+	}
+
 	for (auto& c : m_renderChunkList) {
 		RenderTransparencyChunk(c);
 	}

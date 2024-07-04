@@ -50,11 +50,18 @@ void PostEffect::RenderFog()
 	Graphics::context->ResolveSubresource(Graphics::basicResolvedBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::basicResolvedSRV.Get(),
-		Graphics::depthOnlySRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
+		Graphics::backgroundRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+	Graphics::context->CopyResource(
+		Graphics::copiedDepthOnlyBuffer.Get(), Graphics::depthOnlyBuffer.Get());
+	
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::backBufferRTV.GetAddressOf(), Graphics::depthOnlyDSV.Get());
+
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::basicResolvedSRV.Get(),
+		Graphics::copiedDepthOnlySRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	Render();
 }

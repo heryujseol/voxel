@@ -36,8 +36,10 @@ private:
 	void Update(float dt);
 	void Render();
 
-	void RenderDepthOnly();
 	void RenderEnvMap();
+	void RenderBackground();
+	void RenderDepthOnlyBasic();
+	void RenderDepthOnlyMirror();
 	void RenderBasic();
 	void RenderMirror();
 
