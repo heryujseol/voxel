@@ -170,12 +170,6 @@ void App::Render()
 	// postEffect
 	Graphics::SetPipelineStates(Graphics::fogPSO);
 	m_postEffect.RenderFog();
-
-	// RTV -> backBuffer
-
-
-	// GUI 렌더링을 위한 RTV 재설정
-	// Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 }
 
 bool App::InitWindow()
@@ -367,7 +361,7 @@ void App::RenderMirror()
 
 	// blur mirror world
 	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
-	m_postEffect.BlurMirror(5);
+	m_postEffect.BlurMirror(3);
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
