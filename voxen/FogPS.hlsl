@@ -1,40 +1,13 @@
+#include "Common.hlsli"
+
 Texture2D renderTex : register(t0); // Rendering results
 Texture2D depthOnlyTex : register(t1); // DepthOnly
-
-SamplerState linearClampSS : register(s4);
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    Matrix view;
-    Matrix proj;
-    float3 eyePos;
-    float dummy1;
-    float3 eyeDir;
-    float dummy2;
-    Matrix invProj;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
-};
 
 struct SamplingPixelShaderInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
-
-static const float PI = 3.14159265;
 
 float4 TexcoordToView(float2 texcoord)
 {
@@ -53,23 +26,12 @@ float4 TexcoordToView(float2 texcoord)
     return posView;
 }
 
-float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-	// L: toLight
-	// V: eyeDir
-	// https://www.shadertoy.com/view/7s3SRH
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
-}
-
-
 float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
     //Beer-Lambert law
     float3 fogColor = normalHorizonColor;
-    float fogMin = 280.0;
-    float fogMax = 320.0;
+    float fogMin = lodRenderDistance;
+    float fogMax = maxRenderDistance;
     float fogStrength = 3.0;
         
     float4 posView = TexcoordToView(input.texcoord);
@@ -82,7 +44,7 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
     
     if ((0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700) || (22300 <= dateTime && dateTime <= 23999))
     {
-        float sunDirWeight = HenyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+        float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
         fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     }
         

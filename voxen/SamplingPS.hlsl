@@ -1,6 +1,6 @@
-Texture2D samplingTexture : register(t0);
+#include "Common.hlsli"
 
-SamplerState linearWrapSS : register(s1);
+Texture2D samplingTexture : register(t0);
 
 struct vsOutput
 {

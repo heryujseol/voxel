@@ -1,39 +1,18 @@
+#include "Common.hlsli"
+
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 Texture2D shadowMap : register(t2);
 
-SamplerState pointWrapSS : register(s0);
-SamplerState linearWrapSS : register(s1);
-SamplerState shadowPointSS : register(s2);
-SamplerComparisonState shadowCompareSS : register(s3);
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-    float3 eyePos;
-    float dummy;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
-};
+#ifdef USE_DEPTH_CLIP
+    Texture2D depthTex : register(t2);
+#endif
 
 cbuffer LightConstantBuffer : register(b2)
 {
     Matrix lightView[4];
     Matrix lightProj[4];
-    Matrix invProj[4];
+    Matrix lightInvProj[4];
     float topLX[4];
     float viewWith[4];
 }
@@ -63,65 +42,6 @@ struct vsOutput
 //};
 
 
-float2 getVoxelTexcoord(float3 pos, uint face)
-{
-    float2 texcoord = float2(0.0, 0.0);
-    
-    if (face == 0) // left
-    {
-        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
-    }
-    else if (face == 1) // right
-    {
-        texcoord = float2(pos.z, -pos.y + 32.0);
-    }
-    else if (face == 2) // bottom
-    {
-        texcoord = float2(pos.x, pos.z);
-    }
-    else if (face == 3) // top
-    {
-        texcoord = float2(pos.x, -pos.z + 32.0);
-    }
-    else if (face == 4) // front
-    {
-        texcoord = float2(pos.x, -pos.y + 32.0);
-    }
-    else // back
-    {
-        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
-    }
-
-    return texcoord;
-}
-
-float3 getNormal(uint face)
-{
-    if (face == 0)
-    {
-        return float3(-1.0, 0.0, 0.0);
-    }
-    else if (face == 1)
-    {
-        return float3(1.0, 0.0, 0.0);
-    }
-    else if (face == 2)
-    {
-        return float3(0.0, -1.0, 0.0);
-    }
-    else if (face == 3)
-    {
-        return float3(0.0, 1.0, 0.0);
-    }
-    else if (face == 4)
-    {
-        return float3(0.0, 0.0, -1.0);
-    }
-    else
-    {
-        return float3(0.0, 0.0, 1.0);
-    }
-}
 
 //float N2V(float ndcDepth, matrix invProj)
 //{
@@ -273,13 +193,31 @@ float getShadowFactor(float3 posWorld)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-
     //float temperature = 0.5;
     //float downfall = 1.0;
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
     
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     uint index = (input.type - 1) * 6 + input.face;
+    
+#ifdef USE_ALPHA_CLIP 
+    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(texcoord, index), 0.0).a != 1.0)
+        discard;
+#endif
+    
+#ifdef USE_DEPTH_CLIP
+    float width, height, lod;
+    depthTex.GetDimensions(0, width, height, lod);
+    
+    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
+    float planeDepth = depthTex.Sample(linearClampSS, screenTexcoord).r;
+    float pixelDepth = input.posProj.z;
+
+    if (pixelDepth < planeDepth)
+    {
+        discard;
+    }
+#endif
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
     //color = getFaceColor(input.face, color);

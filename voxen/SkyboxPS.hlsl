@@ -1,50 +1,17 @@
+#include "Common.hlsli"
+
 Texture2D sunTexture : register(t0);
 Texture2D moonTexture : register(t1);
-
-SamplerState pointSampler : register(s0);
-
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-    float3 eyePos;
-    float dummy1;
-    float3 eyeDir;
-    float dummy2;
-}
-
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float3 sunDir;
-    float skyScale;
-    float3 normalHorizonColor;
-    uint dateTime;
-    float3 normalZenithColor;
-    float sunStrength;
-    float3 sunHorizonColor;
-    float moonStrength;
-    float3 sunZenithColor;
-    float dummy3;
-};
 
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
+
+#ifdef USE_RENDER_TARGET_ARRAY_INDEX
+    uint renderTargetArrayIndex : SV_RenderTargetArrayIndex;
+#endif
 };
-
-static const float PI = 3.14159265;
-static const float invPI = 1.0 / 3.14159265;
-
-float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-	// L: toLight
-	// V: eyeDir
-	// https://www.shadertoy.com/view/7s3SRH
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
-}
 
 bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 texcoord)
 {   
@@ -118,7 +85,12 @@ float4 main(vsOutput input) : SV_TARGET
     float2 sunTexcoord;
     if (sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
     {
-        color += sunTexture.SampleLevel(pointSampler, sunTexcoord, 0.0).rgb * sunStrength;
+#ifdef USE_RENDER_TARGET_ARRAY_INDEX
+        color += sunTexture.SampleLevel(linearClampSS, sunTexcoord, 0.0).rgb * sunStrength;
+#else
+        color += sunTexture.SampleLevel(pointWrapSS, sunTexcoord, 0.0).rgb * sunStrength;
+    #endif
+        
     }
     
     // moon
@@ -137,15 +109,19 @@ float4 main(vsOutput input) : SV_TARGET
         moonTexcoord += indexUV; // moonTexcoord : [0,0]~[4,2] 
         moonTexcoord = float2(moonTexcoord.x / col, moonTexcoord.y / row); // [4,2]->[1,1]
         
-        color += moonTexture.SampleLevel(pointSampler, moonTexcoord, 0.0).rgb * moonStrength;
+#ifdef USE_RENDER_TARGET_ARRAY_INDEX
+        color += moonTexture.SampleLevel(linearClampSS, moonTexcoord, 0.0).rgb * moonStrength;
+#else
+        color += moonTexture.SampleLevel(pointWrapSS, moonTexcoord, 0.0).rgb * moonStrength;
+#endif
     }
    
     // background sky
-    float sunDirWeight = sunAltitude > showSectionAltitude ? HenyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
+    float sunDirWeight = sunAltitude > showSectionAltitude ? henyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
     //float sunDirWeight = sunAltitude > showSectionAltitude ? max(dot(sunDir, eyeDir), 0.0) : 0.0;
     color += getSkyColor(posDir, sunDirWeight);
-    
-    return float4(color, 0.0);
+
+    return float4(color, 1.0);
 }
 
 

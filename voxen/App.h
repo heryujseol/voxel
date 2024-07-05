@@ -22,6 +22,13 @@ public:
 	bool Initialize();
 	void Run();
 
+	static const UINT WIDTH = 1920;
+	static const UINT HEIGHT = 1080;
+	static const UINT SHADOW_WIDTH = 1920;
+	static const UINT SHADOW_HEIGHT = 1024;
+	static const UINT MIRROR_WIDTH = WIDTH / 2;
+	static const UINT MIRROR_HEIGHT = HEIGHT / 2;
+	static const UINT ENV_MAP_SIZE = WIDTH / 8;
 
 private:
 	bool InitWindow();
@@ -32,12 +39,13 @@ private:
 	void Update(float dt);
 	void Render();
 
-	void DepthMapRender();
+	void RenderEnvMap();
+	void RenderBackground();
+	void RenderDepthOnlyBasic();
+	void RenderDepthOnlyMirror();
+	void RenderBasic();
+	void RenderMirror();
 
-	UINT m_width;
-	UINT m_height;
-	UINT m_shadowWidth;
-	UINT m_shadowHeight;
 	HWND m_hwnd;
 
 	ChunkManager m_chunkManager;

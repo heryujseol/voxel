@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Block.h"
+#include "Instance.h"
 #include "Structure.h"
 #include "Terrain.h"
 
@@ -8,6 +9,7 @@
 #include <wrl.h>
 #include <directxtk/SimpleMath.h>
 #include <vector>
+#include <map>
 
 using namespace Microsoft::WRL;
 using namespace DirectX::SimpleMath;
@@ -31,14 +33,18 @@ public:
 
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
 	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
+	inline bool IsEmpty() { return IsEmptyLowLod(); }
 
 	inline Vector3 GetPosition() { return m_position; }
 	inline void SetPosition(Vector3 position) { m_position = position; }
 
+	inline bool IsEmptyLowLod() { return m_lowLodVertices.empty(); }
 	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
 	inline bool IsEmptyTransparency() { return m_transparencyVertices.empty(); }
 	inline bool IsEmptySemiAlpha() { return m_semiAlphaVertices.empty(); }
+
+	inline const std::vector<VoxelVertex>& GetLowLodVertices() const { return m_lowLodVertices; }
+	inline const std::vector<uint32_t>& GetLowLodIndices() const { return m_lowLodIndices; }
 
 	inline const std::vector<VoxelVertex>& GetOpaqueVertices() const { return m_opaqueVertices; }
 	inline const std::vector<uint32_t>& GetOpaqueIndices() const { return m_opaqueIndices; }
@@ -47,7 +53,7 @@ public:
 	{
 		return m_transparencyVertices;
 	}
-	inline const std::vector<uint32_t>& GetTransparantIndices() const
+	inline const std::vector<uint32_t>& GetTransparencyIndices() const
 	{
 		return m_transparencyIndices;
 	}
@@ -58,7 +64,7 @@ public:
 	}
 	inline const std::vector<uint32_t>& GetSemiAlphaIndices() const { return m_semiAlphaIndices; }
 
-	inline const std::unordered_map<uint8_t, std::vector<Vector3>>& GetInstanceMap() const
+	inline const std::map<std::tuple<int, int, int>, Instance>& GetInstanceMap() const
 	{
 		return m_instanceMap;
 	}
@@ -76,13 +82,15 @@ private:
 	void GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
 		std::vector<uint32_t>& indices, uint8_t type);
 
-	bool IsOuter(int x, int y, int z);
-
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
+	std::map<std::tuple<int, int, int>, Instance> m_instanceMap;
 
 	UINT m_id;
 	bool m_isLoaded;
 	Vector3 m_position;
+
+	std::vector<VoxelVertex> m_lowLodVertices;
+	std::vector<uint32_t> m_lowLodIndices;
 
 	std::vector<VoxelVertex> m_opaqueVertices;
 	std::vector<uint32_t> m_opaqueIndices;
@@ -94,6 +102,4 @@ private:
 	std::vector<uint32_t> m_semiAlphaIndices;
 
 	ChunkConstantData m_constantData;
-
-	std::unordered_map<uint8_t, std::vector<Vector3>> m_instanceMap;
 };

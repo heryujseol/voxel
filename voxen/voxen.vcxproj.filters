@@ -101,6 +101,9 @@
     <ClInclude Include="MeshGenerator.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Instance.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="light.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -108,6 +111,9 @@
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include="..\.gitignore" />
+    <None Include="Common.hlsli">
+      <Filter>쉐이더 파일</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicVS.hlsl">
@@ -134,19 +140,28 @@
     <FxCompile Include="SamplingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="DepthOnlyVS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="DepthOnlyPS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="PostEffectPS.hlsl">
+    <FxCompile Include="FogPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="InstanceVS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="InstancePS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="EnvMapGS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="EnvMapVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="MirrorMaskingPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="MirrorBlendingPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="BlurPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="BasicShadowVS.hlsl">
