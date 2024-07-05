@@ -12,8 +12,6 @@ Light::~Light() {}
 
 bool Light::Initialize()
 {
-
-
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create constant buffer in light" << std::endl;
 		return false;
@@ -34,25 +32,29 @@ void Light::Update(float dt, Camera& camera)
 	float angle = (float)m_dateTime / DATE_CYCLE_AMOUNT * 2.0f * Utils::PI;
 	
 	m_dir = Vector3::Transform(Vector3(-1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
-	m_constantData.lightDir = m_dir;
 	m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
 
-	float cascade[4] = { 0.2f, 0.4f, 0.6f, 1.0f };
+	float cascade[CASCADE_NUM] = { 0.125f, 0.25f, 0.5f, 1.0f };
+	float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 1536.0f, 1792.0f };
 
-	for (int i = 0; i < 4; i++) {
-		m_constantData.lightPos[i] = Vector4::Transform(
-			Vector4(450.0f * cascade[i], 0.0f, 0.0f, 1.0f), Matrix::CreateRotationZ(angle));
-		m_lightPos = m_constantData.lightPos[i];
+	for (int i = 0; i < CASCADE_NUM; i++) {
+		m_lightPos = Vector4::Transform(
+			Vector4(550.0f * cascade[i], 0.0f, 0.0f, 1.0f), Matrix::CreateRotationZ(angle));
 
-		Matrix viewRow = XMMatrixLookToLH(
-			m_constantData.lightPos[i], m_constantData.lightDir, m_up);
-		Matrix projRow = XMMatrixOrthographicLH(1080.0f, 1080.0f, 0.1f, 3000.0f);
+		float viewWidth = 1024.0f * cascade[CASCADE_NUM - 1 - i];
+		float viewHeight = viewWidth;
+
+		Matrix viewRow = XMMatrixLookToLH(m_lightPos, m_dir, m_up);
+		Matrix projRow = XMMatrixOrthographicLH(viewWidth, viewHeight, 0.1f, 3000.0f);
 		//XMMatrixPerspectiveFovLH(3.141592f / 2.0f, 1.0f, 0.1f, 3000.0f);
-
-		m_constantData.invProj[i] = projRow.Invert().Transpose();
 
 		m_constantData.view[i] = viewRow.Transpose();
 		m_constantData.proj[i] = projRow.Transpose();
+		m_constantData.invProj[i] = projRow.Invert().Transpose();
+		m_constantData.topLX[i] = topLX[i];
+		m_constantData.viewWith[i] = viewWidth;
+
+		DXUtils::UpdateViewport(m_viewPorts[i], topLX[i], 0.0f, viewWidth, viewHeight);
 	}
 
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);

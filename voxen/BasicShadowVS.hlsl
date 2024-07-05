@@ -9,11 +9,6 @@ cbuffer ChunkConstantBuffer : register(b1)
     matrix world;
 }
 
-//cbuffer LightConstantBuffer : register(b2)
-//{
-//    Matrix Lview[4];
-//    Matrix Lproj[4];
-//}
 
 struct vsOutput
 {
@@ -33,8 +28,6 @@ vsOutput main(uint data : DATA, uint vertexID : SV_VertexID)
     float3 position = float3(float(x), float(y), float(z));
     
     output.posWorld = mul(float4(position, 1.0), world);
-    //output.posWorld = mul(float4(position, 1.0), Lview[3]);
-    //output.posWorld = mul(output.posWorld, Lproj[3]);
     
     return output;
 }

@@ -67,8 +67,7 @@ struct CloudConstantData {
 struct LightConstantData {
 	Matrix view[4];
 	Matrix proj[4];
-	Vector4 lightPos[4];
-	Vector3 lightDir;
-	float dummy2;
 	Matrix invProj[4];
+	float topLX[4];
+	float viewWith[4];
 };

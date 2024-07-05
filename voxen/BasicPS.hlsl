@@ -1,6 +1,6 @@
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
-Texture2DArray shadowMap : register(t2);
+Texture2D shadowMap : register(t2);
 
 SamplerState pointWrapSS : register(s0);
 SamplerState linearWrapSS : register(s1);
@@ -33,11 +33,9 @@ cbuffer LightConstantBuffer : register(b2)
 {
     Matrix lightView[4];
     Matrix lightProj[4];
-    float3 lightPos[4];
-    float dummy1[4];
-    float3 lightDir;
-    float dummy2;
     Matrix invProj[4];
+    float topLX[4];
+    float viewWith[4];
 }
 
 struct vsOutput
@@ -217,8 +215,8 @@ float getShadowFactor(float3 posWorld)
 
     ////return shadowFactor;
     
-    float width, height, numElements, numMips;
-    shadowMap.GetDimensions(0, width, height, numElements, numMips);
+    float width, height, numMips;
+    shadowMap.GetDimensions(0, width, height, numMips);
     
     [unroll]
     for (int i = 0; i < 4; ++i)
@@ -229,12 +227,19 @@ float getShadowFactor(float3 posWorld)
         // NDC -> 텍스쳐 좌표계
         shadowPos.x = shadowPos.x * 0.5f + 0.5f;
         shadowPos.y = shadowPos.y * -0.5f + 0.5f;
-
+        
+        
+        // 텍스쳐 내에서 몇번째 텍스쳐인지 구분해내야함
         // 텍스쳐 좌표계 안이 아니라면 패스
         if (shadowPos.x < 0 || shadowPos.x > 1 || shadowPos.y < 0 || shadowPos.y > 1)
         {
             continue;
         }
+        
+        
+        // 뷰포트 내의 상대좌표 계산 + 시작위치
+        shadowPos.x = shadowPos.x * (viewWith[i] / 1920.0) + (topLX[i] / 1920.0);
+        shadowPos.y = shadowPos.y * (viewWith[i] / 1024.0);
 
 
         // Depth in NDC space.
@@ -259,7 +264,7 @@ float getShadowFactor(float3 posWorld)
         [unroll]
         for (int j = 0; j < 9; ++j)
         {
-            percentLit += shadowMap.SampleCmpLevelZero(shadowCompareSS, float3(shadowPos.xy + offsets[j], i), depth).r;
+            percentLit += shadowMap.SampleCmpLevelZero(shadowCompareSS, float2(shadowPos.xy + offsets[j]), depth).r;
         }
         return percentLit / 9.0f;
     }
@@ -291,7 +296,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3 diff = strength * ndotl;
     float3 spec = pow(max(hdotn, 0.0), 4.0);
     
-    float shadowFactor = getShadowFactor(input.posWorld);
+    float shadowFactor = 1.0; //getShadowFactor(input.posWorld);
     //if (shadowFactor == 1)
     //    color = float3(1.0, 0.0, 0.0);
     //else if (shadowFactor == 2)

@@ -2,10 +2,9 @@ cbuffer LightConstantBuffer : register(b0)
 {
     Matrix view[4];
     Matrix proj[4];
-    float4 lightPos[4];
-    float3 lightDir;
-    float dummy2;
     Matrix invProj[4];
+    float topLX[4];
+    float viewWith[4];
 }
 
 struct vsOutput
@@ -16,8 +15,8 @@ struct vsOutput
 struct gsOutput
 {
     float4 pos : SV_POSITION;
-    uint RTIndex : SV_RenderTargetArrayIndex;
-    //uint VPIndex : SV_ViewportArrayIndex;
+    //uint RTIndex : SV_RenderTargetArrayIndex;
+    uint VPIndex : SV_ViewportArrayIndex;
 };
 
 [maxvertexcount(12)]
@@ -27,8 +26,8 @@ void main(triangle vsOutput input[3], inout TriangleStream<gsOutput> output)
     
     for (int face = 0; face < 4; ++face)
     {
-        element.RTIndex = face;
-        //element.VPIndex = face;
+        //element.RTIndex = face;
+        element.VPIndex = face;
         
         for (int i = 0; i < 3; ++i)
         {

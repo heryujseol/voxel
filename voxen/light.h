@@ -20,7 +20,7 @@ public:
 	void Update(float dt, Camera& camera);
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-	//D3D11_VIEWPORT m_viewPorts[4];
+	D3D11_VIEWPORT m_viewPorts[4];
 
 private:
 

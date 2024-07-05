@@ -164,9 +164,7 @@ void App::Render()
 	//// shadowMap
 	//	shadowSRV를 basic, instance sr 에 추가
 
-	DXUtils::UpdateViewport(Graphics::shadowViewport, 0, 0, m_shadowWidth, m_shadowHeight);
-	//Graphics::context->RSSetViewports(4, m_light.m_viewPorts);
-	Graphics::context->RSSetViewports(1, &Graphics::shadowViewport);
+	Graphics::context->RSSetViewports(4, m_light.m_viewPorts);
 
 	/*Graphics::context->OMSetRenderTargets(
 		4, Graphics::shadowRenderRTV->GetAddressOf(), Graphics::shadowDSV.Get());*/

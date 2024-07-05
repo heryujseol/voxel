@@ -77,9 +77,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> postEffectBuffer;
 	ComPtr<ID3D11RenderTargetView> postEffectRTV;
 
-	ComPtr<ID3D11Texture2D> shadowRenderBuffer[4];
-	ComPtr<ID3D11RenderTargetView> shadowRenderRTV[4];
-
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -117,7 +114,7 @@ namespace Graphics {
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
-	D3D11_VIEWPORT shadowViewport;
+	//D3D11_VIEWPORT shadowViewport[4];
 
 
 	// PSO
@@ -168,7 +165,7 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 	desc.BufferDesc.RefreshRate.Numerator = 60;
 	desc.BufferDesc.RefreshRate.Denominator = 1;
 	desc.BufferDesc.Format = pixelFormat;
-	desc.SampleDesc.Count = 1; // backbuffer´Â ¸ÖÆ¼ »ùÇÃ¸µ ÇÏÁö ¾ÊÀ½
+	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferCount = 2;
@@ -242,22 +239,6 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 		return false;
 	}
 
-	// Shadow RTV
-	for (int i = 0; i < 4; i++) {
-		
-		if (!DXUtils::CreateTextureBuffer(
-				shadowRenderBuffer[i], width, height, false, format, bindFlag)) {
-			std::cout << "failed create render target buffer" << std::endl;
-			return false;
-		}
-		ret = Graphics::device->CreateRenderTargetView(
-			shadowRenderBuffer[i].Get(), nullptr, shadowRenderRTV[i].GetAddressOf());
-		if (FAILED(ret)) {
-			std::cout << "failed create render target view" << std::endl;
-			return false;
-		}
-	}
-
 	return true;
 }
 
@@ -300,20 +281,17 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	}
 
 	// shadow DSV
-	UINT shadowWidth = 1080;
-	UINT shadowHeight = 1080;
+	UINT shadowWidth = 1920;
+	UINT shadowHeight = 1024;
 	if (!DXUtils::CreateTextureBuffer(
-			shadowBuffer, shadowWidth, shadowHeight, false, format, (UINT)72, 1, 4)) {
+			shadowBuffer, shadowWidth, shadowHeight, false, format, (UINT)72)) {
 		std::cout << "failed create shadow depth stencil buffer" << std::endl;
 		return false;
 	}
 
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
 	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-	dsvDesc.Texture2DArray.MipSlice = 0;
-	dsvDesc.Texture2DArray.ArraySize = 4;
-	dsvDesc.Texture2DArray.FirstArraySlice = 0;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	ret = Graphics::device->CreateDepthStencilView(
 		shadowBuffer.Get(), &dsvDesc, shadowDSV.GetAddressOf());
 	if (FAILED(ret)) {
@@ -399,11 +377,9 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 	// shadowSRV
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2DArray.MostDetailedMip = 0;
 	srvDesc.Texture2DArray.MipLevels = 1;
-	srvDesc.Texture2DArray.FirstArraySlice = 0;
-	srvDesc.Texture2DArray.ArraySize = 4;
 	ret = Graphics::device->CreateShaderResourceView(
 		Graphics::shadowBuffer.Get(), &srvDesc, shadowSRV.GetAddressOf());
 	if (FAILED(ret)) {

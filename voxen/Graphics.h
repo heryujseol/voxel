@@ -81,9 +81,6 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> postEffectBuffer;
 	extern ComPtr<ID3D11RenderTargetView> postEffectRTV;
-
-	extern ComPtr<ID3D11Texture2D> shadowRenderBuffer[4];
-	extern ComPtr<ID3D11RenderTargetView> shadowRenderRTV[4];
 	
 
 	// DSV & Buffer
@@ -121,7 +118,7 @@ namespace Graphics {
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
-	extern D3D11_VIEWPORT shadowViewport;
+	//extern D3D11_VIEWPORT shadowViewport[4];
 
 
 	// device, context, swapChain
