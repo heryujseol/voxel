@@ -264,7 +264,7 @@ void ChunkManager::UpdateLoadChunkList()
 
 		// load chunk
 		chunk->Initialize();
-		UpdateChunkBuffer(chunk);
+		InitChunkBuffer(chunk);
 
 		// set load value
 		loadCount++;
@@ -296,7 +296,6 @@ void ChunkManager::UpdateUnloadChunkList()
 		int z = (int)pos.z;
 		m_chunkMap.erase(std::make_tuple(x, y, z));
 
-		// ClearChunkBuffer(chunk);
 		ReleaseChunkToPool(chunk);
 
 		chunk->Clear();
@@ -357,15 +356,9 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	}
 
 	for (int i = 0; i < Instance::INSTANCE_TYPE_COUNT; ++i) {
-		if (DXUtils::CheckResizeBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i])) {
-			m_instanceInfoBuffers[i].Reset();
-			m_instanceInfoBuffers[i] = nullptr;
-
-			DXUtils::CreateInstanceBuffer(
-				m_instanceInfoBuffers[i], (UINT)m_instanceInfoList[i].size() + 1024);
-		}
-
-		DXUtils::UpdateInstanceBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i]);
+		DXUtils::ResizeBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i],
+			(UINT)D3D11_BIND_VERTEX_BUFFER, m_instanceInfoList[i].size() + 1024);
+		DXUtils::UpdateBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i]);
 	}
 }
 
@@ -418,79 +411,64 @@ bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirr
 	return true;
 }
 
-bool ChunkManager::UpdateChunkBuffer(Chunk* chunk)
+void ChunkManager::InitChunkBuffer(Chunk* chunk)
 {
 	if (chunk->IsEmpty())
-		return true;
+		return;
 
 	UINT id = chunk->GetID();
 
 	// constant data
 	ChunkConstantData tempConstantData = chunk->GetConstantData();
 	tempConstantData.world = tempConstantData.world.Transpose();
-	if (!m_constantBuffers[id]) {
-		if (!DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData)) {
-			std::cout << "failed create constant buffer in chunk manager" << std::endl;
-			return false;
-		}
-	}
-	else {
+	if (!m_constantBuffers[id])
+		DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData);
+	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
-	}
 
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
-		if (!DXUtils::CreateVertexBuffer(m_lowLodVertexBuffers[id], chunk->GetLowLodVertices())) {
-			std::cout << "failed create vertex buffer in chunk manager" << std::endl;
-			return false;
-		}
-		if (!DXUtils::CreateIndexBuffer(m_lowLodIndexBuffers[id], chunk->GetLowLodIndices())) {
-			std::cout << "failed create index buffer in chunk manager" << std::endl;
-			return false;
-		}
+		DXUtils::ResizeBuffer(
+			m_lowLodVertexBuffers[id], chunk->GetLowLodVertices(), (UINT)D3D11_BIND_VERTEX_BUFFER);
+		DXUtils::ResizeBuffer(
+			m_lowLodIndexBuffers[id], chunk->GetLowLodIndices(), (UINT)D3D11_BIND_INDEX_BUFFER);
+
+		DXUtils::UpdateBuffer(m_lowLodVertexBuffers[id], chunk->GetLowLodVertices());
+		DXUtils::UpdateBuffer(m_lowLodIndexBuffers[id], chunk->GetLowLodIndices());
 	}
 
 	// opaque
 	if (!chunk->IsEmptyOpaque()) {
-		if (!DXUtils::CreateVertexBuffer(m_opaqueVertexBuffers[id], chunk->GetOpaqueVertices())) {
-			std::cout << "failed create vertex buffer in chunk manager" << std::endl;
-			return false;
-		}
-		if (!DXUtils::CreateIndexBuffer(m_opaqueIndexBuffers[id], chunk->GetOpaqueIndices())) {
-			std::cout << "failed create index buffer in chunk manager" << std::endl;
-			return false;
-		}
+		DXUtils::ResizeBuffer(
+			m_opaqueVertexBuffers[id], chunk->GetOpaqueVertices(), (UINT)D3D11_BIND_VERTEX_BUFFER);
+		DXUtils::ResizeBuffer(
+			m_opaqueIndexBuffers[id], chunk->GetOpaqueIndices(), (UINT)D3D11_BIND_INDEX_BUFFER);
+
+		DXUtils::UpdateBuffer(m_opaqueVertexBuffers[id], chunk->GetOpaqueVertices());
+		DXUtils::UpdateBuffer(m_opaqueIndexBuffers[id], chunk->GetOpaqueIndices());
 	}
 
 	// transparency
 	if (!chunk->IsEmptyTransparency()) {
-		if (!DXUtils::CreateVertexBuffer(
-				m_transparencyVertexBuffers[id], chunk->GetTransparencyVertices())) {
-			std::cout << "failed create vertex buffer in chunk manager" << std::endl;
-			return false;
-		}
-		if (!DXUtils::CreateIndexBuffer(
-				m_transparencyIndexBuffers[id], chunk->GetTransparencyIndices())) {
-			std::cout << "failed create index buffer in chunk manager" << std::endl;
-			return false;
-		}
+		DXUtils::ResizeBuffer(m_transparencyVertexBuffers[id], chunk->GetTransparencyVertices(),
+			(UINT)D3D11_BIND_VERTEX_BUFFER);
+		DXUtils::ResizeBuffer(m_transparencyIndexBuffers[id], chunk->GetTransparencyIndices(),
+			(UINT)D3D11_BIND_INDEX_BUFFER);
+
+		DXUtils::UpdateBuffer(m_transparencyVertexBuffers[id], chunk->GetTransparencyVertices());
+		DXUtils::UpdateBuffer(m_transparencyIndexBuffers[id], chunk->GetTransparencyIndices());
 	}
 
 	// semiAlpha
 	if (!chunk->IsEmptySemiAlpha()) {
-		if (!DXUtils::CreateVertexBuffer(
-				m_semiAlphaVertexBuffers[id], chunk->GetSemiAlphaVertices())) {
-			std::cout << "failed create vertex buffer in chunk manager" << std::endl;
-			return false;
-		}
-		if (!DXUtils::CreateIndexBuffer(
-				m_semiAlphaIndexBuffers[id], chunk->GetSemiAlphaIndices())) {
-			std::cout << "failed create index buffer in chunk manager" << std::endl;
-			return false;
-		}
-	}
+		DXUtils::ResizeBuffer(m_semiAlphaVertexBuffers[id], chunk->GetSemiAlphaVertices(),
+			(UINT)D3D11_BIND_VERTEX_BUFFER);
+		DXUtils::ResizeBuffer(m_semiAlphaIndexBuffers[id], chunk->GetSemiAlphaIndices(),
+			(UINT)D3D11_BIND_INDEX_BUFFER);
 
-	return true;
+		DXUtils::UpdateBuffer(m_semiAlphaVertexBuffers[id], chunk->GetSemiAlphaVertices());
+		DXUtils::UpdateBuffer(m_semiAlphaIndexBuffers[id], chunk->GetSemiAlphaIndices());
+	}
 }
 
 void ChunkManager::ClearChunkBuffer(Chunk* chunk)
@@ -586,7 +564,9 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 bool ChunkManager::MakeInstanceInfoBuffer()
 {
 	for (auto& instanceBuffer : m_instanceInfoBuffers) {
-		if (!DXUtils::CreateInstanceBuffer(instanceBuffer, MAX_INSTANCE_BUFFER_COUNT)) { // ¾à 8MB
+		if (!DXUtils::CreateDynamicBuffer(instanceBuffer, MAX_INSTANCE_BUFFER_COUNT,
+				sizeof(InstanceInfoVertex),
+				(UINT)D3D11_BIND_VERTEX_BUFFER)) { // ¾à 8MB
 			std::cout << "failed create instance info buffer in chunk manager" << std::endl;
 			return false;
 		}

@@ -51,7 +51,7 @@ private:
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
-	bool UpdateChunkBuffer(Chunk* chunk);
+	void InitChunkBuffer(Chunk* chunk);
 
 	void ClearChunkBuffer(Chunk* chunk);
 	
