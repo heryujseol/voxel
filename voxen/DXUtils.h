@@ -87,20 +87,66 @@ namespace DXUtils {
 		return true;
 	}
 
-	static bool CreateInstanceBuffer(ComPtr<ID3D11Buffer>& instanceBuffer, UINT maxCount)
+	static bool CreateDynamicBuffer(
+		ComPtr<ID3D11Buffer>& buffer, size_t count, size_t stride, UINT bindFlags)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.ByteWidth = UINT(maxCount * sizeof(InstanceInfo));
+		desc.ByteWidth = (UINT)count * (UINT)stride;
 		desc.Usage = D3D11_USAGE_DYNAMIC;
-		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.BindFlags = bindFlags;
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		HRESULT ret = Graphics::device->CreateBuffer(&desc, nullptr, instanceBuffer.GetAddressOf());
+		HRESULT ret = Graphics::device->CreateBuffer(&desc, nullptr, buffer.GetAddressOf());
 		if (FAILED(ret))
 			return false;
 
 		return true;
+	}
+
+	template <typename T>
+	static bool CheckResizeBuffer(
+		ComPtr<ID3D11Buffer>& currentBuffer, const std::vector<T>& newDataList)
+	{
+		if (!currentBuffer)
+			return true;
+
+		D3D11_BUFFER_DESC desc;
+		currentBuffer->GetDesc(&desc);
+
+		UINT currentBufferCount = desc.ByteWidth / sizeof(T);
+		if (currentBufferCount < newDataList.size())
+			return true;
+		else
+			return false;
+	}
+
+	template <typename T>
+	static bool ResizeBuffer(ComPtr<ID3D11Buffer>& buffer, const std::vector<T>& dataSet,
+		UINT bindFlags, size_t count = -1)
+	{
+		if (DXUtils::CheckResizeBuffer(buffer, dataSet)) {
+			buffer.Reset();
+			buffer = nullptr;
+
+			count = (count == -1) ? dataSet.size() : count;
+			if (!DXUtils::CreateDynamicBuffer(buffer, count, sizeof(T), bindFlags)) {
+				std::cout << "failed resize buffer" << std::endl;
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	template <typename T>
+	static void UpdateBuffer(ComPtr<ID3D11Buffer>& buffer, const std::vector<T>& dataSet)
+	{
+		D3D11_MAPPED_SUBRESOURCE ms;
+
+		Graphics::context->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		memcpy(ms.pData, dataSet.data(), sizeof(T) * dataSet.size());
+		Graphics::context->Unmap(buffer.Get(), 0);
 	}
 
 
@@ -116,17 +162,6 @@ namespace DXUtils {
 	}
 
 
-	static void UpdateInstanceBuffer(
-		ComPtr<ID3D11Buffer>& instanceBuffer, const std::vector<InstanceInfo>& instanceInfo)
-	{
-		D3D11_MAPPED_SUBRESOURCE ms;
-
-		Graphics::context->Map(instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-		memcpy(ms.pData, instanceInfo.data(), sizeof(InstanceInfo) * instanceInfo.size());
-		Graphics::context->Unmap(instanceBuffer.Get(), 0);
-	}
-
-
 	static bool CreateVertexShaderAndInputLayout(const std::wstring& filename,
 		ComPtr<ID3D11VertexShader>& vs, ComPtr<ID3D11InputLayout>& il,
 		const std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc, D3D_SHADER_MACRO* macro = nullptr)
@@ -139,8 +174,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -176,8 +211,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -209,8 +244,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> shaderBlob = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
-		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), macro, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());

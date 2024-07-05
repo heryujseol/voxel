@@ -152,8 +152,11 @@ void App::Render()
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
-	// DepthOnly
-	RenderDepthOnly();
+	// Background (Sky + Cloud)
+	RenderBackground();
+
+	// DepthOnly Basic
+	RenderDepthOnlyBasic();
 
 	// Basic
 	RenderBasic();
@@ -161,31 +164,12 @@ void App::Render()
 	// Mirror
 	RenderMirror();
 
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+	// DepthOnly Mirror
+	RenderDepthOnlyMirror();
 
 	// postEffect
-	//Graphics::SetPipelineStates(Graphics::fogPSO);
-	//m_postEffect.RenderFog();
-
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	// skybox
-	Graphics::SetPipelineStates(Graphics::skyboxPSO);
-	m_skybox.Render();
-
-	// cloud
-	Graphics::SetPipelineStates(Graphics::cloudPSO);
-	m_cloud.Render();
-
-
-	// RTV -> backBuffer
-	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
-		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-	// GUI 렌더링을 위한 RTV 재설정
-	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+	Graphics::SetPipelineStates(Graphics::fogPSO);
+	m_postEffect.RenderFog();
 }
 
 bool App::InitWindow()
@@ -278,22 +262,6 @@ bool App::InitScene()
 	return true;
 }
 
-void App::RenderDepthOnly()
-{
-	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
-	Graphics::context->ClearDepthStencilView(
-		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	Graphics::SetPipelineStates(Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-
-	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	m_chunkManager.RenderSemiAlpha();
-
-	Graphics::SetPipelineStates(Graphics::instancePSO);
-	m_chunkManager.RenderInstance();
-}
-
 void App::RenderEnvMap()
 {
 	Graphics::context->ClearDepthStencilView(Graphics::envMapDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -312,27 +280,51 @@ void App::RenderEnvMap()
 	m_skybox.Render();
 }
 
+void App::RenderBackground() 
+{
+	Graphics::context->ClearDepthStencilView(
+		Graphics::backgroundDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::backgroundRTV.GetAddressOf(), Graphics::backgroundDSV.Get());
+
+	// skybox
+	Graphics::SetPipelineStates(Graphics::skyboxPSO);
+	m_skybox.Render();
+
+	// cloud
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
+}
+
+void App::RenderDepthOnlyBasic()
+{
+	Graphics::context->ClearDepthStencilView(
+		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::depthOnlyDSV.Get());
+
+	m_chunkManager.RenderBasic(m_camera.GetPosition(), true);
+}
+
+void App::RenderDepthOnlyMirror()
+{
+	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::depthOnlyDSV.Get());
+
+	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
+	m_chunkManager.RenderTransparency(false);
+}
+
 void App::RenderBasic()
 {
-	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
-	Graphics::context->ClearDepthStencilView(
-		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	Graphics::context->ClearDepthStencilView(Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	
+	Graphics::context->CopyResource(
+		Graphics::basicRenderBuffer.Get(), Graphics::backgroundRenderBuffer.Get());
 
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	// opaque
-	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-
-	// semiAlpha
-	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	m_chunkManager.RenderSemiAlpha();
-
-	// instance
-	Graphics::SetPipelineStates(Graphics::instancePSO);
-	m_chunkManager.RenderInstance();
+	m_chunkManager.RenderBasic(m_camera.GetPosition(), false);
 }
 
 void App::RenderMirror()
@@ -344,8 +336,8 @@ void App::RenderMirror()
 	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::mirrorPlaneDepthDSV.Get());
 	Graphics::context->ClearDepthStencilView(
 		Graphics::mirrorPlaneDepthDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	Graphics::SetPipelineStates(Graphics::basicPSO);
-	m_chunkManager.RenderTransparency();
+	Graphics::SetPipelineStates(Graphics::mirrorDepthPSO);
+	m_chunkManager.RenderTransparency(false);
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
@@ -355,9 +347,8 @@ void App::RenderMirror()
 		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
 
 	// plane stencil and envMap
-	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
-	m_chunkManager.RenderTransparency();
+	Graphics::SetPipelineStates(Graphics::mirrorMaskingExceptDepthPSO);
+	m_chunkManager.RenderTransparency(false);
 
 	// mirror cloud
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
@@ -366,8 +357,7 @@ void App::RenderMirror()
 
 	// mirror low lod world
 	Graphics::context->PSSetShaderResources(2, 1, Graphics::mirrorPlaneDepthSRV.GetAddressOf());
-	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
-	m_chunkManager.RenderMirror();
+	m_chunkManager.RenderMirrorWorld();
 
 	// blur mirror world
 	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
@@ -384,11 +374,6 @@ void App::RenderMirror()
 	Graphics::context->ResolveSubresource(Graphics::basicResolvedBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::mirrorWorldSRV.Get(), Graphics::depthOnlySRV.Get(),
-		Graphics::basicResolvedSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 4, pptr.data());
-
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
-	m_chunkManager.RenderTransparency();
+	m_chunkManager.RenderTransparency(true);
 }

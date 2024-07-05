@@ -26,7 +26,7 @@ struct InstanceVertex {
 	Vector2 texcoord;
 };
 
-struct InstanceInfo {
+struct InstanceInfoVertex {
 	Matrix instanceWorld;
 	uint32_t type;
 };
@@ -35,9 +35,9 @@ struct CameraConstantData {
 	Matrix view;
 	Matrix proj;
 	Vector3 eyePos;
-	float dummy1;
+	float maxRenderDistance;
 	Vector3 eyeDir;
-	float dummy2;
+	float lodRenderDistance;
 	Matrix invProj;
 };
 

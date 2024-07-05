@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Block.h"
+#include "Instance.h"
 #include "Structure.h"
 #include "Terrain.h"
 
@@ -8,6 +9,7 @@
 #include <wrl.h>
 #include <directxtk/SimpleMath.h>
 #include <vector>
+#include <map>
 
 using namespace Microsoft::WRL;
 using namespace DirectX::SimpleMath;
@@ -62,7 +64,7 @@ public:
 	}
 	inline const std::vector<uint32_t>& GetSemiAlphaIndices() const { return m_semiAlphaIndices; }
 
-	inline const std::unordered_map<uint8_t, std::vector<Vector3>>& GetInstanceMap() const
+	inline const std::map<std::tuple<int, int, int>, Instance>& GetInstanceMap() const
 	{
 		return m_instanceMap;
 	}
@@ -81,6 +83,7 @@ private:
 		std::vector<uint32_t>& indices, uint8_t type);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
+	std::map<std::tuple<int, int, int>, Instance> m_instanceMap;
 
 	UINT m_id;
 	bool m_isLoaded;
@@ -99,6 +102,4 @@ private:
 	std::vector<uint32_t> m_semiAlphaIndices;
 
 	ChunkConstantData m_constantData;
-
-	std::unordered_map<uint8_t, std::vector<Vector3>> m_instanceMap;
 };

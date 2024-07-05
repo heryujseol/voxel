@@ -14,15 +14,16 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 11;
+	static const int CHUNK_COUNT = 2 * (Camera::MAX_RENDER_DISTANCE / Chunk::CHUNK_SIZE) + 1;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
+	static const int CHUNK_POOL_SIZE = CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P;
 	static const int MAX_ASYNC_LOAD_COUNT = 1;
-	static const int MAX_INSTANCE_RENDER_DISTANCE = 160;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
-	static const int MAX_INSTANCE_BUFFER_COUNT = MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfo);
+	static const int MAX_INSTANCE_BUFFER_COUNT =
+		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
 
 	ChunkManager();
 	~ChunkManager();
@@ -30,11 +31,16 @@ public:
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
 
-	void RenderOpaque();
-	void RenderSemiAlpha();
-	void RenderTransparency();
+	void RenderOpaqueChunk(Chunk* chunk);
+	void RenderSemiAlphaChunk(Chunk* chunk);
+	void RenderLowLodChunk(Chunk* chunk);
+	void RenderTransparencyChunk(Chunk* chunk);
 	void RenderInstance();
-	void RenderMirror();
+
+	void RenderBasic(Vector3 cameraPos, bool useMasking);
+	void RenderMirrorWorld();
+	void RenderTransparency(bool useBlending);
+	
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
@@ -45,8 +51,10 @@ private:
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
-	bool MakeBuffer(Chunk* chunk);
+	void InitChunkBuffer(Chunk* chunk);
+
 	void ClearChunkBuffer(Chunk* chunk);
+	
 	Chunk* GetChunkFromPool();
 	void ReleaseChunkToPool(Chunk* chunk);
 
@@ -78,6 +86,6 @@ private:
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceIndexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceInfoBuffers;
-	std::vector<std::vector<InstanceInfo>> m_instanceInfoList;
+	std::vector<std::vector<InstanceInfoVertex>> m_instanceInfoList;
 	std::vector<UINT> m_instanceIndexCount;
 };

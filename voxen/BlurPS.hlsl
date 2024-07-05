@@ -1,6 +1,6 @@
-Texture2D mirrorWorldTex : register(t0);
+#include "Common.hlsli"
 
-SamplerState linearClampSS : register(s2);
+Texture2D mirrorWorldTex : register(t0);
 
 cbuffer postEffectConstantBuffer : register(b2)
 {
