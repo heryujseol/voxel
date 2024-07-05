@@ -18,6 +18,21 @@ using namespace DirectX;
 
 
 namespace DXUtils {
+	template <typename T>
+	static bool CheckResizeBuffer(ComPtr<ID3D11Buffer>& currentBuffer, const std::vector<T>& newDataList)
+	{
+		if (!currentBuffer)
+			return true;
+
+		D3D11_BUFFER_DESC desc;
+		currentBuffer->GetDesc(&desc);
+
+		UINT currentBufferCount = desc.ByteWidth / sizeof(T);
+		if (currentBufferCount < newDataList.size())
+			return true;
+		else 
+			return false;
+	}
 
 	template <typename V>
 	static bool CreateVertexBuffer(

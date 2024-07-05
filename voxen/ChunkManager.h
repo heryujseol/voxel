@@ -19,6 +19,7 @@ public:
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
+	static const int CHUNK_POOL_SIZE = CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P;
 	static const int MAX_ASYNC_LOAD_COUNT = 1;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
 	static const int MAX_INSTANCE_BUFFER_COUNT =
@@ -50,8 +51,10 @@ private:
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
-	bool MakeBuffer(Chunk* chunk);
+	bool UpdateChunkBuffer(Chunk* chunk);
+
 	void ClearChunkBuffer(Chunk* chunk);
+	
 	Chunk* GetChunkFromPool();
 	void ReleaseChunkToPool(Chunk* chunk);
 
