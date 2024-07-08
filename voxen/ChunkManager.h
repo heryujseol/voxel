@@ -1,7 +1,6 @@
 #pragma once
 
 #include <map>
-#include <unordered_map>
 #include <queue>
 #include <future>
 
@@ -44,7 +43,7 @@ public:
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
-	void UpdateLoadChunkList();
+	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
