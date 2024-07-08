@@ -47,7 +47,7 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	return true;
 }
 
-void ChunkManager::Update(Camera& camera)
+void ChunkManager::Update(Camera& camera, float dt)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
@@ -58,6 +58,7 @@ void ChunkManager::Update(Camera& camera)
 	UpdateUnloadChunkList();
 	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
+	UpdateChunkConstant(dt);
 }
 
 void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
@@ -154,7 +155,7 @@ void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
 	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
-		Vector3 chunkOffset = c->GetPosition();
+		Vector3 chunkOffset = c->GetOffsetPosition();
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - cameraPos;
 
@@ -221,7 +222,7 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 					m_chunkMap.end()) { // found chunk to be loaded
 					Chunk* chunk = GetChunkFromPool();
 					if (chunk) {
-						chunk->SetPosition(Vector3((float)x, (float)y, (float)z));
+						chunk->SetOffsetPosition(Vector3((float)x, (float)y, (float)z));
 
 						m_chunkMap[std::make_tuple(x, y, z)] = chunk;
 						m_loadChunkList.push_back(chunk);
@@ -244,14 +245,14 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 void ChunkManager::UpdateLoadChunkList(Camera& camera)
 {
 	std::sort(m_loadChunkList.begin(), m_loadChunkList.end(), [&camera](Chunk* a, Chunk* b) {
-		Vector3 aDiff = (a->GetPosition() - camera.GetPosition());
-		Vector3 bDiff = (b->GetPosition() - camera.GetPosition());
+		Vector3 aDiff = (a->GetOffsetPosition() - camera.GetPosition());
+		Vector3 bDiff = (b->GetOffsetPosition() - camera.GetPosition());
 
 		float aDiffLengthXZ = Vector2(aDiff.x, aDiff.z).Length();
 		float bDiffLengthXZ = Vector2(bDiff.x, bDiff.z).Length();
 
 		if (aDiffLengthXZ == bDiffLengthXZ) {
-			return a->GetPosition().y < b->GetPosition().y;
+			return a->GetOffsetPosition().y < b->GetOffsetPosition().y;
 		}
 		return aDiffLengthXZ > bDiffLengthXZ;
 	});
@@ -298,7 +299,7 @@ void ChunkManager::UpdateUnloadChunkList()
 		Chunk* chunk = m_unloadChunkList.back();
 		m_unloadChunkList.pop_back();
 
-		Vector3 pos = chunk->GetPosition();
+		Vector3 pos = chunk->GetOffsetPosition();
 		int x = (int)pos.x;
 		int y = (int)pos.y;
 		int z = (int)pos.z;
@@ -344,8 +345,8 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	// check instance in chunk managerList
 	for (auto& c : m_renderChunkList) {
 		// check distance
-		Vector3 chunkOffset = c->GetPosition();
-		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
+		Vector3 chunkPosition = c->GetPosition();
+		Vector3 chunkCenterPosition = chunkPosition + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - camera.GetPosition();
 		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE)
 			continue;
@@ -356,7 +357,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 			InstanceInfoVertex info;
 			info.type = p.second.GetType();
 
-			info.instanceWorld = p.second.GetWorld().Transpose();
+			info.instanceWorld = (p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
 
 			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
 		}
@@ -366,6 +367,27 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 		DXUtils::ResizeBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i],
 			(UINT)D3D11_BIND_VERTEX_BUFFER, m_instanceInfoList[i].size() + 1024);
 		DXUtils::UpdateBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i]);
+	}
+}
+
+void ChunkManager::UpdateChunkConstant(float dt) 
+{
+	for (auto& p : m_chunkMap) {
+		if (p.second->IsLoaded() && p.second->IsUpdateRequired()) {
+			p.second->Update(dt);
+
+			ChunkConstantData tempConstantData;
+			tempConstantData.world = p.second->GetConstantData().world.Transpose();
+
+			if (m_constantBuffers[p.second->GetID()]) {
+				DXUtils::UpdateConstantBuffer(
+					m_constantBuffers[p.second->GetID()], tempConstantData);
+			}
+
+			if (p.second->GetPosition().y == p.second->GetOffsetPosition().y) {
+				p.second->SetUpdateRequired(false);
+			}
+		}
 	}
 }
 
@@ -428,10 +450,12 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	// constant data
 	ChunkConstantData tempConstantData = chunk->GetConstantData();
 	tempConstantData.world = tempConstantData.world.Transpose();
+	
 	if (!m_constantBuffers[id])
 		DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData);
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
+	
 
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {

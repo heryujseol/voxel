@@ -28,7 +28,7 @@ public:
 	~ChunkManager();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(Camera& camera);
+	void Update(Camera& camera, float dt);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -47,6 +47,7 @@ private:
 	void UpdateUnloadChunkList();
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
+	void UpdateChunkConstant(float dt);
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 

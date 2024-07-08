@@ -35,8 +35,11 @@ public:
 	inline bool IsLoaded() { return m_isLoaded; }
 	inline bool IsEmpty() { return IsEmptyLowLod(); }
 
+	inline Vector3 GetOffsetPosition() { return m_offsetPosition; }
+	inline void SetOffsetPosition(Vector3 offsetPosition) { m_offsetPosition = offsetPosition; }
 	inline Vector3 GetPosition() { return m_position; }
-	inline void SetPosition(Vector3 position) { m_position = position; }
+	inline void SetUpdateRequired(bool isRequired) { m_isUpdateRequired = isRequired; }
+	inline bool IsUpdateRequired() { return m_isUpdateRequired; }
 
 	inline bool IsEmptyLowLod() { return m_lowLodVertices.empty(); }
 	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
@@ -87,7 +90,10 @@ private:
 
 	UINT m_id;
 	bool m_isLoaded;
+	Vector3 m_offsetPosition;
 	Vector3 m_position;
+	
+	bool m_isUpdateRequired;
 
 	std::vector<VoxelVertex> m_lowLodVertices;
 	std::vector<uint32_t> m_lowLodIndices;
