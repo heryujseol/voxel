@@ -320,7 +320,6 @@ void App::RenderEnvMap()
 
 void App::RenderBackground() 
 {
-
 	Graphics::context->ClearDepthStencilView(
 		Graphics::backgroundDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	Graphics::context->OMSetRenderTargets(
