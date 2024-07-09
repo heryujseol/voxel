@@ -29,10 +29,13 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
+	extern ComPtr<ID3D11VertexShader> basicShadowVS;
 
 
 	// Geometry Shader
-	extern ComPtr<ID3D11GeometryShader> skyoxEnvMapGS;
+	extern ComPtr<ID3D11GeometryShader> skyboxEnvMapGS;
+	extern ComPtr<ID3D11GeometryShader> basicShadowGS;
+
 
 
 	// Pixel Shader
@@ -62,6 +65,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
+	extern ComPtr<ID3D11SamplerState> shadowPointSS;
+	extern ComPtr<ID3D11SamplerState> shadowCompareSS;
+
 
 
 	// Depth Stencil State
@@ -111,6 +117,8 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
+	extern ComPtr<ID3D11Texture2D> shadowBuffer;
+	extern ComPtr<ID3D11DepthStencilView> shadowDSV;
 
 	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
@@ -135,6 +143,8 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> copiedDepthOnlyBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copiedDepthOnlySRV;
+	extern ComPtr<ID3D11ShaderResourceView> shadowSRV;
+
 
 	extern ComPtr<ID3D11Texture2D> basicResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
@@ -196,4 +206,7 @@ namespace Graphics {
 	extern GraphicsPSO mirrorMaskingExceptDepthPSO;
 	extern GraphicsPSO mirrorBlendPSO;
 	extern GraphicsPSO mirrorBlurPSO;
+	extern GraphicsPSO basicDepthPSO;
+	extern GraphicsPSO instanceDepthPSO;
+	extern GraphicsPSO basicShadowPSO;
 }

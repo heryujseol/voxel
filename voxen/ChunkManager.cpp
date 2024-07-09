@@ -154,8 +154,8 @@ void ChunkManager::RenderInstance()
 void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
 		Vector3 chunkOffset = c->GetPosition();

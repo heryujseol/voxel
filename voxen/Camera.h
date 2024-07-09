@@ -46,6 +46,12 @@ private:
 	inline void MoveForward(float dt);
 	inline void MoveRight(float dt);
 
+	uint32_t m_dateTime;
+
+	const uint32_t DATE_CYCLE_AMOUNT = 24000;
+	const uint32_t DATE_REAL_TIME = 30; // 60
+	const float DATE_TIME_SPEED = (float)DATE_CYCLE_AMOUNT / DATE_REAL_TIME;
+
 	float m_projFovAngleY;
 	float m_nearZ;
 	float m_farZ;

@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Skybox.h"
 #include "Cloud.h"
+#include "Light.h"
 #include "PostEffect.h"
 
 using namespace Microsoft::WRL;
@@ -23,6 +24,8 @@ public:
 
 	static const UINT WIDTH = 1920;
 	static const UINT HEIGHT = 1080;
+	static const UINT SHADOW_WIDTH = 1920;
+	static const UINT SHADOW_HEIGHT = 1024;
 	static const UINT MIRROR_WIDTH = WIDTH / 2;
 	static const UINT MIRROR_HEIGHT = HEIGHT / 2;
 	static const UINT ENV_MAP_SIZE = WIDTH / 8;
@@ -49,6 +52,7 @@ private:
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;
+	Light m_light;
 	PostEffect m_postEffect;
 
 	bool m_keyPressed[256];

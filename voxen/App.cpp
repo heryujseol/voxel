@@ -131,10 +131,12 @@ void App::Update(float dt)
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
+		m_light.Update(dt, m_camera);
 	}
 	else {
 		m_skybox.Update(0.0f);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
+		m_light.Update(0.0f, m_camera);
 	}
 }
 
@@ -157,6 +159,39 @@ void App::Render()
 
 	// DepthOnly Basic
 	RenderDepthOnlyBasic();
+
+
+	////// shadowMap
+	////	shadowSRV를 basic, instance sr 에 추가
+
+	//Graphics::context->RSSetViewports(4, m_light.m_viewPorts);
+
+	///*Graphics::context->OMSetRenderTargets(
+	//	4, Graphics::shadowRenderRTV->GetAddressOf(), Graphics::shadowDSV.Get());*/
+	//Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
+	//Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	////Graphics::context->VSSetConstantBuffers(2, 1, m_light.m_constantBuffer.GetAddressOf());
+	//Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_constantBuffer.GetAddressOf());
+
+	//Graphics::SetPipelineStates(Graphics::basicShadowPSO);
+	//m_chunkManager.RenderOpaque();
+	//if (!m_keyToggle['L'])
+	//	m_chunkManager.RenderSemiAlpha();
+
+	//Graphics::SetPipelineStates(Graphics::instanceDepthPSO);
+	////Graphics::SetPipelineStates(Graphics::instancePSO);
+	//m_chunkManager.RenderInstance();
+
+
+	////원래대로 되돌리기
+	//Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+	//Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+
+	//Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
+	//Graphics::context->OMSetRenderTargets(
+	//	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	//Graphics::context->ClearDepthStencilView(
+	//	Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	// Basic
 	RenderBasic();
@@ -256,6 +291,9 @@ bool App::InitScene()
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
 		return false;
 
+	if (!m_light.Initialize())
+		return false;
+
 	if (!m_postEffect.Initialize())
 		return false;
 
@@ -282,6 +320,7 @@ void App::RenderEnvMap()
 
 void App::RenderBackground() 
 {
+
 	Graphics::context->ClearDepthStencilView(
 		Graphics::backgroundDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	Graphics::context->OMSetRenderTargets(

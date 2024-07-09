@@ -4,6 +4,8 @@
 SamplerState pointWrapSS : register(s0);
 SamplerState linearWrapSS : register(s1);
 SamplerState linearClampSS : register(s2);
+SamplerState shadowPointSS : register(s3);
+SamplerComparisonState shadowCompareSS : register(s4);
 
 cbuffer CameraConstantBuffer : register(b0)
 {

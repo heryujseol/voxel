@@ -89,6 +89,33 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 
 		m_isOnConstantDirtyFlag = false;
 	}
+	//static float acc = 0.0f;
+
+	//// dateTime
+	//acc += DATE_TIME_SPEED * dt;
+	//m_dateTime = (uint32_t)acc;
+	//m_dateTime %= DATE_CYCLE_AMOUNT;
+
+	//float angle = (float)m_dateTime / DATE_CYCLE_AMOUNT * 2.0f * Utils::PI;
+	//m_constantData.eyePos = Vector3::Transform(Vector3(450.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+	//m_eyePos = m_constantData.eyePos;
+	//m_forward = Vector3::Transform(Vector3(-1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+	//m_constantData.eyeDir = m_forward;
+
+	//// Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+	//m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
+
+	//Matrix viewRow = XMMatrixLookToLH(
+	//	m_constantData.eyePos, m_constantData.eyeDir, m_up);
+	////Matrix projRow = XMMatrixPerspectiveFovLH(XMConvertToRadians(120.0f), 1.0f, 0.1f, 1000.0f);
+	//Matrix projRow = XMMatrixOrthographicLH(1080.0f, 1080.0f, 0.1f, 3000.0f);
+
+	//m_constantData.invProj = projRow.Invert().Transpose();
+
+	//m_constantData.view = viewRow.Transpose();
+	//m_constantData.proj = projRow.Transpose();
+
+	//DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
 
 void Camera::UpdatePosition(bool keyPressed[256], float dt)
