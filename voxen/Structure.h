@@ -52,7 +52,7 @@ struct SkyboxConstantData {
 	uint32_t dateTime;
 	Vector3 normalZenithColor;
 	float sunStrength;
-	Vector3 sunHorizonColor; 
+	Vector3 sunHorizonColor;
 	float moonStrength;
 	Vector3 sunZenithColor;
 	float dummy3;
@@ -74,13 +74,4 @@ struct postEffectConstantData {
 	float dy;
 	float strength;
 	float threshold;
-};
-
-
-struct LightConstantData {
-	Matrix view[4];
-	Matrix proj[4];
-	Matrix invProj[4];
-	float topLX[4];
-	float viewWith[4];
 };
