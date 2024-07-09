@@ -59,6 +59,8 @@ void ChunkManager::Update(Camera& camera, float dt)
 	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
 	UpdateChunkConstant(dt);
+
+	UpdateIsInWater(camera);
 }
 
 void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
@@ -357,7 +359,8 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 			InstanceInfoVertex info;
 			info.type = p.second.GetType();
 
-			info.instanceWorld = (p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
+			info.instanceWorld =
+				(p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
 
 			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
 		}
@@ -370,7 +373,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	}
 }
 
-void ChunkManager::UpdateChunkConstant(float dt) 
+void ChunkManager::UpdateChunkConstant(float dt)
 {
 	for (auto& p : m_chunkMap) {
 		if (p.second->IsLoaded() && p.second->IsUpdateRequired()) {
@@ -450,12 +453,12 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	// constant data
 	ChunkConstantData tempConstantData = chunk->GetConstantData();
 	tempConstantData.world = tempConstantData.world.Transpose();
-	
+
 	if (!m_constantBuffers[id])
 		DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData);
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
-	
+
 
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
@@ -579,4 +582,30 @@ bool ChunkManager::MakeInstanceInfoBuffer()
 	}
 
 	return true;
+}
+
+void ChunkManager::UpdateIsInWater(Camera& camera)
+{
+	camera.m_isInWater = false;
+	Vector3 cameraChunkPos = camera.GetChunkPosition();
+
+	int x = (int)cameraChunkPos.x;
+	int y = (int)cameraChunkPos.y;
+	int z = (int)cameraChunkPos.z;
+
+	auto iter = m_chunkMap.find(std::make_tuple(x, y, z));
+	if (iter == m_chunkMap.end())
+		return;
+
+	Chunk* c = iter->second;
+	if (!c->IsLoaded())
+		return;
+
+	Vector3 chunkPos = camera.GetPosition() - cameraChunkPos;
+	int floorX = (int)std::floor(chunkPos.x);
+	int floorY = (int)std::floor(chunkPos.y);
+	int floorZ = (int)std::floor(chunkPos.z);
+
+	if (c->GetBlockTypeByPosition(floorX, floorY, floorZ) == BLOCK_TYPE::WATER)
+		camera.m_isInWater = true;
 }

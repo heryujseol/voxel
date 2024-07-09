@@ -38,6 +38,7 @@ public:
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
+	bool m_isInWater;
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);

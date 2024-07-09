@@ -1245,6 +1245,7 @@ void Graphics::InitGraphicsPSO()
 
 	// mirrorMaskingPSO
 	mirrorMaskingPSO = basicPSO;
+	mirrorMaskingPSO.rasterizerState = noneCullRS;
 	mirrorMaskingPSO.pixelShader = mirrorMaskingPS;
 	mirrorMaskingPSO.depthStencilState = basicMaskingDSS;
 	mirrorMaskingPSO.stencilRef = 1;
@@ -1264,7 +1265,6 @@ void Graphics::InitGraphicsPSO()
 	mirrorBlurPSO.vertexShader = samplingVS;
 	mirrorBlurPSO.pixelShader = blurXPS;
 
-	
 	// basicshadowPSO
 	basicShadowPSO = basicPSO;
 	basicShadowPSO.vertexShader = basicShadowVS;

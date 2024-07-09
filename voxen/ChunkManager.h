@@ -48,12 +48,11 @@ private:
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 	void UpdateChunkConstant(float dt);
+	void UpdateIsInWater(Camera& camera);
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	void InitChunkBuffer(Chunk* chunk);
-
-	void ClearChunkBuffer(Chunk* chunk);
 	
 	Chunk* GetChunkFromPool();
 	void ReleaseChunkToPool(Chunk* chunk);

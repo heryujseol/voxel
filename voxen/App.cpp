@@ -109,7 +109,7 @@ void App::Run()
 			ImGui::Text("SunDir : %.2f %.2f", sun.x, sun.y);
 			uint32_t time = m_skybox.GetTime();
 			ImGui::Text("time : %d", time);
-			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
+			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
@@ -160,7 +160,6 @@ void App::Render()
 	// DepthOnly Basic
 	RenderDepthOnlyBasic();
 
-
 	////// shadowMap
 	////	shadowSRV를 basic, instance sr 에 추가
 
@@ -198,6 +197,7 @@ void App::Render()
 
 	// Mirror
 	RenderMirror();
+	
 
 	// DepthOnly Mirror
 	RenderDepthOnlyMirror();
