@@ -1,7 +1,6 @@
 #pragma once
 
 #include <map>
-#include <unordered_map>
 #include <queue>
 #include <future>
 
@@ -29,7 +28,7 @@ public:
 	~ChunkManager();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(Camera& camera);
+	void Update(Camera& camera, float dt);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -44,10 +43,11 @@ public:
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
-	void UpdateLoadChunkList();
+	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
+	void UpdateChunkConstant(float dt);
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 

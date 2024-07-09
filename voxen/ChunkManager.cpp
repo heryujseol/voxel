@@ -7,15 +7,11 @@
 #include "Instance.h"
 
 #include <iostream>
+#include <algorithm>
 
 ChunkManager::ChunkManager() {}
 
-ChunkManager::~ChunkManager()
-{
-	for (int i = 0; i < CHUNK_POOL_SIZE; ++i) {
-		ClearChunkBuffer(m_chunkPool[i]);
-	}
-}
+ChunkManager::~ChunkManager() {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
@@ -51,17 +47,18 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	return true;
 }
 
-void ChunkManager::Update(Camera& camera)
+void ChunkManager::Update(Camera& camera, float dt)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
 		camera.m_isOnChunkDirtyFlag = false;
 	}
 
-	UpdateLoadChunkList();
+	UpdateLoadChunkList(camera);
 	UpdateUnloadChunkList();
 	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
+	UpdateChunkConstant(dt);
 }
 
 void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
@@ -158,7 +155,7 @@ void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
 	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
-		Vector3 chunkOffset = c->GetPosition();
+		Vector3 chunkOffset = c->GetOffsetPosition();
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - cameraPos;
 
@@ -213,7 +210,7 @@ void ChunkManager::RenderTransparency(bool useBlending)
 
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
-	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
+	std::map<std::tuple<int, int, int>, bool> renderableChunkMap;
 	for (int i = 0; i < MAX_HEIGHT_CHUNK_COUNT; ++i) {
 		for (int j = 0; j < CHUNK_COUNT; ++j) {
 			for (int k = 0; k < CHUNK_COUNT; ++k) {
@@ -225,29 +222,41 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 					m_chunkMap.end()) { // found chunk to be loaded
 					Chunk* chunk = GetChunkFromPool();
 					if (chunk) {
-						chunk->SetPosition(Vector3((float)x, (float)y, (float)z));
+						chunk->SetOffsetPosition(Vector3((float)x, (float)y, (float)z));
 
 						m_chunkMap[std::make_tuple(x, y, z)] = chunk;
 						m_loadChunkList.push_back(chunk);
 					}
 				}
 				else
-					loadedChunkMap[std::make_tuple(x, y, z)] = true;
+					renderableChunkMap[std::make_tuple(x, y, z)] = true;
 			}
 		}
 	}
 
 	for (auto& p : m_chunkMap) { // { 1, 2, 3 } -> { 1, 2 } : 3 unload
-		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() &&
+		if (renderableChunkMap.find(p.first) == renderableChunkMap.end() &&
 			m_chunkMap[p.first]->IsLoaded()) {
-
 			m_unloadChunkList.push_back(p.second);
 		}
 	}
 }
 
-void ChunkManager::UpdateLoadChunkList()
+void ChunkManager::UpdateLoadChunkList(Camera& camera)
 {
+	std::sort(m_loadChunkList.begin(), m_loadChunkList.end(), [&camera](Chunk* a, Chunk* b) {
+		Vector3 aDiff = (a->GetOffsetPosition() - camera.GetPosition());
+		Vector3 bDiff = (b->GetOffsetPosition() - camera.GetPosition());
+
+		float aDiffLengthXZ = Vector2(aDiff.x, aDiff.z).Length();
+		float bDiffLengthXZ = Vector2(bDiff.x, bDiff.z).Length();
+
+		if (aDiffLengthXZ == bDiffLengthXZ) {
+			return a->GetOffsetPosition().y < b->GetOffsetPosition().y;
+		}
+		return aDiffLengthXZ > bDiffLengthXZ;
+	});
+
 	int loadCount = 0;
 
 	while (!m_loadChunkList.empty() && loadCount < MAX_ASYNC_LOAD_COUNT) {
@@ -290,7 +299,7 @@ void ChunkManager::UpdateUnloadChunkList()
 		Chunk* chunk = m_unloadChunkList.back();
 		m_unloadChunkList.pop_back();
 
-		Vector3 pos = chunk->GetPosition();
+		Vector3 pos = chunk->GetOffsetPosition();
 		int x = (int)pos.x;
 		int y = (int)pos.y;
 		int z = (int)pos.z;
@@ -315,14 +324,13 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera)
 		if (p.second->IsEmpty())
 			continue;
 
-		Vector3 chunkOffsetPos = p.second->GetPosition();
-		if (FrustumCulling(chunkOffsetPos, camera, false)) {
+		Vector3 chunkPos = p.second->GetPosition();
+		if (FrustumCulling(chunkPos, camera, false)) {
 			m_renderChunkList.push_back(p.second);
 		}
 
-		Vector3 mirrorChunkOffsetPos =
-			Vector3::Transform(chunkOffsetPos, camera.GetMirrorPlaneMatrix());
-		if (FrustumCulling(mirrorChunkOffsetPos, camera, true)) {
+		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
+		if (FrustumCulling(mirrorChunkPos, camera, true)) {
 			m_renderMirrorChunkList.push_back(p.second);
 		}
 	}
@@ -337,8 +345,8 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	// check instance in chunk managerList
 	for (auto& c : m_renderChunkList) {
 		// check distance
-		Vector3 chunkOffset = c->GetPosition();
-		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
+		Vector3 chunkPosition = c->GetPosition();
+		Vector3 chunkCenterPosition = chunkPosition + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - camera.GetPosition();
 		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE)
 			continue;
@@ -349,7 +357,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 			InstanceInfoVertex info;
 			info.type = p.second.GetType();
 
-			info.instanceWorld = p.second.GetWorld().Transpose();
+			info.instanceWorld = (p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
 
 			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
 		}
@@ -359,6 +367,27 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 		DXUtils::ResizeBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i],
 			(UINT)D3D11_BIND_VERTEX_BUFFER, m_instanceInfoList[i].size() + 1024);
 		DXUtils::UpdateBuffer(m_instanceInfoBuffers[i], m_instanceInfoList[i]);
+	}
+}
+
+void ChunkManager::UpdateChunkConstant(float dt) 
+{
+	for (auto& p : m_chunkMap) {
+		if (p.second->IsLoaded() && p.second->IsUpdateRequired()) {
+			p.second->Update(dt);
+
+			ChunkConstantData tempConstantData;
+			tempConstantData.world = p.second->GetConstantData().world.Transpose();
+
+			if (m_constantBuffers[p.second->GetID()]) {
+				DXUtils::UpdateConstantBuffer(
+					m_constantBuffers[p.second->GetID()], tempConstantData);
+			}
+
+			if (p.second->GetPosition().y == p.second->GetOffsetPosition().y) {
+				p.second->SetUpdateRequired(false);
+			}
+		}
 	}
 }
 
@@ -421,10 +450,12 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	// constant data
 	ChunkConstantData tempConstantData = chunk->GetConstantData();
 	tempConstantData.world = tempConstantData.world.Transpose();
+	
 	if (!m_constantBuffers[id])
 		DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData);
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
+	
 
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
@@ -469,31 +500,6 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 		DXUtils::UpdateBuffer(m_semiAlphaVertexBuffers[id], chunk->GetSemiAlphaVertices());
 		DXUtils::UpdateBuffer(m_semiAlphaIndexBuffers[id], chunk->GetSemiAlphaIndices());
 	}
-}
-
-void ChunkManager::ClearChunkBuffer(Chunk* chunk)
-{
-	UINT id = chunk->GetID();
-
-	m_lowLodVertexBuffers[id].Reset();
-	m_lowLodIndexBuffers[id].Reset();
-	m_opaqueVertexBuffers[id].Reset();
-	m_opaqueIndexBuffers[id].Reset();
-	m_transparencyVertexBuffers[id].Reset();
-	m_transparencyIndexBuffers[id].Reset();
-	m_semiAlphaVertexBuffers[id].Reset();
-	m_semiAlphaIndexBuffers[id].Reset();
-	m_constantBuffers[id].Reset();
-
-	m_lowLodVertexBuffers[id] = nullptr;
-	m_lowLodIndexBuffers[id] = nullptr;
-	m_opaqueVertexBuffers[id] = nullptr;
-	m_opaqueIndexBuffers[id] = nullptr;
-	m_transparencyVertexBuffers[id] = nullptr;
-	m_transparencyIndexBuffers[id] = nullptr;
-	m_semiAlphaVertexBuffers[id] = nullptr;
-	m_semiAlphaIndexBuffers[id] = nullptr;
-	m_constantBuffers[id] = nullptr;
 }
 
 Chunk* ChunkManager::GetChunkFromPool()

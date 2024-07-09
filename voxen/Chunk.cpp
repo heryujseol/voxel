@@ -6,7 +6,11 @@
 #include <algorithm>
 #include <unordered_map>
 
-Chunk::Chunk(UINT id) : m_id(id), m_position(0.0, 0.0, 0.0), m_isLoaded(false) {}
+Chunk::Chunk(UINT id)
+	: m_id(id), m_isLoaded(false), m_offsetPosition(0.0f, 0.0f, 0.0f), m_position(0.0f, 0.0f, 0.0f),
+	  m_isUpdateRequired(true)
+{
+}
 
 Chunk::~Chunk() { Clear(); }
 
@@ -22,12 +26,19 @@ void Chunk::Initialize()
 	InitWorldVerticesData();
 
 	// 3. initialize constant data
+	m_position = Vector3(m_offsetPosition.x, -2.0f * CHUNK_SIZE, m_offsetPosition.z);
 	m_constantData.world = Matrix::CreateTranslation(m_position);
+	m_isUpdateRequired = true;
 }
 
 void Chunk::Update(float dt)
 {
-	// m_constantData.world *= Matrix::CreateRotationY(dt);
+	m_position.y += 50.0f * dt;
+	if (m_position.y > m_offsetPosition.y) {
+		m_position.y = m_offsetPosition.y;
+	}
+
+	m_constantData.world = Matrix::CreateTranslation(m_position);
 }
 
 void Chunk::Clear()
@@ -51,8 +62,8 @@ void Chunk::InitChunkData()
 {
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
-			int nx = (int)m_position.x + x - 1;
-			int nz = (int)m_position.z + z - 1;
+			int nx = (int)m_offsetPosition.x + x - 1;
+			int nz = (int)m_offsetPosition.z + z - 1;
 
 			int height = Terrain::GetHeight(nx, nz);
 			float t = Terrain::GetPerlinNoise2((float)nx / 182.0f, (float)nz / 182.0f);
@@ -60,7 +71,7 @@ void Chunk::InitChunkData()
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				m_blocks[x][y][z].SetType(0);
 
-				int ny = (int)m_position.y + y - 1;
+				int ny = (int)m_offsetPosition.y + y - 1;
 				if (-64 <= ny && (ny <= height || height <= 62)) {
 					uint8_t type = Terrain::GetType(nx, ny, nz, height, t);
 
@@ -84,26 +95,23 @@ void Chunk::InitInstanceInfoData()
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				int nx = (int)m_position.x + x;
-				int ny = (int)m_position.y + y;
-				int nz = (int)m_position.z + z;
 
 				// instance testing
 				int choose[4] = { 128, 129, 130, 144 };
 				static int loop = 0;
 				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::AIR ||
 						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::WATER) &&
-					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType()) && nx % 3 == 0 &&
-					nz % 3 == 0) {
+					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType()) && x % 3 == 0 &&
+					z % 3 == 0) {
 					Instance instance;
 
 					uint8_t type = choose[loop++ % 4];
 					instance.SetType(type);
 
-					Vector3 pos = Vector3((float)nx, (float)ny, (float)nz) + Vector3(0.5f);
+					Vector3 pos = Vector3((float)x, (float)y, (float)z) + Vector3(0.5f);
 					instance.SetWorld(Matrix::CreateTranslation(pos));
 
-					m_instanceMap[std::make_tuple(nx, ny, nz)] = instance;
+					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
 			}
 		}
