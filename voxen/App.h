@@ -40,11 +40,13 @@ private:
 	void Render();
 
 	void RenderEnvMap();
-	void RenderBackground();
 	void RenderDepthOnlyBasic();
 	void RenderDepthOnlyMirror();
 	void RenderBasic();
 	void RenderMirror();
+	void RenderSkybox();
+	void RenderFog();
+	void RenderCloud();
 
 	HWND m_hwnd;
 

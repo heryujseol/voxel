@@ -89,9 +89,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> basicRTV;
 
-	extern ComPtr<ID3D11Texture2D> backgroundRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> backgroundRTV;
-
 	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
 
@@ -105,9 +102,6 @@ namespace Graphics {
 	// DSV & Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> basicDSV;
-
-	extern ComPtr<ID3D11Texture2D> backgroundDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> backgroundDSV;
 
 	extern ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	extern ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
@@ -139,6 +133,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> cloudResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> cloudSRV;
 
+	extern ComPtr<ID3D11ShaderResourceView> basicDepthSRV;
 	extern ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
 	extern ComPtr<ID3D11Texture2D> copiedDepthOnlyBuffer;

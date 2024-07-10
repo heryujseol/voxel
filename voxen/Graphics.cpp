@@ -86,9 +86,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> basicRTV;
 
-	ComPtr<ID3D11Texture2D> backgroundRenderBuffer;
-	ComPtr<ID3D11RenderTargetView> backgroundRTV;
-
 	ComPtr<ID3D11Texture2D> envMapRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> envMapRTV;
 
@@ -102,9 +99,6 @@ namespace Graphics {
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> basicDSV;
-
-	ComPtr<ID3D11Texture2D> backgroundDepthBuffer;
-	ComPtr<ID3D11DepthStencilView> backgroundDSV;
 
 	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
@@ -136,6 +130,7 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> cloudResolvedBuffer;
 	ComPtr<ID3D11ShaderResourceView> cloudSRV;
 
+	ComPtr<ID3D11ShaderResourceView> basicDepthSRV;
 	ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
 	ComPtr<ID3D11Texture2D> copiedDepthOnlyBuffer;
@@ -304,20 +299,6 @@ bool Graphics::InitRenderTargetBuffers()
 	}
 
 
-	// Cloud RTV
-	if (!DXUtils::CreateTextureBuffer(
-			backgroundRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create background render target buffer" << std::endl;
-		return false;
-	}
-	ret = Graphics::device->CreateRenderTargetView(
-		backgroundRenderBuffer.Get(), nullptr, backgroundRTV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create background render target view" << std::endl;
-		return false;
-	}
-
-
 	// EnvMap RTV
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
@@ -378,8 +359,8 @@ bool Graphics::InitRenderTargetBuffers()
 bool Graphics::InitDepthStencilBuffers()
 {
 	// basic DSV
-	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	DXGI_FORMAT format = DXGI_FORMAT_R24G8_TYPELESS;
+	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
 			basicDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
@@ -388,31 +369,12 @@ bool Graphics::InitDepthStencilBuffers()
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = format;
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	HRESULT ret = Graphics::device->CreateDepthStencilView(
 		basicDepthBuffer.Get(), &dsvDesc, basicDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create depth stencil view" << std::endl;
-		return false;
-	}
-
-	// background DSV
-	format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	bindFlag = D3D11_BIND_DEPTH_STENCIL;
-	if (!DXUtils::CreateTextureBuffer(
-			backgroundDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create background depth stencil buffer" << std::endl;
-		return false;
-	}
-
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = format;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
-	ret = Graphics::device->CreateDepthStencilView(
-		backgroundDepthBuffer.Get(), &dsvDesc, backgroundDSV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create background depth stencil view" << std::endl;
 		return false;
 	}
 
@@ -562,9 +524,19 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
+	// basicDepthSRV
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+	ret = Graphics::device->CreateShaderResourceView(
+		basicDepthBuffer.Get(), &srvDesc, basicDepthSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from basic depth srv" << std::endl;
+		return false;
+	}
 
 	// depth Only
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
 	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
@@ -598,7 +570,7 @@ bool Graphics::InitShaderResourceBuffers()
 		std::cout << "failed create copied depth only buffer" << std::endl;
 		return false;
 	}
-
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
 	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
@@ -615,10 +587,13 @@ bool Graphics::InitShaderResourceBuffers()
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	bindFlag = D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			basicResolvedBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			basicResolvedBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create shader resource buffer from basic resolved" << std::endl;
 		return false;
 	}
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
 	ret = Graphics::device->CreateShaderResourceView(
 		basicResolvedBuffer.Get(), 0, basicResolvedSRV.GetAddressOf());
 	if (FAILED(ret)) {

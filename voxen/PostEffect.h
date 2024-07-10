@@ -16,7 +16,6 @@ public:
 
 	bool Initialize();
 	void Render();
-	void RenderFog();
 	void BlurMirror(int loopCount);
 
 
