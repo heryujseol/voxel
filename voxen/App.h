@@ -40,8 +40,6 @@ private:
 	void Render();
 
 	void RenderEnvMap();
-	void RenderDepthOnlyBasic();
-	void RenderDepthOnlyMirror();
 	void RenderBasic();
 	void RenderMirror();
 	void RenderSkybox();

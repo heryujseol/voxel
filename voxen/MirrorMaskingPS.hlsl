@@ -1,6 +1,8 @@
 #include "Common.hlsli"
 
-TextureCube envMapTexture : register(t0);
+#ifdef USE_ENV_MAPPING
+    TextureCube envMapTexture : register(t0);
+#endif
 
 struct vsOutput
 {
@@ -13,12 +15,16 @@ struct vsOutput
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float3 normal = getNormal(input.face);    
+    float3 normal = getNormal(input.face);
     if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
     
+#ifdef USE_ENV_MAPPING
     float3 toEye = normalize(eyePos - input.posWorld);
     float3 color = envMapTexture.Sample(linearClampSS, reflect(-toEye, normal)).rgb;
-    
+  
     return float4(color, 1.0);
+#else
+    return float4(0.0, 0.0, 0.0, 0.0);
+#endif
 }

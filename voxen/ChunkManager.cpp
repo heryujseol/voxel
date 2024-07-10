@@ -150,40 +150,31 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
+void ChunkManager::RenderBasic(Vector3 cameraPos)
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
-
 	for (auto& c : m_renderChunkList) {
 		Vector3 chunkOffset = c->GetOffsetPosition();
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - cameraPos;
 
-		Graphics::SetPipelineStates(useMasking ? Graphics::basicMaskingPSO : Graphics::basicPSO);
+		Graphics::SetPipelineStates(Graphics::basicPSO);
 		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE) {
 			RenderLowLodChunk(c);
 		}
 		else {
 			RenderOpaqueChunk(c);
 
-			Graphics::SetPipelineStates(
-				useMasking ? Graphics::semiAlphaMaskingPSO : Graphics::semiAlphaPSO);
+			Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
 			RenderSemiAlphaChunk(c);
 		}
 	}
 
-	Graphics::SetPipelineStates(useMasking ? Graphics::instanceMaskingPSO : Graphics::instancePSO);
+	Graphics::SetPipelineStates(Graphics::instancePSO);
 	RenderInstance();
 }
 
 void ChunkManager::RenderMirrorWorld()
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
 	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
 	for (auto& c : m_renderMirrorChunkList) {
 		RenderLowLodChunk(c);
@@ -193,18 +184,8 @@ void ChunkManager::RenderMirrorWorld()
 	RenderInstance();
 }
 
-void ChunkManager::RenderTransparency(bool useBlending)
+void ChunkManager::RenderTransparency()
 {
-	if (useBlending) {
-		std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-			Graphics::mirrorWorldSRV.Get(), Graphics::depthOnlySRV.Get(),
-			Graphics::basicResolvedSRV.Get() };
-		Graphics::context->PSSetShaderResources(0, 4, pptr.data());
-	}
-	else {
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
-	}
-
 	for (auto& c : m_renderChunkList) {
 		RenderTransparencyChunk(c);
 	}
