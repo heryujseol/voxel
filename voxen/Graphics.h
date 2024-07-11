@@ -50,7 +50,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> fogPS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
-	extern ComPtr<ID3D11PixelShader> mirrorMaskingEnvMappingPS;
 	extern ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	extern ComPtr<ID3D11PixelShader> blurXPS;
 	extern ComPtr<ID3D11PixelShader> blurYPS;
@@ -96,6 +95,9 @@ namespace Graphics {
 	
 	extern ComPtr<ID3D11Texture2D> mirrorWorldBlurBuffer[2];
 	extern ComPtr<ID3D11RenderTargetView> mirrorWorldBlurRTV[2];
+
+	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
 	
 
 	// DSV & Buffer
@@ -105,8 +107,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
 
-	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
 	extern ComPtr<ID3D11Texture2D> shadowBuffer;
 	extern ComPtr<ID3D11DepthStencilView> shadowDSV;
 
@@ -146,6 +146,7 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
+
 	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 

@@ -305,19 +305,17 @@ void App::RenderMirror()
 	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
 
-	// plane depth
-	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::mirrorPlaneDepthDSV.Get());
-	Graphics::context->ClearDepthStencilView(
-		Graphics::mirrorPlaneDepthDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	Graphics::SetPipelineStates(Graphics::mirrorDepthPSO);
-	m_chunkManager.RenderTransparency();
-
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::mirrorPlaneDepthRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
 		Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	std::vector<ID3D11RenderTargetView*> ppRTVs;
+	ppRTVs.push_back(Graphics::mirrorWorldRTV.Get());
+	ppRTVs.push_back(Graphics::mirrorPlaneDepthRTV.Get());
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
+		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::mirrorWorldDSV.Get());
 
 	// plane stencil and envMap
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
@@ -325,14 +323,18 @@ void App::RenderMirror()
 	m_chunkManager.RenderTransparency();
 
 	// mirror cloud
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
 	m_cloud.Render();
 
 	// mirror low lod world
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get(), Graphics::mirrorPlaneDepthSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::mirrorPlaneDepthSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 	m_chunkManager.RenderMirrorWorld();
 
 	// blur mirror world
@@ -345,7 +347,7 @@ void App::RenderMirror()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
+	
 	// mirror blending
 	Graphics::context->ResolveSubresource(Graphics::basicResolvedBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -353,11 +355,13 @@ void App::RenderMirror()
 		Graphics::copiedBasicDepthBuffer.Get(), Graphics::basicDepthBuffer.Get());
 	Graphics::context->ResolveSubresource(Graphics::basicDepthResolvedBuffer.Get(), 0,
 		Graphics::copiedBasicDepthBuffer.Get(), 0, DXGI_FORMAT_R32_FLOAT);
-
-	std::vector<ID3D11ShaderResourceView*> pptr2 = { Graphics::atlasMapSRV.Get(),
-		Graphics::mirrorWorldSRV.Get(), Graphics::basicDepthResolvedSRV.Get(),
-		Graphics::basicResolvedSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 4, pptr2.data());
+	
+	ppSRVs.clear();
+	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
+	ppSRVs.push_back(Graphics::basicDepthResolvedSRV.Get());
+	ppSRVs.push_back(Graphics::basicResolvedSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
 	m_chunkManager.RenderTransparency();
@@ -370,6 +374,15 @@ void App::RenderSkybox()
 
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
+}
+
+void App::RenderCloud()
+{
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
 }
 
 void App::RenderFog()
@@ -385,13 +398,4 @@ void App::RenderFog()
 
 	Graphics::SetPipelineStates(Graphics::fogPSO);
 	m_postEffect.Render();
-}
-
-void App::RenderCloud()
-{
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	Graphics::SetPipelineStates(Graphics::cloudPSO);
-	m_cloud.Render();
 }

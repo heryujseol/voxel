@@ -47,7 +47,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	ComPtr<ID3D11PixelShader> fogPS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
-	ComPtr<ID3D11PixelShader> mirrorMaskingEnvMappingPS;
 	ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
@@ -94,6 +93,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> mirrorWorldBlurBuffer[2];
 	ComPtr<ID3D11RenderTargetView> mirrorWorldBlurRTV[2];
 
+	ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -102,8 +104,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> envMapDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> envMapDSV;
 
-	ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
-	ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
 	ComPtr<ID3D11Texture2D> shadowBuffer;
 	ComPtr<ID3D11DepthStencilView> shadowDSV;
 
@@ -143,6 +143,7 @@ namespace Graphics {
 
 	ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
 	ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
+
 	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 
@@ -347,6 +348,23 @@ bool Graphics::InitRenderTargetBuffers()
 		}
 	}
 
+	
+	// mirrorPlaneDepth
+	format = DXGI_FORMAT_R32_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(mirrorPlaneDepthRenderBuffer, App::MIRROR_WIDTH, App::MIRROR_HEIGHT,
+			false, format, bindFlag)) {
+		std::cout << "failed create mirror plane depth render buffer" << std::endl;
+		return false;
+	}
+
+	ret = Graphics::device->CreateRenderTargetView(
+		mirrorPlaneDepthRenderBuffer.Get(), nullptr, mirrorPlaneDepthRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror plane depth rtv" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -411,26 +429,6 @@ bool Graphics::InitDepthStencilBuffers()
 		envMapDepthBuffer.Get(), &dsvDesc, envMapDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create env map depth stencil view" << std::endl;
-		return false;
-	}
-
-
-	// mirrorPlaneDepth
-	format = DXGI_FORMAT_R32_TYPELESS;
-	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(mirrorPlaneDepthBuffer, App::MIRROR_WIDTH, App::MIRROR_HEIGHT,
-			false, format, bindFlag)) {
-		std::cout << "failed create mirror plane depth stencil buffer" << std::endl;
-		return false;
-	}
-
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	ret = Graphics::device->CreateDepthStencilView(
-		mirrorPlaneDepthBuffer.Get(), &dsvDesc, mirrorPlaneDepthDSV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create mirror plane masking depth stencil view" << std::endl;
 		return false;
 	}
 
@@ -519,7 +517,7 @@ bool Graphics::InitShaderResourceBuffers()
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
 	ret = Graphics::device->CreateShaderResourceView(
-		copiedBasicBuffer.Get(), 0, copiedBasicSRV.GetAddressOf());
+		copiedBasicBuffer.Get(), nullptr, copiedBasicSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from copied basic srv" << std::endl;
 		return false;
@@ -600,7 +598,7 @@ bool Graphics::InitShaderResourceBuffers()
 
 	// mirror world render SRV
 	ret = Graphics::device->CreateShaderResourceView(
-		mirrorWorldRenderBuffer.Get(), 0, mirrorWorldSRV.GetAddressOf());
+		mirrorWorldRenderBuffer.Get(), nullptr, mirrorWorldSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from mirror world srv" << std::endl;
 		return false;
@@ -609,7 +607,7 @@ bool Graphics::InitShaderResourceBuffers()
 	// mirror world blur SRV
 	for (int i = 0; i < 2; ++i) {
 		ret = Graphics::device->CreateShaderResourceView(
-			mirrorWorldBlurBuffer[i].Get(), 0, mirrorWorldBlurSRV[i].GetAddressOf());
+			mirrorWorldBlurBuffer[i].Get(), nullptr, mirrorWorldBlurSRV[i].GetAddressOf());
 		if (FAILED(ret)) {
 			std::cout << "failed create shader resource view from mirror world blur srv"
 					  << std::endl;
@@ -618,13 +616,8 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	// mirror plane depth SRV
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = 1;
 	ret = device->CreateShaderResourceView(
-		mirrorPlaneDepthBuffer.Get(), &srvDesc, mirrorPlaneDepthSRV.GetAddressOf());
+		mirrorPlaneDepthRenderBuffer.Get(), nullptr, mirrorPlaneDepthSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from mirror plane depth srv" << std::endl;
 		return false;
@@ -832,16 +825,6 @@ bool Graphics::InitPixelShaders()
 	// MirrorMaskingPS
 	if (!DXUtils::CreatePixelShader(L"MirrorMaskingPS.hlsl", mirrorMaskingPS)) {
 		std::cout << "failed create mirrorMasking ps" << std::endl;
-		return false;
-	}
-
-	macros.clear();
-	macros.push_back({ "USE_ENV_MAPPING", "1" });
-	macros.push_back({ NULL, NULL });
-	// MirrorMasking
-	if (!DXUtils::CreatePixelShader(
-			L"MirrorMaskingPS.hlsl", mirrorMaskingEnvMappingPS, macros.data())) {
-		std::cout << "failed create mirrorMaskingEnvMapping ps" << std::endl;
 		return false;
 	}
 
@@ -1151,7 +1134,7 @@ void Graphics::InitGraphicsPSO()
 	// mirrorMaskingPSO
 	mirrorMaskingPSO = basicPSO;
 	mirrorMaskingPSO.rasterizerState = noneCullRS;
-	mirrorMaskingPSO.pixelShader = mirrorMaskingEnvMappingPS;
+	mirrorMaskingPSO.pixelShader = mirrorMaskingPS;
 	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
 	mirrorMaskingPSO.stencilRef = 1;
 

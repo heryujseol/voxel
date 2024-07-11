@@ -42,8 +42,8 @@ private:
 	void RenderEnvMap();
 	void RenderBasic();
 	void RenderMirror();
-	void RenderSkybox();
 	void RenderFog();
+	void RenderSkybox();
 	void RenderCloud();
 
 	HWND m_hwnd;
