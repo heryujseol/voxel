@@ -10,14 +10,14 @@ struct vsOutput
     uint sampleIndex : SV_SampleIndex;
 };
 
-float4 TexcoordToView(float2 texcoord, float2 screencoord, uint sampleIndex)
+float4 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
 {
     float4 posProj;
 
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1;
-    posProj.z = msaaDepthTex.Load(screencoord, sampleIndex).r;
+    posProj.z = msaaDepthTex.Load(screenCoord, sampleIndex).r;
     posProj.w = 1.0;
 
     // ProjectSpace -> ViewSpace
@@ -35,7 +35,7 @@ float4 main(vsOutput input) : SV_TARGET
     float fogMax = maxRenderDistance;
     float fogStrength = 3.0;
         
-    float4 posView = TexcoordToView(input.texcoord, input.posProj.xy, input.sampleIndex);
+    float4 posView = texcoordToView(input.texcoord, input.posProj.xy, input.sampleIndex);
     float dist = length(posView.xyz);
         
     float distFog = saturate((dist - fogMin) / (fogMax - fogMin));

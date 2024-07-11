@@ -133,12 +133,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copiedBasicDepthBuffer;
 	ComPtr<ID3D11ShaderResourceView> copiedBasicDepthSRV;
 
-	ComPtr<ID3D11Texture2D> basicResolvedBuffer;
-	ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
-
-	ComPtr<ID3D11Texture2D> basicDepthResolvedBuffer;
-	ComPtr<ID3D11ShaderResourceView> basicDepthResolvedSRV;
-
 	ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
@@ -538,46 +532,6 @@ bool Graphics::InitShaderResourceBuffers()
 		copiedBasicDepthBuffer.Get(), &srvDesc, copiedBasicDepthSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from copied basic depth srv" << std::endl;
-		return false;
-	}
-
-	// basic resolved srv
-	format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			basicResolvedBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create shader resource buffer from basic resolved" << std::endl;
-		return false;
-	}
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	ret = Graphics::device->CreateShaderResourceView(
-		basicResolvedBuffer.Get(), &srvDesc, basicResolvedSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from basic resolved srv" << std::endl;
-		return false;
-	}
-
-	// basic depth resolved srv
-	format = DXGI_FORMAT_R32_FLOAT;
-	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			basicDepthResolvedBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create shader resource buffer from basic depth resolved" << std::endl;
-		return false;
-	}
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	ret = Graphics::device->CreateShaderResourceView(
-		basicDepthResolvedBuffer.Get(), &srvDesc, basicDepthResolvedSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from basic depth resolved srv" << std::endl;
 		return false;
 	}
 

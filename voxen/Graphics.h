@@ -136,12 +136,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> copiedBasicDepthBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copiedBasicDepthSRV;
 
-	extern ComPtr<ID3D11Texture2D> basicResolvedBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
-
-	extern ComPtr<ID3D11Texture2D> basicDepthResolvedBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> basicDepthResolvedSRV;
-
 	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;

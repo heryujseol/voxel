@@ -2,8 +2,8 @@
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D mirrorWorldTex : register(t1);
-Texture2D depthOnlyTex : register(t2);
-Texture2D basicRenderTex : register(t3);
+Texture2DMS<float, 4> depthOnlyTex : register(t2);
+Texture2DMS<float4, 4> basicRenderTex : register(t3);
 
 struct vsOutput
 {
@@ -12,6 +12,7 @@ struct vsOutput
     sample float3 posModel : POSITION2;
     uint face : FACE;
     uint type : TYPE;
+    uint sampleIndex : SV_SampleIndex;
 };
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
@@ -23,14 +24,14 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
-float3 texcoordToView(float2 texcoord)
+float3 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
 {
     float4 posProj;
 
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1;
-    posProj.z = depthOnlyTex.Sample(linearClampSS, texcoord).r;
+    posProj.z = depthOnlyTex.Load(screenCoord, sampleIndex).r;
     posProj.w = 1.0;
 
     // ProjectSpace -> ViewSpace
@@ -52,15 +53,15 @@ float4 main(vsOutput input) : SV_TARGET
     // absorption color
     float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
     
-    float width, height, lod;
-    depthOnlyTex.GetDimensions(0, width, height, lod);
+    float width, height, sampleCount;
+    depthOnlyTex.GetDimensions(width, height, sampleCount);
     float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
         
     // origin render color
-    float3 originColor = basicRenderTex.Sample(linearClampSS, screenTexcoord).rgb;
+    float3 originColor = basicRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
     
     // absorption factor
-    float objectDistance = length(texcoordToView(screenTexcoord));
+    float objectDistance = length(texcoordToView(screenTexcoord, input.posProj.xy, input.sampleIndex));
     float planeDistance = length(eyePos - input.posWorld);
     float diffDistance = abs(objectDistance - planeDistance);
     float absorptionCoeff = 0.1;

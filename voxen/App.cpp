@@ -349,18 +349,16 @@ void App::RenderMirror()
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 	
 	// mirror blending
-	Graphics::context->ResolveSubresource(Graphics::basicResolvedBuffer.Get(), 0,
-		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	Graphics::context->CopyResource(
+		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicDepthBuffer.Get(), Graphics::basicDepthBuffer.Get());
-	Graphics::context->ResolveSubresource(Graphics::basicDepthResolvedBuffer.Get(), 0,
-		Graphics::copiedBasicDepthBuffer.Get(), 0, DXGI_FORMAT_R32_FLOAT);
 	
 	ppSRVs.clear();
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
-	ppSRVs.push_back(Graphics::basicDepthResolvedSRV.Get());
-	ppSRVs.push_back(Graphics::basicResolvedSRV.Get());
+	ppSRVs.push_back(Graphics::copiedBasicDepthSRV.Get());
+	ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
