@@ -76,11 +76,17 @@ struct postEffectConstantData {
 	float threshold;
 };
 
-
 struct LightConstantData {
 	Matrix view[4];
 	Matrix proj[4];
 	Matrix invProj[4];
 	float topLX[4];
 	float viewWith[4];
+};
+
+struct FogConstantData {
+	float fogDistMin;
+	float fogDistMax;
+	float fogStrength;
+	bool isInWater;
 };

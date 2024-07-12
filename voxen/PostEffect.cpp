@@ -26,14 +26,29 @@ bool PostEffect::Initialize()
 		return false;
 	}
 
-	m_postEffectConstantData.dx = 1.0f / (float)App::MIRROR_WIDTH;
-	m_postEffectConstantData.dy = 1.0f / (float)App::MIRROR_HEIGHT;
-	if (!DXUtils::CreateConstantBuffer(m_postEffectConstantBuffer, m_postEffectConstantData)) {
+	m_blurConstantData.dx = 1.0f / (float)App::MIRROR_WIDTH;
+	m_blurConstantData.dy = 1.0f / (float)App::MIRROR_HEIGHT;
+	if (!DXUtils::CreateConstantBuffer(m_blurConstantBuffer, m_blurConstantData)) {
 		std::cout << "failed create blur constant buffer" << std::endl;
 		return false;
 	}
 
+	m_fogConstantData.fogDistMin = 0.0f;
+	m_fogConstantData.fogDistMax = 0.0f;
+	m_fogConstantData.fogStrength = 1.0f;
+	m_fogConstantData.isInWater = false;
+	if (!DXUtils::CreateConstantBuffer(m_fogConstantBuffer, m_fogConstantData)) {
+		std::cout << "failed create fog constant buffer" << std::endl;
+		return false;
+	}
+
 	return true;
+}
+
+void PostEffect::Update(float dt, Camera& camera) 
+{ 
+	
+	DXUtils::UpdateConstantBuffer(m_fogConstantBuffer, m_fogConstantData);
 }
 
 void PostEffect::Render()
@@ -47,7 +62,7 @@ void PostEffect::Render()
 
 void PostEffect::BlurMirror(int loopCount)
 {
-	Graphics::context->PSSetConstantBuffers(2, 1, m_postEffectConstantBuffer.GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(2, 1, m_blurConstantBuffer.GetAddressOf());
 
 	for (int i = 0; i < loopCount; ++i) {
 		Graphics::context->OMSetRenderTargets(

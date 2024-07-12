@@ -6,6 +6,7 @@
 
 #include "Structure.h"
 #include "Utils.h"
+#include "Camera.h"
 
 using namespace Microsoft::WRL;
 
@@ -15,6 +16,7 @@ public:
 	~PostEffect();
 
 	bool Initialize();
+	void Update(float dt, Camera& camera);
 	void Render();
 	void BlurMirror(int loopCount);
 
@@ -27,6 +29,9 @@ private:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 
-	postEffectConstantData m_postEffectConstantData;
-	ComPtr<ID3D11Buffer> m_postEffectConstantBuffer;
+	BlurConstantData m_blurConstantData;
+	FogConstantData m_fogConstantData;
+
+	ComPtr<ID3D11Buffer> m_blurConstantBuffer;
+	ComPtr<ID3D11Buffer> m_fogConstantBuffer;
 };

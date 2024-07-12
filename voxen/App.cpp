@@ -128,6 +128,7 @@ void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	ChunkManager::GetInstance()->Update(m_camera, dt);
+	m_postEffect.Update(dt, m_camera);
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
