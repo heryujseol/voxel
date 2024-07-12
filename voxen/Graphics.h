@@ -48,11 +48,12 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> instanceDepthClipPS;
-	extern ComPtr<ID3D11PixelShader> fogPS;
+	extern ComPtr<ID3D11PixelShader> fogFilterPS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	extern ComPtr<ID3D11PixelShader> blurXPS;
 	extern ComPtr<ID3D11PixelShader> blurYPS;
+	extern ComPtr<ID3D11PixelShader> inWaterFilterPS;
 
 
 	// Rasterizer State
@@ -183,14 +184,14 @@ namespace Graphics {
 	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudMirrorPSO;
-	extern GraphicsPSO fogPSO;
+	extern GraphicsPSO fogFilterPSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
-	extern GraphicsPSO mirrorDepthPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
 	extern GraphicsPSO mirrorBlendPSO;
 	extern GraphicsPSO mirrorBlurPSO;
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
+	extern GraphicsPSO inWaterFilterPSO;
 }

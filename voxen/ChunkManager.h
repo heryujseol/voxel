@@ -24,8 +24,7 @@ public:
 	static const int MAX_INSTANCE_BUFFER_COUNT =
 		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
 
-	ChunkManager();
-	~ChunkManager();
+	static ChunkManager* GetInstance();
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera, float dt);
@@ -39,16 +38,24 @@ public:
 	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
 	void RenderTransparency();
+
+	Chunk* GetChunkByPosition(int x, int y, int z);
 	
 
 private:
+	static ChunkManager* chunkManager;
+
+	ChunkManager();
+	~ChunkManager();
+	ChunkManager(const ChunkManager& other);
+	ChunkManager& operator=(const ChunkManager& rhs);
+
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 	void UpdateChunkConstant(float dt);
-	void UpdateIsInWater(Camera& camera);
 
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 

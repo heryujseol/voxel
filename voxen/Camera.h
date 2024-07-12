@@ -43,6 +43,7 @@ public:
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
+	void UpdateIsInWater();
 
 	inline void MoveForward(float dt);
 	inline void MoveRight(float dt);

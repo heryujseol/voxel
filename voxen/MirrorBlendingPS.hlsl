@@ -2,8 +2,8 @@
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D mirrorWorldTex : register(t1);
-Texture2DMS<float, 4> depthOnlyTex : register(t2);
-Texture2DMS<float4, 4> basicRenderTex : register(t3);
+Texture2DMS<float, 4> msaaDepthTex : register(t2);
+Texture2DMS<float4, 4> msaaRenderTex : register(t3);
 
 struct vsOutput
 {
@@ -31,7 +31,7 @@ float3 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1;
-    posProj.z = depthOnlyTex.Load(screenCoord, sampleIndex).r;
+    posProj.z = msaaDepthTex.Load(screenCoord, sampleIndex).r;
     posProj.w = 1.0;
 
     // ProjectSpace -> ViewSpace
@@ -54,11 +54,11 @@ float4 main(vsOutput input) : SV_TARGET
     float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
     
     float width, height, sampleCount;
-    depthOnlyTex.GetDimensions(width, height, sampleCount);
+    msaaDepthTex.GetDimensions(width, height, sampleCount);
     float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
         
     // origin render color
-    float3 originColor = basicRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+    float3 originColor = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
     
     // absorption factor
     float objectDistance = length(texcoordToView(screenTexcoord, input.posProj.xy, input.sampleIndex));

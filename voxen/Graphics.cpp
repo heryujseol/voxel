@@ -45,11 +45,12 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
 	ComPtr<ID3D11PixelShader> instanceDepthClipPS;
-	ComPtr<ID3D11PixelShader> fogPS;
+	ComPtr<ID3D11PixelShader> fogFilterPS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	ComPtr<ID3D11PixelShader> mirrorBlendingPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
+	ComPtr<ID3D11PixelShader> inWaterFilterPS;
 
 
 	// Rasterizer State
@@ -180,17 +181,16 @@ namespace Graphics {
 	GraphicsPSO skyboxEnvMapPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudMirrorPSO;
-	GraphicsPSO fogPSO;
+	GraphicsPSO fogFilterPSO;
 	GraphicsPSO instancePSO;
 	GraphicsPSO instanceMirrorPSO;
-	GraphicsPSO mirrorDepthPSO;
 	GraphicsPSO mirrorMaskingPSO;
 	GraphicsPSO mirrorBlendPSO;
 	GraphicsPSO mirrorBlurPSO;
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
-
+	GraphicsPSO inWaterFilterPSO;
 }
 
 
@@ -755,9 +755,9 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// fogPS
-	if (!DXUtils::CreatePixelShader(L"FogPS.hlsl", fogPS)) {
-		std::cout << "failed create fog ps" << std::endl;
+	// fogFilterPS
+	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterPS)) {
+		std::cout << "failed create fog filter ps" << std::endl;
 		return false;
 	}
 
@@ -801,6 +801,12 @@ bool Graphics::InitPixelShaders()
 	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurYPS, macros.data())) {
 		std::cout << "failed create blur y ps" << std::endl;
+		return false;
+	}
+
+	// InWaterFilterPS
+	if (!DXUtils::CreatePixelShader(L"InWaterFilterPS.hlsl", inWaterFilterPS)) {
+		std::cout << "failed create in water filter ps" << std::endl;
 		return false;
 	}
 
@@ -1062,11 +1068,11 @@ void Graphics::InitGraphicsPSO()
 	cloudMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
 	cloudMirrorPSO.stencilRef = 1;
 
-	// fogPSO
-	fogPSO = basicPSO;
-	fogPSO.inputLayout = samplingIL;
-	fogPSO.vertexShader = samplingVS;
-	fogPSO.pixelShader = fogPS;
+	// fogFilterPSO
+	fogFilterPSO = basicPSO;
+	fogFilterPSO.inputLayout = samplingIL;
+	fogFilterPSO.vertexShader = samplingVS;
+	fogFilterPSO.pixelShader = fogFilterPS;
 
 	// instancePSO
 	instancePSO = basicPSO;
@@ -1081,13 +1087,8 @@ void Graphics::InitGraphicsPSO()
 	instanceMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
 	instanceMirrorPSO.stencilRef = 1;
 
-	// mirrorDepthPSO
-	mirrorDepthPSO = basicPSO;
-	mirrorDepthPSO.pixelShader = mirrorMaskingPS;
-
 	// mirrorMaskingPSO
 	mirrorMaskingPSO = basicPSO;
-	mirrorMaskingPSO.rasterizerState = noneCullRS;
 	mirrorMaskingPSO.pixelShader = mirrorMaskingPS;
 	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
 	mirrorMaskingPSO.stencilRef = 1;
@@ -1108,6 +1109,12 @@ void Graphics::InitGraphicsPSO()
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
+
+	// inWaterFilterPSO
+	inWaterFilterPSO = basicPSO;
+	inWaterFilterPSO.inputLayout = samplingIL;
+	inWaterFilterPSO.vertexShader = samplingVS;
+	inWaterFilterPSO.pixelShader = inWaterFilterPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

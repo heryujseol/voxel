@@ -45,10 +45,10 @@ private:
 	void RenderFog();
 	void RenderSkybox();
 	void RenderCloud();
+	void RenderInWater();
 
 	HWND m_hwnd;
 
-	ChunkManager m_chunkManager;
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;

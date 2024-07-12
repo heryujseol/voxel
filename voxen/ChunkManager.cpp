@@ -9,9 +9,23 @@
 #include <iostream>
 #include <algorithm>
 
+ChunkManager* ChunkManager::chunkManager = nullptr;
+
+ChunkManager* ChunkManager::GetInstance()
+{
+	if (chunkManager == nullptr) {
+		chunkManager = new ChunkManager();
+	}
+	return chunkManager;
+}
+
 ChunkManager::ChunkManager() {}
 
 ChunkManager::~ChunkManager() {}
+
+ChunkManager::ChunkManager(const ChunkManager& other) {}
+
+ChunkManager& ChunkManager::operator=(const ChunkManager& rhs) {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
@@ -59,8 +73,6 @@ void ChunkManager::Update(Camera& camera, float dt)
 	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
 	UpdateChunkConstant(dt);
-
-	UpdateIsInWater(camera);
 }
 
 void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
@@ -565,28 +577,12 @@ bool ChunkManager::MakeInstanceInfoBuffer()
 	return true;
 }
 
-void ChunkManager::UpdateIsInWater(Camera& camera)
+Chunk* ChunkManager::GetChunkByPosition(int x, int y, int z)
 {
-	camera.m_isInWater = false;
-	Vector3 cameraChunkPos = camera.GetChunkPosition();
-
-	int x = (int)cameraChunkPos.x;
-	int y = (int)cameraChunkPos.y;
-	int z = (int)cameraChunkPos.z;
-
 	auto iter = m_chunkMap.find(std::make_tuple(x, y, z));
+
 	if (iter == m_chunkMap.end())
-		return;
+		return nullptr;
 
-	Chunk* c = iter->second;
-	if (!c->IsLoaded())
-		return;
-
-	Vector3 chunkPos = camera.GetPosition() - cameraChunkPos;
-	int floorX = (int)std::floor(chunkPos.x);
-	int floorY = (int)std::floor(chunkPos.y);
-	int floorZ = (int)std::floor(chunkPos.z);
-
-	if (c->GetBlockTypeByPosition(floorX, floorY, floorZ) == BLOCK_TYPE::WATER)
-		camera.m_isInWater = true;
+	return iter->second;
 }

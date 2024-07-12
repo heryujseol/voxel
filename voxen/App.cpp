@@ -19,7 +19,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_hwnd(), m_chunkManager(), m_camera(), m_skybox(), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
+	: m_hwnd(), m_camera(), m_skybox(), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
 	  m_keyPressed{
 		  false,
 	  },
@@ -127,7 +127,7 @@ void App::Run()
 void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
-	m_chunkManager.Update(m_camera, dt);
+	ChunkManager::GetInstance()->Update(m_camera, dt);
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
@@ -161,7 +161,8 @@ void App::Render()
 	RenderBasic();
 
 	// Mirror
-	RenderMirror();
+	if (!m_camera.m_isInWater)
+		RenderMirror();
 
 	// fog
 	RenderFog();
@@ -172,6 +173,11 @@ void App::Render()
 	// Cloud
 	RenderCloud();
 
+	// In Water
+	if (m_camera.m_isInWater) {
+		RenderInWater();
+	}
+	
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -252,7 +258,7 @@ bool App::InitScene()
 	if (!m_camera.Initialize(Vector3(0.0f, 108.0f, 0.0f)))
 		return false;
 
-	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
+	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))
 		return false;
 
 	if (!m_skybox.Initialize(550.0f, 0.2f))
@@ -297,7 +303,7 @@ void App::RenderBasic()
 		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
-	m_chunkManager.RenderBasic(m_camera.GetPosition());
+	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
 }
 
 void App::RenderMirror()
@@ -320,7 +326,7 @@ void App::RenderMirror()
 	// plane stencil and envMap
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
-	m_chunkManager.RenderTransparency();
+	ChunkManager::GetInstance()->RenderTransparency();
 
 	// mirror cloud
 	Graphics::context->OMSetRenderTargets(
@@ -335,7 +341,7 @@ void App::RenderMirror()
 	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::mirrorPlaneDepthSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-	m_chunkManager.RenderMirrorWorld();
+	ChunkManager::GetInstance()->RenderMirrorWorld();
 
 	// blur mirror world
 	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
@@ -362,7 +368,22 @@ void App::RenderMirror()
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
-	m_chunkManager.RenderTransparency();
+	ChunkManager::GetInstance()->RenderTransparency();
+}
+
+void App::RenderFog()
+{
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+	Graphics::context->CopyResource(
+		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
+
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::copiedBasicSRV.Get(),
+		Graphics::basicDepthSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
+	m_postEffect.Render();
 }
 
 void App::RenderSkybox()
@@ -383,17 +404,15 @@ void App::RenderCloud()
 	m_cloud.Render();
 }
 
-void App::RenderFog()
+void App::RenderInWater()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::copiedBasicSRV.Get(),
-		Graphics::basicDepthSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
-	Graphics::SetPipelineStates(Graphics::fogPSO);
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::copiedBasicSRV.GetAddressOf());
+	Graphics::SetPipelineStates(Graphics::inWaterFilterPSO);
 	m_postEffect.Render();
 }
