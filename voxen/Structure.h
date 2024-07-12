@@ -69,11 +69,11 @@ struct EnvMapConstantData {
 	Matrix proj;
 };
 
-struct postEffectConstantData {
+struct BlurConstantData {
 	float dx;
 	float dy;
-	float strength;
-	float threshold;
+	float dummy1;
+	float dummy2;
 };
 
 struct LightConstantData {
