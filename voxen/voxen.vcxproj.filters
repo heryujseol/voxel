@@ -158,7 +158,7 @@
     <FxCompile Include="MirrorMaskingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="MirrorBlendingPS.hlsl">
+    <FxCompile Include="WaterPlanePS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="BlurPS.hlsl">
@@ -170,7 +170,7 @@
     <FxCompile Include="BasicShadowGS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="InWaterFilterPS.hlsl">
+    <FxCompile Include="WaterFilterPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

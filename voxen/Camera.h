@@ -35,15 +35,16 @@ public:
 			XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
 	}
 	inline Matrix GetMirrorPlaneMatrix() { return m_mirrorPlaneMatrix; }
+	inline bool IsUnderWater() { return m_constantData.isUnderWater; }
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
-	bool m_isInWater;
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
-	void UpdateIsInWater();
+
+	bool CheckIsUnderWater();
 
 	inline void MoveForward(float dt);
 	inline void MoveRight(float dt);

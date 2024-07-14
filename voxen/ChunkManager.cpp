@@ -25,7 +25,7 @@ ChunkManager::~ChunkManager() {}
 
 ChunkManager::ChunkManager(const ChunkManager& other) {}
 
-ChunkManager& ChunkManager::operator=(const ChunkManager& rhs) {}
+void ChunkManager::operator=(const ChunkManager& rhs) {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
@@ -61,7 +61,7 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	return true;
 }
 
-void ChunkManager::Update(Camera& camera, float dt)
+void ChunkManager::Update(float dt, Camera& camera)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());

@@ -18,8 +18,14 @@ public:
 	bool Initialize();
 	void Update(float dt, Camera& camera);
 	void Render();
-	void BlurMirror(int loopCount);
 
+	ComPtr<ID3D11Buffer> m_blurConstantBuffer;
+	ComPtr<ID3D11Buffer> m_fogFilterConstantBuffer;
+	ComPtr<ID3D11Buffer> m_waterFilterConstantBuffer;
+
+	BlurConstantData m_blurConstantData;
+	FogFilterConstantData m_fogFilterConstantData;
+	WaterFilterConstantData m_waterFilterConstantData;
 
 private:
 	std::vector<SamplingVertex> m_vertices;
@@ -28,10 +34,4 @@ private:
 	UINT m_offset;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
-
-	BlurConstantData m_blurConstantData;
-	FogConstantData m_fogConstantData;
-
-	ComPtr<ID3D11Buffer> m_blurConstantBuffer;
-	ComPtr<ID3D11Buffer> m_fogConstantBuffer;
 };

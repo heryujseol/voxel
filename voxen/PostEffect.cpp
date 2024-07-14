@@ -33,22 +33,29 @@ bool PostEffect::Initialize()
 		return false;
 	}
 
-	m_fogConstantData.fogDistMin = 0.0f;
-	m_fogConstantData.fogDistMax = 0.0f;
-	m_fogConstantData.fogStrength = 1.0f;
-	m_fogConstantData.isInWater = false;
-	if (!DXUtils::CreateConstantBuffer(m_fogConstantBuffer, m_fogConstantData)) {
-		std::cout << "failed create fog constant buffer" << std::endl;
+	m_fogFilterConstantData.fogDistMin = 0.0f;
+	m_fogFilterConstantData.fogDistMax = 0.0f;
+	m_fogFilterConstantData.fogStrength = 1.0f;
+	m_fogFilterConstantData.fogColor = Vector3(0.0f);
+	if (!DXUtils::CreateConstantBuffer(m_fogFilterConstantBuffer, m_fogFilterConstantData)) {
+		std::cout << "failed create fog filter constant buffer" << std::endl;
+		return false;
+	}
+
+	m_waterFilterConstantData.filterColor = Vector3(0.0f);
+	m_waterFilterConstantData.blendStrength = 0.0f;
+	if (!DXUtils::CreateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData)) {
+		std::cout << "failed create water filter constant buffer" << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
-void PostEffect::Update(float dt, Camera& camera) 
-{ 
-	
-	DXUtils::UpdateConstantBuffer(m_fogConstantBuffer, m_fogConstantData);
+void PostEffect::Update(float dt, Camera& camera)
+{
+	DXUtils::UpdateConstantBuffer(m_fogFilterConstantBuffer, m_fogFilterConstantData);
+	DXUtils::UpdateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData);
 }
 
 void PostEffect::Render()
@@ -58,33 +65,4 @@ void PostEffect::Render()
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
-void PostEffect::BlurMirror(int loopCount)
-{
-	Graphics::context->PSSetConstantBuffers(2, 1, m_blurConstantBuffer.GetAddressOf());
-
-	for (int i = 0; i < loopCount; ++i) {
-		Graphics::context->OMSetRenderTargets(
-			1, Graphics::mirrorWorldBlurRTV[0].GetAddressOf(), nullptr);
-		if (i != 0)
-			Graphics::context->PSSetShaderResources(
-				0, 1, Graphics::mirrorWorldBlurSRV[1].GetAddressOf());
-		else
-			Graphics::context->PSSetShaderResources(0, 1, Graphics::mirrorWorldSRV.GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurXPS.Get(), nullptr, 0);
-		
-		Render();
-
-		if (i != loopCount - 1)
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldBlurRTV[1].GetAddressOf(), nullptr);
-		else
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(
-			0, 1, Graphics::mirrorWorldBlurSRV[0].GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurYPS.Get(), nullptr, 0);
-		Render();
-	}
 }

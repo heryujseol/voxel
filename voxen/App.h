@@ -41,11 +41,13 @@ private:
 
 	void RenderEnvMap();
 	void RenderBasic();
-	void RenderMirror();
-	void RenderFog();
+	void RenderWaterPlane();
+	void RenderMirrorWorld();
+	void BlurMirror(int blurLoopCount);
 	void RenderSkybox();
 	void RenderCloud();
-	void RenderInWater();
+	void RenderFogFilter();
+	void RenderWaterFilter();
 
 	HWND m_hwnd;
 

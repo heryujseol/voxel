@@ -3,6 +3,16 @@
 Texture2DMS<float4, 4> msaaRenderTex : register(t0);
 Texture2DMS<float, 4> msaaDepthTex : register(t1);
 
+cbuffer FogConstantBuffer : register(b2)
+{
+    float fogDistMin;
+    float fogDistMax;
+    float fogStrength;
+    float dummy1;
+    float3 fogColor;
+    float dummy2;
+};
+
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
@@ -29,26 +39,23 @@ float4 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    //Beer-Lambert law
-    float3 fogColor = normalHorizonColor;
-    float fogMin = lodRenderDistance;
-    float fogMax = maxRenderDistance;
-    float fogStrength = 3.0;
-        
-    float4 posView = texcoordToView(input.texcoord, input.posProj.xy, input.sampleIndex);
-    float dist = length(posView.xyz);
-        
-    float distFog = saturate((dist - fogMin) / (fogMax - fogMin));
-    float fogFactor = exp(-distFog * fogStrength);
-        
-    float3 color = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
-    
-    if ((0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700) || (22300 <= dateTime && dateTime <= 23999))
+    /*
+    float3 fogColor = isUnderWater ? float3(1.0, 1.0, 1.0) : normalHorizonColor;
+    if (!isUnderWater && (0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700) || (22300 <= dateTime && dateTime <= 23999))
     {
         float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
         fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
-    }
+    }*/
+    
+    //Beer-Lambert law
+    float4 posView = texcoordToView(input.texcoord, input.posProj.xy, input.sampleIndex);
+    float dist = length(posView.xyz);
         
+    float distFog = saturate((dist - fogDistMin) / (fogDistMax - fogDistMin));
+    float fogFactor = exp(-fogStrength * distFog);
+        
+    float3 color = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+    
     color = lerp(fogColor, color, fogFactor);
     
     return float4(color, 1.0);

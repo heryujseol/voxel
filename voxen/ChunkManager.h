@@ -27,7 +27,7 @@ public:
 	static ChunkManager* GetInstance();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(Camera& camera, float dt);
+	void Update(float dt, Camera& camera);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -48,7 +48,7 @@ private:
 	ChunkManager();
 	~ChunkManager();
 	ChunkManager(const ChunkManager& other);
-	ChunkManager& operator=(const ChunkManager& rhs);
+	void operator=(const ChunkManager& rhs);
 
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunkList(Camera& camera);

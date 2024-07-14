@@ -47,10 +47,10 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	ComPtr<ID3D11PixelShader> fogFilterPS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
-	ComPtr<ID3D11PixelShader> mirrorBlendingPS;
+	ComPtr<ID3D11PixelShader> waterPlanePS;
+	ComPtr<ID3D11PixelShader> waterFilterPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
-	ComPtr<ID3D11PixelShader> inWaterFilterPS;
 
 
 	// Rasterizer State
@@ -185,12 +185,12 @@ namespace Graphics {
 	GraphicsPSO instancePSO;
 	GraphicsPSO instanceMirrorPSO;
 	GraphicsPSO mirrorMaskingPSO;
-	GraphicsPSO mirrorBlendPSO;
 	GraphicsPSO mirrorBlurPSO;
+	GraphicsPSO waterPlanePSO;
+	GraphicsPSO waterFilterPSO;
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
-	GraphicsPSO inWaterFilterPSO;
 }
 
 
@@ -782,9 +782,15 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// MirrorBlendingPS
-	if (!DXUtils::CreatePixelShader(L"MirrorBlendingPS.hlsl", mirrorBlendingPS)) {
-		std::cout << "failed create mirrorBlending ps" << std::endl;
+	// WaterPlanePS
+	if (!DXUtils::CreatePixelShader(L"WaterPlanePS.hlsl", waterPlanePS)) {
+		std::cout << "failed create water plane ps" << std::endl;
+		return false;
+	}
+
+	// WaterFilterPS
+	if (!DXUtils::CreatePixelShader(L"WaterFilterPS.hlsl", waterFilterPS)) {
+		std::cout << "failed create water filter ps" << std::endl;
 		return false;
 	}
 
@@ -801,12 +807,6 @@ bool Graphics::InitPixelShaders()
 	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurYPS, macros.data())) {
 		std::cout << "failed create blur y ps" << std::endl;
-		return false;
-	}
-
-	// InWaterFilterPS
-	if (!DXUtils::CreatePixelShader(L"InWaterFilterPS.hlsl", inWaterFilterPS)) {
-		std::cout << "failed create in water filter ps" << std::endl;
 		return false;
 	}
 
@@ -1093,28 +1093,29 @@ void Graphics::InitGraphicsPSO()
 	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
 	mirrorMaskingPSO.stencilRef = 1;
 
-	// mirrorBlendPSO
-	mirrorBlendPSO = basicPSO;
-	mirrorBlendPSO.pixelShader = mirrorBlendingPS;
-	mirrorBlendPSO.blendState = alphaBS;
-
 	// mirrorBlur PSO
 	mirrorBlurPSO = basicPSO;
 	mirrorBlurPSO.inputLayout = samplingIL;
 	mirrorBlurPSO.vertexShader = samplingVS;
 	mirrorBlurPSO.pixelShader = blurXPS;
 
+	// waterPlanePSO
+	waterPlanePSO = basicPSO;
+	waterPlanePSO.rasterizerState = noneCullRS;
+	waterPlanePSO.pixelShader = waterPlanePS;
+	waterPlanePSO.blendState = alphaBS;
+
+	// waterFilterPSO
+	waterFilterPSO = basicPSO;
+	waterFilterPSO.inputLayout = samplingIL;
+	waterFilterPSO.vertexShader = samplingVS;
+	waterFilterPSO.pixelShader = waterFilterPS;
+
 	// basicshadowPSO
 	basicShadowPSO = basicPSO;
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
-
-	// inWaterFilterPSO
-	inWaterFilterPSO = basicPSO;
-	inWaterFilterPSO.inputLayout = samplingIL;
-	inWaterFilterPSO.vertexShader = samplingVS;
-	inWaterFilterPSO.pixelShader = inWaterFilterPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

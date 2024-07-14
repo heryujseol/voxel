@@ -6,8 +6,7 @@ Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.1f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false),
-	  m_isInWater(false)
+	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
 }
 
@@ -18,32 +17,28 @@ bool Camera::Initialize(Vector3 pos)
 	m_eyePos = pos;
 	m_chunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 
-	m_constantData.view = GetViewMatrix();
-	m_constantData.proj = GetProjectionMatrix();
-	m_constantData.invProj = m_constantData.proj.Invert();
+	bool isUnderWater = CheckIsUnderWater();
+	m_constantData.isUnderWater = isUnderWater;
+	m_projFovAngleY = isUnderWater ? 65.0f : 80.0f;
+
+	m_constantData.view = GetViewMatrix().Transpose();
+	m_constantData.proj = GetProjectionMatrix().Transpose();
+	m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
 	m_constantData.eyePos = m_eyePos;
 	m_constantData.eyeDir = m_forward;
 	m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
 	m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 
-	CameraConstantData tempConstantData;
-	tempConstantData.view = m_constantData.view.Transpose();
-	tempConstantData.proj = m_constantData.proj.Transpose();
-	tempConstantData.invProj = m_constantData.invProj.Transpose();
-	tempConstantData.eyePos = m_constantData.eyePos;
-	tempConstantData.eyeDir = m_constantData.eyeDir;
-	tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
-	tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
-	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
+	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create camera constant buffer" << std::endl;
 		return false;
 	}
 
 	Plane mirrorPlane = Plane(Vector3(0.0f, 62.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
 	m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
-	tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
-	tempConstantData.view = tempConstantData.view.Transpose();
-	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, tempConstantData)) {
+	m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
+	m_constantData.view = m_constantData.view.Transpose();
+	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, m_constantData)) {
 		std::cout << "failed create camera mirror constant buffer" << std::endl;
 		return false;
 	}
@@ -67,33 +62,25 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 {
 	UpdatePosition(keyPressed, dt);
 	UpdateViewDirection(mouseX, mouseY);
-	UpdateIsInWater();
-
-	if (m_isInWater)
-		m_projFovAngleY = 65.0f;
-	else
-		m_projFovAngleY = 80.0f;
 
 	if (m_isOnConstantDirtyFlag) {
-		m_constantData.view = GetViewMatrix();
-		m_constantData.proj = GetProjectionMatrix();
-		m_constantData.invProj = m_constantData.proj.Invert();
+		bool isUnderWater = CheckIsUnderWater();
+		m_constantData.isUnderWater = isUnderWater;
+		m_projFovAngleY = isUnderWater ? 65.0f : 80.0f;
+
+		m_constantData.view = GetViewMatrix().Transpose();
+		m_constantData.proj = GetProjectionMatrix().Transpose();
+		m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
 		m_constantData.eyePos = m_eyePos;
 		m_constantData.eyeDir = m_forward;
+		m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+		m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
+		
+		DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 
-		CameraConstantData tempConstantData;
-		tempConstantData.view = m_constantData.view.Transpose();
-		tempConstantData.proj = m_constantData.proj.Transpose();
-		tempConstantData.invProj = m_constantData.invProj.Transpose();
-		tempConstantData.eyePos = m_constantData.eyePos;
-		tempConstantData.eyeDir = m_constantData.eyeDir;
-		tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
-		tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
-		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
-
-		tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
-		tempConstantData.view = tempConstantData.view.Transpose();
-		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, tempConstantData);
+		m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
+		m_constantData.view = m_constantData.view.Transpose();
+		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, m_constantData);
 
 		m_isOnConstantDirtyFlag = false;
 	}
@@ -154,20 +141,18 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
 }
 
-void Camera::UpdateIsInWater() 
+bool Camera::CheckIsUnderWater()
 {
-	m_isInWater = false;
-	
 	int x = (int)m_chunkPos.x;
 	int y = (int)m_chunkPos.y;
 	int z = (int)m_chunkPos.z;
 
 	Chunk* c = ChunkManager::GetInstance()->GetChunkByPosition(x, y, z);
 	if (c == nullptr)
-		return;
+		return false;
 
 	if (!c->IsLoaded())
-		return;
+		return false;
 
 	Vector3 chunkOffset = m_eyePos - m_chunkPos;
 	int floorX = (int)std::floor(chunkOffset.x);
@@ -175,7 +160,9 @@ void Camera::UpdateIsInWater()
 	int floorZ = (int)std::floor(chunkOffset.z);
 
 	if (c->GetBlockTypeByPosition(floorX, floorY, floorZ) == BLOCK_TYPE::WATER)
-		m_isInWater = true;
+		return true;
+
+	return false;
 }
 
 void Camera::MoveForward(float dt) { m_eyePos += m_forward * m_speed * dt; }

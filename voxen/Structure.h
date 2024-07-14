@@ -39,6 +39,8 @@ struct CameraConstantData {
 	Vector3 eyeDir;
 	float lodRenderDistance;
 	Matrix invProj;
+	int isUnderWater;
+	Vector3 dummy;
 };
 
 struct ChunkConstantData {
@@ -55,7 +57,7 @@ struct SkyboxConstantData {
 	Vector3 sunHorizonColor; 
 	float moonStrength;
 	Vector3 sunZenithColor;
-	float dummy3;
+	float dummy;
 };
 
 struct CloudConstantData {
@@ -72,8 +74,7 @@ struct EnvMapConstantData {
 struct BlurConstantData {
 	float dx;
 	float dy;
-	float dummy1;
-	float dummy2;
+	Vector2 dummy;
 };
 
 struct LightConstantData {
@@ -84,9 +85,16 @@ struct LightConstantData {
 	float viewWith[4];
 };
 
-struct FogConstantData {
+struct FogFilterConstantData {
 	float fogDistMin;
 	float fogDistMax;
 	float fogStrength;
-	bool isInWater;
+	float dummy1;
+	Vector3 fogColor;
+	float dummy2;
+};
+
+struct WaterFilterConstantData {
+	Vector3 filterColor;
+	float blendStrength;
 };
