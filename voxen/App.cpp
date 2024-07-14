@@ -116,9 +116,9 @@ void App::Run()
 			ImGui::SliderFloat(
 				"fogDistMin", &m_postEffect.m_fogFilterConstantData.fogDistMin, 0.0f, 100.0f);
 			ImGui::SliderFloat(
-				"fogDistMax", &m_postEffect.m_fogFilterConstantData.fogDistMax, 0.0f, 100.0f);
+				"fogDistMax", &m_postEffect.m_fogFilterConstantData.fogDistMax, 0.0f, 300.0f);
 			ImGui::SliderFloat(
-				"fogStrength", &m_postEffect.m_fogFilterConstantData.fogStrength, 0.0f, 100.0f);
+				"fogStrength", &m_postEffect.m_fogFilterConstantData.fogStrength, 0.0f, 10.0f);
 			ImGui::SliderFloat3(
 				"fogColor", (float*)&m_postEffect.m_fogFilterConstantData.fogColor, 0.0f, 1.0f);
 
@@ -184,10 +184,10 @@ void App::Render()
 	RenderBasic();
 
 	if (m_camera.IsUnderWater()) {
+		RenderFogFilter();
 		RenderSkybox();
 		RenderCloud();
 		RenderWaterPlane();
-		RenderFogFilter();
 		RenderWaterFilter();
 	}
 	else {
@@ -345,8 +345,9 @@ void App::RenderWaterPlane()
 
 		ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
 		ppSRVs.push_back(Graphics::copiedBasicDepthSRV.Get());
-	}
 
+		
+	}
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
@@ -468,7 +469,7 @@ void App::RenderFogFilter()
 void App::RenderWaterFilter()
 {
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+		1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
