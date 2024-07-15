@@ -35,7 +35,7 @@ public:
 			XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
 	}
 	inline Matrix GetMirrorPlaneMatrix() { return m_mirrorPlaneMatrix; }
-	inline bool IsUnderWater() { return m_constantData.isUnderWater; }
+	inline bool IsUnderWater() { return m_isUnderWater; }
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
@@ -44,10 +44,10 @@ private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
 
-	bool CheckIsUnderWater();
+	void MoveForward(float dt);
+	void MoveRight(float dt);
 
-	inline void MoveForward(float dt);
-	inline void MoveRight(float dt);
+	void SetIsUnderWater();
 
 	uint32_t m_dateTime;
 
@@ -71,6 +71,8 @@ private:
 	float m_viewNdcY;
 
 	float m_speed;
+
+	bool m_isUnderWater;
 
 	CameraConstantData m_constantData;
 	EnvMapConstantData m_envMapConstantData;

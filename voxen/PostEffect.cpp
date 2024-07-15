@@ -8,7 +8,7 @@
 
 PostEffect::PostEffect()
 	: m_stride(sizeof(SamplingVertex)), m_offset(0), m_vertexBuffer(nullptr),
-	  m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f){};
+	  m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f), m_waterMaxDuration(2.5f){};
 
 PostEffect::~PostEffect(){};
 
@@ -56,16 +56,18 @@ void PostEffect::Update(float dt, Camera& camera)
 {
 	if (camera.IsUnderWater()) {
 		m_waterAdaptationTime += dt;
-		m_waterAdaptationTime = min(2.0f, m_waterAdaptationTime);
+		m_waterAdaptationTime = min(m_waterMaxDuration, m_waterAdaptationTime);
 
-		m_waterFilterConstantData.filterColor.x = 0.15f * 0.5f * m_waterAdaptationTime;
-		m_waterFilterConstantData.filterColor.y = 0.25f * 0.5f * m_waterAdaptationTime;
-		m_waterFilterConstantData.filterColor.z = 0.96f * 0.5f * m_waterAdaptationTime;
-		m_waterFilterConstantData.filterStrength = 0.8f - (0.4f * 0.5f * m_waterAdaptationTime);
+		float percetage = m_waterAdaptationTime / m_waterMaxDuration;
 
-		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * 0.5f * m_waterAdaptationTime);
-		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * 0.5f * m_waterAdaptationTime);
-		m_fogFilterConstantData.fogStrength = 5.0f - (0.5f * m_waterAdaptationTime);
+		m_waterFilterConstantData.filterColor.x = 0.075f + 0.075f * percetage;
+		m_waterFilterConstantData.filterColor.y = 0.125f + 0.125f * percetage;
+		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * percetage;
+		m_waterFilterConstantData.filterStrength = 0.7f - (0.3f * percetage);
+
+		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
+		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);
+		m_fogFilterConstantData.fogStrength = 5.0f - percetage;
 		
 	}
 	else {

@@ -31,11 +31,6 @@ public:
 
 	inline UINT GetID() { return m_id; }
 
-	inline uint8_t GetBlockTypeByPosition(int x, int y, int z)
-	{
-		return m_blocks[x + 1][y + 1][z + 1].GetType();
-	}
-
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
 	inline bool IsLoaded() { return m_isLoaded; }
 	inline bool IsEmpty() { return IsEmptyLowLod(); }
@@ -79,6 +74,7 @@ public:
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 
+	uint8_t GetBlockTypeByPosition(Vector3 pos);
 
 private:
 	void InitChunkData();

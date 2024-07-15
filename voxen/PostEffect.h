@@ -36,4 +36,5 @@ private:
 	WaterFilterConstantData m_waterFilterConstantData;
 
 	float m_waterAdaptationTime;
+	float m_waterMaxDuration;
 };
