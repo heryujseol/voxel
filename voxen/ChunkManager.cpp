@@ -9,9 +9,23 @@
 #include <iostream>
 #include <algorithm>
 
+ChunkManager* ChunkManager::chunkManager = nullptr;
+
+ChunkManager* ChunkManager::GetInstance()
+{
+	if (chunkManager == nullptr) {
+		chunkManager = new ChunkManager();
+	}
+	return chunkManager;
+}
+
 ChunkManager::ChunkManager() {}
 
 ChunkManager::~ChunkManager() {}
+
+ChunkManager::ChunkManager(const ChunkManager& other) {}
+
+void ChunkManager::operator=(const ChunkManager& rhs) {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
@@ -47,7 +61,7 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	return true;
 }
 
-void ChunkManager::Update(Camera& camera, float dt)
+void ChunkManager::Update(float dt, Camera& camera)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
@@ -148,40 +162,31 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderBasic(Vector3 cameraPos, bool useMasking)
+void ChunkManager::RenderBasic(Vector3 cameraPos)
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
-
 	for (auto& c : m_renderChunkList) {
 		Vector3 chunkOffset = c->GetOffsetPosition();
 		Vector3 chunkCenterPosition = chunkOffset + Vector3(Chunk::CHUNK_SIZE * 0.5);
 		Vector3 diffPosition = chunkCenterPosition - cameraPos;
 
-		Graphics::SetPipelineStates(useMasking ? Graphics::basicMaskingPSO : Graphics::basicPSO);
+		Graphics::SetPipelineStates(Graphics::basicPSO);
 		if (diffPosition.Length() > (float)Camera::LOD_RENDER_DISTANCE) {
 			RenderLowLodChunk(c);
 		}
 		else {
 			RenderOpaqueChunk(c);
 
-			Graphics::SetPipelineStates(
-				useMasking ? Graphics::semiAlphaMaskingPSO : Graphics::semiAlphaPSO);
+			Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
 			RenderSemiAlphaChunk(c);
 		}
 	}
 
-	Graphics::SetPipelineStates(useMasking ? Graphics::instanceMaskingPSO : Graphics::instancePSO);
+	Graphics::SetPipelineStates(Graphics::instancePSO);
 	RenderInstance();
 }
 
 void ChunkManager::RenderMirrorWorld()
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
 	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
 	for (auto& c : m_renderMirrorChunkList) {
 		RenderLowLodChunk(c);
@@ -191,18 +196,8 @@ void ChunkManager::RenderMirrorWorld()
 	RenderInstance();
 }
 
-void ChunkManager::RenderTransparency(bool useBlending)
+void ChunkManager::RenderTransparency()
 {
-	if (useBlending) {
-		std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-			Graphics::mirrorWorldSRV.Get(), Graphics::depthOnlySRV.Get(),
-			Graphics::basicResolvedSRV.Get() };
-		Graphics::context->PSSetShaderResources(0, 4, pptr.data());
-	}
-	else {
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
-	}
-
 	for (auto& c : m_renderChunkList) {
 		RenderTransparencyChunk(c);
 	}
@@ -357,7 +352,8 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 			InstanceInfoVertex info;
 			info.type = p.second.GetType();
 
-			info.instanceWorld = (p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
+			info.instanceWorld =
+				(p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
 
 			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
 		}
@@ -370,7 +366,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	}
 }
 
-void ChunkManager::UpdateChunkConstant(float dt) 
+void ChunkManager::UpdateChunkConstant(float dt)
 {
 	for (auto& p : m_chunkMap) {
 		if (p.second->IsLoaded() && p.second->IsUpdateRequired()) {
@@ -450,12 +446,12 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	// constant data
 	ChunkConstantData tempConstantData = chunk->GetConstantData();
 	tempConstantData.world = tempConstantData.world.Transpose();
-	
+
 	if (!m_constantBuffers[id])
 		DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData);
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
-	
+
 
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
@@ -579,4 +575,14 @@ bool ChunkManager::MakeInstanceInfoBuffer()
 	}
 
 	return true;
+}
+
+Chunk* ChunkManager::GetChunkByPosition(int x, int y, int z)
+{
+	auto iter = m_chunkMap.find(std::make_tuple(x, y, z));
+
+	if (iter == m_chunkMap.end())
+		return nullptr;
+
+	return iter->second;
 }

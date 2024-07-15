@@ -40,15 +40,17 @@ private:
 	void Render();
 
 	void RenderEnvMap();
-	void RenderBackground();
-	void RenderDepthOnlyBasic();
-	void RenderDepthOnlyMirror();
 	void RenderBasic();
-	void RenderMirror();
+	void RenderWaterPlane();
+	void RenderMirrorWorld();
+	void BlurMirror(int blurLoopCount);
+	void RenderSkybox();
+	void RenderCloud();
+	void RenderFogFilter();
+	void RenderWaterFilter();
 
 	HWND m_hwnd;
 
-	ChunkManager m_chunkManager;
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;

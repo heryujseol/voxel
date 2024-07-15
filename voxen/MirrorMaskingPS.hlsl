@@ -11,15 +11,24 @@ struct vsOutput
     uint type : TYPE;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+struct psOutput
+{
+    float4 color : SV_Target0;
+    float depth : SV_Target1;
+};
+
+psOutput main(vsOutput input)
 {
     float3 normal = getNormal(input.face);
-    float3 toEye = normalize(eyePos - input.posWorld);
-    
     if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
     
+    float3 toEye = normalize(eyePos - input.posWorld);
     float3 color = envMapTexture.Sample(linearClampSS, reflect(-toEye, normal)).rgb;
+  
+    psOutput output;
+    output.color = float4(color, 1.0);
+    output.depth = input.posProj.z;
     
-    return float4(color, 1.0);
+    return output;
 }

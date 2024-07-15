@@ -24,11 +24,10 @@ public:
 	static const int MAX_INSTANCE_BUFFER_COUNT =
 		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
 
-	ChunkManager();
-	~ChunkManager();
+	static ChunkManager* GetInstance();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(Camera& camera, float dt);
+	void Update(float dt, Camera& camera);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -36,12 +35,21 @@ public:
 	void RenderTransparencyChunk(Chunk* chunk);
 	void RenderInstance();
 
-	void RenderBasic(Vector3 cameraPos, bool useMasking);
+	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
-	void RenderTransparency(bool useBlending);
+	void RenderTransparency();
+
+	Chunk* GetChunkByPosition(int x, int y, int z);
 	
 
 private:
+	static ChunkManager* chunkManager;
+
+	ChunkManager();
+	~ChunkManager();
+	ChunkManager(const ChunkManager& other);
+	void operator=(const ChunkManager& rhs);
+
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
@@ -52,8 +60,6 @@ private:
 	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	void InitChunkBuffer(Chunk* chunk);
-
-	void ClearChunkBuffer(Chunk* chunk);
 	
 	Chunk* GetChunkFromPool();
 	void ReleaseChunkToPool(Chunk* chunk);

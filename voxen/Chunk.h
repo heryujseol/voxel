@@ -74,6 +74,7 @@ public:
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 
+	uint8_t GetBlockTypeByPosition(Vector3 pos);
 
 private:
 	void InitChunkData();

@@ -1,11 +1,13 @@
 #include "Camera.h"
 #include "DXUtils.h"
+#include "ChunkManager.h"
 
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.1f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
-	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
-	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
+	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f),
+	  m_forward(0.0f, 0.0f, 1.0f), m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f),
+	  m_viewNdcX(0.0f), m_viewNdcY(0.0f), m_speed(20.0f), m_isUnderWater(false),
+	  m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
 }
 
@@ -16,32 +18,25 @@ bool Camera::Initialize(Vector3 pos)
 	m_eyePos = pos;
 	m_chunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 
-	m_constantData.view = GetViewMatrix();
-	m_constantData.proj = GetProjectionMatrix();
-	m_constantData.invProj = m_constantData.proj.Invert();
+	m_constantData.view = GetViewMatrix().Transpose();
+	m_constantData.proj = GetProjectionMatrix().Transpose();
+	m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
 	m_constantData.eyePos = m_eyePos;
 	m_constantData.eyeDir = m_forward;
 	m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
 	m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
+	m_constantData.isUnderWater = m_isUnderWater;
 
-	CameraConstantData tempConstantData;
-	tempConstantData.view = m_constantData.view.Transpose();
-	tempConstantData.proj = m_constantData.proj.Transpose();
-	tempConstantData.invProj = m_constantData.invProj.Transpose();
-	tempConstantData.eyePos = m_constantData.eyePos;
-	tempConstantData.eyeDir = m_constantData.eyeDir;
-	tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
-	tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
-	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
+	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create camera constant buffer" << std::endl;
 		return false;
 	}
 
 	Plane mirrorPlane = Plane(Vector3(0.0f, 62.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
 	m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
-	tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
-	tempConstantData.view = tempConstantData.view.Transpose();
-	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, tempConstantData)) {
+	m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
+	m_constantData.view = m_constantData.view.Transpose();
+	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, m_constantData)) {
 		std::cout << "failed create camera mirror constant buffer" << std::endl;
 		return false;
 	}
@@ -67,55 +62,23 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 	UpdateViewDirection(mouseX, mouseY);
 
 	if (m_isOnConstantDirtyFlag) {
-		m_constantData.view = GetViewMatrix();
-		m_constantData.proj = GetProjectionMatrix();
-		m_constantData.invProj = m_constantData.proj.Invert();
+		m_constantData.view = GetViewMatrix().Transpose();
+		m_constantData.proj = GetProjectionMatrix().Transpose();
+		m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
 		m_constantData.eyePos = m_eyePos;
 		m_constantData.eyeDir = m_forward;
+		m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+		m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
+		m_constantData.isUnderWater = m_isUnderWater;
 
-		CameraConstantData tempConstantData;
-		tempConstantData.view = m_constantData.view.Transpose();
-		tempConstantData.proj = m_constantData.proj.Transpose();
-		tempConstantData.invProj = m_constantData.invProj.Transpose();
-		tempConstantData.eyePos = m_constantData.eyePos;
-		tempConstantData.eyeDir = m_constantData.eyeDir;
-		tempConstantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
-		tempConstantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
-		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
+		DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 
-		tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
-		tempConstantData.view = tempConstantData.view.Transpose();
-		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, tempConstantData);
+		m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
+		m_constantData.view = m_constantData.view.Transpose();
+		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, m_constantData);
 
 		m_isOnConstantDirtyFlag = false;
 	}
-	//static float acc = 0.0f;
-
-	//// dateTime
-	//acc += DATE_TIME_SPEED * dt;
-	//m_dateTime = (uint32_t)acc;
-	//m_dateTime %= DATE_CYCLE_AMOUNT;
-
-	//float angle = (float)m_dateTime / DATE_CYCLE_AMOUNT * 2.0f * Utils::PI;
-	//m_constantData.eyePos = Vector3::Transform(Vector3(450.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
-	//m_eyePos = m_constantData.eyePos;
-	//m_forward = Vector3::Transform(Vector3(-1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
-	//m_constantData.eyeDir = m_forward;
-
-	//// Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
-	//m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
-
-	//Matrix viewRow = XMMatrixLookToLH(
-	//	m_constantData.eyePos, m_constantData.eyeDir, m_up);
-	////Matrix projRow = XMMatrixPerspectiveFovLH(XMConvertToRadians(120.0f), 1.0f, 0.1f, 1000.0f);
-	//Matrix projRow = XMMatrixOrthographicLH(1080.0f, 1080.0f, 0.1f, 3000.0f);
-
-	//m_constantData.invProj = projRow.Invert().Transpose();
-
-	//m_constantData.view = viewRow.Transpose();
-	//m_constantData.proj = projRow.Transpose();
-
-	//DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
 
 void Camera::UpdatePosition(bool keyPressed[256], float dt)
@@ -138,6 +101,8 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 	}
 
 	if (m_isOnConstantDirtyFlag) {
+		SetIsUnderWater();
+
 		Vector3 newChunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 		if (newChunkPos != m_chunkPos) {
 			m_isOnChunkDirtyFlag = true;
@@ -176,3 +141,28 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 void Camera::MoveForward(float dt) { m_eyePos += m_forward * m_speed * dt; }
 
 void Camera::MoveRight(float dt) { m_eyePos += m_right * m_speed * dt; }
+
+void Camera::SetIsUnderWater()
+{
+	m_isUnderWater = false;
+
+	int x = (int)m_chunkPos.x;
+	int y = (int)m_chunkPos.y;
+	int z = (int)m_chunkPos.z;
+
+	Chunk* c = ChunkManager::GetInstance()->GetChunkByPosition(x, y, z);
+	if (c != nullptr && c->IsLoaded()) {
+		Vector3 chunkOffset = m_eyePos - m_chunkPos;
+		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::WATER) {
+			m_isUnderWater = true;
+			return;
+		}
+
+		float bias = 0.15f;
+		chunkOffset.y -= bias;
+		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::WATER) {
+			m_isUnderWater = true;
+			return;
+		}
+	}
+}

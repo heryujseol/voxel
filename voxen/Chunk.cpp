@@ -384,3 +384,14 @@ void Chunk::GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<Voxe
 		}
 	}
 }
+
+uint8_t Chunk::GetBlockTypeByPosition(Vector3 pos)
+{
+	int padding = 1;
+
+	int fx = (int)std::floor(pos.x);
+	int fy = (int)std::floor(pos.y);
+	int fz = (int)std::floor(pos.z);
+
+	return m_blocks[fx + padding][fy + padding][fz + padding].GetType();
+}

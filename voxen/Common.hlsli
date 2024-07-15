@@ -16,6 +16,8 @@ cbuffer CameraConstantBuffer : register(b0)
     float3 eyeDir;
     float lodRenderDistance;
     Matrix invProj;
+    bool isUnderWater;
+    float3 cameraDummyData;
 };
 
 cbuffer SkyboxConstantBuffer : register(b1)
@@ -29,7 +31,7 @@ cbuffer SkyboxConstantBuffer : register(b1)
     float3 sunHorizonColor;
     float moonStrength;
     float3 sunZenithColor;
-    float dummy3;
+    float skyboxDummyData;
 };
 
 static const float PI = 3.14159265;
