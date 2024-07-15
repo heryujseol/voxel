@@ -112,23 +112,6 @@ void App::Run()
 			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
 
-			////////////////////
-			ImGui::SliderFloat(
-				"fogDistMin", &m_postEffect.m_fogFilterConstantData.fogDistMin, 0.0f, 100.0f);
-			ImGui::SliderFloat(
-				"fogDistMax", &m_postEffect.m_fogFilterConstantData.fogDistMax, 0.0f, 300.0f);
-			ImGui::SliderFloat(
-				"fogStrength", &m_postEffect.m_fogFilterConstantData.fogStrength, 0.0f, 10.0f);
-			ImGui::SliderFloat3(
-				"fogColor", (float*)&m_postEffect.m_fogFilterConstantData.fogColor, 0.0f, 1.0f);
-
-			ImGui::SliderFloat3("waterFilter",
-				(float*)&m_postEffect.m_waterFilterConstantData.filterColor, 0.0f, 1.0f);
-			ImGui::SliderFloat(
-				"blendStrength", &m_postEffect.m_waterFilterConstantData.blendStrength, 0.0f, 1.0f);
-
-			////////////////////
-
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -148,9 +131,9 @@ void App::Update(float dt)
 		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	}
 	
-	ChunkManager::GetInstance()->Update(dt, m_camera);
 	m_postEffect.Update(dt, m_camera);
-
+	ChunkManager::GetInstance()->Update(dt, m_camera);
+	
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
@@ -161,6 +144,8 @@ void App::Update(float dt)
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 		m_light.Update(0.0f, m_camera);
 	}
+
+	
 }
 
 void App::Render()

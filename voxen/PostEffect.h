@@ -23,10 +23,6 @@ public:
 	ComPtr<ID3D11Buffer> m_fogFilterConstantBuffer;
 	ComPtr<ID3D11Buffer> m_waterFilterConstantBuffer;
 
-	BlurConstantData m_blurConstantData;
-	FogFilterConstantData m_fogFilterConstantData;
-	WaterFilterConstantData m_waterFilterConstantData;
-
 private:
 	std::vector<SamplingVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
@@ -34,4 +30,10 @@ private:
 	UINT m_offset;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
+
+	BlurConstantData m_blurConstantData;
+	FogFilterConstantData m_fogFilterConstantData;
+	WaterFilterConstantData m_waterFilterConstantData;
+
+	float m_waterAdaptationTime;
 };

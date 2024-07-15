@@ -62,7 +62,7 @@ float4 main(vsOutput input) : SV_TARGET
    
     if (isUnderWater)
     {
-        return float4(lerp(originColor, textureColor.rgb, 0.75), 1.0);
+        return float4(lerp(originColor, textureColor.rgb, 0.5), 1.0);
     }
     else
     {

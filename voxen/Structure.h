@@ -96,5 +96,5 @@ struct FogFilterConstantData {
 
 struct WaterFilterConstantData {
 	Vector3 filterColor;
-	float blendStrength;
+	float filterStrength;
 };

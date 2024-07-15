@@ -8,9 +8,7 @@ cbuffer FogConstantBuffer : register(b2)
     float fogDistMin;
     float fogDistMax;
     float fogStrength;
-    float dummy1;
-    float3 fogColor;
-    float dummy2;
+    float dummy;
 };
 
 struct vsOutput
@@ -39,6 +37,13 @@ float4 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
 
 float4 main(vsOutput input) : SV_TARGET
 {
+    float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+    float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
+    if (isUnderWater)
+    {
+        fogColor = float3(0.12, 0.26, 0.65);
+    }
+    
     /*
     float3 fogColor = isUnderWater ? float3(1.0, 1.0, 1.0) : normalHorizonColor;
     if (!isUnderWater && (0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700) || (22300 <= dateTime && dateTime <= 23999))

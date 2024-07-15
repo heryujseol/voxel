@@ -5,7 +5,7 @@ Texture2DMS<float4, 4> msaaRenderTex : register(t0);
 cbuffer WaterFilterConstantBuffer : register(b2)
 {
     float3 filterColor;
-    float blendStrength;
+    float filterStrength;
 }
 
 struct vsOutput
@@ -19,5 +19,7 @@ float4 main(vsOutput input) : SV_TARGET
 {
     float3 renderColor = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
 
-    return float4(lerp(renderColor, filterColor, blendStrength), 1.0);
+    float3 blendColor = lerp(renderColor, filterColor, filterStrength);
+    
+    return float4(blendColor, 1.0);
 }

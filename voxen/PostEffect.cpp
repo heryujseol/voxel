@@ -8,7 +8,7 @@
 
 PostEffect::PostEffect()
 	: m_stride(sizeof(SamplingVertex)), m_offset(0), m_vertexBuffer(nullptr),
-	  m_indexBuffer(nullptr){};
+	  m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f){};
 
 PostEffect::~PostEffect(){};
 
@@ -43,7 +43,7 @@ bool PostEffect::Initialize()
 	}
 
 	m_waterFilterConstantData.filterColor = Vector3(0.0f);
-	m_waterFilterConstantData.blendStrength = 0.0f;
+	m_waterFilterConstantData.filterStrength = 0.0f;
 	if (!DXUtils::CreateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData)) {
 		std::cout << "failed create water filter constant buffer" << std::endl;
 		return false;
@@ -54,6 +54,27 @@ bool PostEffect::Initialize()
 
 void PostEffect::Update(float dt, Camera& camera)
 {
+	if (camera.IsUnderWater()) {
+		m_waterAdaptationTime += dt;
+		m_waterAdaptationTime = min(2.0f, m_waterAdaptationTime);
+
+		m_waterFilterConstantData.filterColor.x = 0.15f * 0.5f * m_waterAdaptationTime;
+		m_waterFilterConstantData.filterColor.y = 0.25f * 0.5f * m_waterAdaptationTime;
+		m_waterFilterConstantData.filterColor.z = 0.96f * 0.5f * m_waterAdaptationTime;
+		m_waterFilterConstantData.filterStrength = 0.8f - (0.4f * 0.5f * m_waterAdaptationTime);
+
+		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * 0.5f * m_waterAdaptationTime);
+		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * 0.5f * m_waterAdaptationTime);
+		m_fogFilterConstantData.fogStrength = 5.0f - (0.5f * m_waterAdaptationTime);
+		
+	}
+	else {
+		m_waterAdaptationTime = 0.0f;
+
+		m_fogFilterConstantData.fogDistMin = Camera::LOD_RENDER_DISTANCE;
+		m_fogFilterConstantData.fogDistMax = Camera::MAX_RENDER_DISTANCE;
+		m_fogFilterConstantData.fogStrength = 3.0f;
+	}
 	DXUtils::UpdateConstantBuffer(m_fogFilterConstantBuffer, m_fogFilterConstantData);
 	DXUtils::UpdateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData);
 }
