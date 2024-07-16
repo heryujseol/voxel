@@ -20,7 +20,7 @@ struct psOutput
     float4 normal : SV_TARGET1;
 };
 
-psOutput main(vsOutput input) : SV_TARGET
+psOutput main(vsOutput input)
 {
     float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0).a;
     if (alpha != 1.0)

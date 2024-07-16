@@ -22,6 +22,8 @@ public:
 	ComPtr<ID3D11Buffer> m_blurConstantBuffer;
 	ComPtr<ID3D11Buffer> m_fogFilterConstantBuffer;
 	ComPtr<ID3D11Buffer> m_waterFilterConstantBuffer;
+	ComPtr<ID3D11Buffer> m_ssaoConstantBuffer;
+	ComPtr<ID3D11Buffer> m_ssaoNoiseConstantBuffer;
 
 private:
 	std::vector<SamplingVertex> m_vertices;
@@ -34,6 +36,8 @@ private:
 	BlurConstantData m_blurConstantData;
 	FogFilterConstantData m_fogFilterConstantData;
 	WaterFilterConstantData m_waterFilterConstantData;
+	SsaoConstantData m_ssaoConstantData;
+	SsaoNoiseConstantData m_ssaoNoiseConstantData;
 
 	float m_waterAdaptationTime;
 	float m_waterMaxDuration;

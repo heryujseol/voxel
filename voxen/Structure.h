@@ -98,3 +98,11 @@ struct WaterFilterConstantData {
 	Vector3 filterColor;
 	float filterStrength;
 };
+
+struct SsaoConstantData {
+	Vector4 sampleKernel[64];
+};
+
+struct SsaoNoiseConstantData {
+	Vector4 rotationNoise[16];
+};

@@ -173,5 +173,8 @@
     <FxCompile Include="WaterFilterPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
+    <FxCompile Include="SsaoPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

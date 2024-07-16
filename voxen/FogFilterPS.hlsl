@@ -18,23 +18,6 @@ struct vsOutput
     uint sampleIndex : SV_SampleIndex;
 };
 
-float4 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
-{
-    float4 posProj;
-
-    // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
-    posProj.xy = texcoord * 2.0 - 1.0;
-    posProj.y *= -1;
-    posProj.z = msaaDepthTex.Load(screenCoord, sampleIndex).r;
-    posProj.w = 1.0;
-
-    // ProjectSpace -> ViewSpace
-    float4 posView = mul(posProj, invProj);
-    posView.xyz /= posView.w; // homogeneous coordinates
-    
-    return posView;
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
@@ -53,8 +36,9 @@ float4 main(vsOutput input) : SV_TARGET
     }*/
     
     //Beer-Lambert law
-    float4 posView = texcoordToView(input.texcoord, input.posProj.xy, input.sampleIndex);
-    float dist = length(posView.xyz);
+    float depth = msaaDepthTex.Load(input.posProj.xy, input.sampleIndex).r;
+    float3 posView = convertViewPos(input.texcoord, depth);
+    float dist = length(posView);
         
     float distFog = saturate((dist - fogDistMin) / (fogDistMax - fogDistMin));
     float fogFactor = exp(-fogStrength * distFog);

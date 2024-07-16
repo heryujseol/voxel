@@ -22,7 +22,7 @@ struct psOutput
     float4 normal : SV_TARGET1;
 };
 
-psOutput main(vsOutput input) : SV_TARGET
+psOutput main(vsOutput input)
 {
     //float temperature = 0.5;
     //float downfall = 1.0;

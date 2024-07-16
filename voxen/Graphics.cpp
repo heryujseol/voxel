@@ -51,6 +51,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> waterFilterPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
+	ComPtr<ID3D11PixelShader> ssaoPS;
 
 
 	// Rasterizer State
@@ -103,6 +104,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> normalMapBuffer;
 	ComPtr<ID3D11RenderTargetView> normalMapRTV;
 
+	ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> ssaoRTV;
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -146,6 +150,10 @@ namespace Graphics {
 	ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
 
 	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
+
+	ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
+
+	ComPtr<ID3D11ShaderResourceView> normalMapSRV;
 
 
 	// Viewport
@@ -197,6 +205,7 @@ namespace Graphics {
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
+	GraphicsPSO ssaoPSO;
 }
 
 
@@ -391,6 +400,22 @@ bool Graphics::InitRenderTargetBuffers()
 		normalMapBuffer.Get(), nullptr, normalMapRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create normal map rtv" << std::endl;
+		return false;
+	}
+
+	
+	// ssao RTV
+	format = DXGI_FORMAT_R32_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			ssaoRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create ssao buffer" << std::endl;
+		return false;
+	}
+	ret = Graphics::device->CreateRenderTargetView(
+		ssaoRenderBuffer.Get(), nullptr, ssaoRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create ssao rtv" << std::endl;
 		return false;
 	}
 
@@ -609,6 +634,22 @@ bool Graphics::InitShaderResourceBuffers()
 		mirrorPlaneDepthRenderBuffer.Get(), nullptr, mirrorPlaneDepthSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from mirror plane depth srv" << std::endl;
+		return false;
+	}
+
+	// albedo Map SRV
+	ret = device->CreateShaderResourceView(
+		albedoMapBuffer.Get(), nullptr, albedoMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from albedo map srv" << std::endl;
+		return false;
+	}
+
+	// normal Map SRV
+	ret = device->CreateShaderResourceView(
+		normalMapBuffer.Get(), nullptr, normalMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from normal map srv" << std::endl;
 		return false;
 	}
 
@@ -842,6 +883,12 @@ bool Graphics::InitPixelShaders()
 	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurYPS, macros.data())) {
 		std::cout << "failed create blur y ps" << std::endl;
+		return false;
+	}
+
+	// SsaoPS
+	if (!DXUtils::CreatePixelShader(L"SsaoPS.hlsl", ssaoPS)) {
+		std::cout << "failed create ssao ps" << std::endl;
 		return false;
 	}
 
@@ -1151,6 +1198,12 @@ void Graphics::InitGraphicsPSO()
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
+
+	// ssaoPSO
+	ssaoPSO = basicPSO;
+	ssaoPSO.inputLayout = samplingIL;
+	ssaoPSO.vertexShader = samplingVS;
+	ssaoPSO.pixelShader = ssaoPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

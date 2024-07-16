@@ -24,23 +24,6 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
-float3 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
-{
-    float4 posProj;
-
-    // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
-    posProj.xy = texcoord * 2.0 - 1.0;
-    posProj.y *= -1;
-    posProj.z = msaaDepthTex.Load(screenCoord, sampleIndex).r;
-    posProj.w = 1.0;
-
-    // ProjectSpace -> ViewSpace
-    float4 posView = mul(posProj, invProj);
-    posView.xyz /= posView.w; // homogeneous coordinates
-    
-    return posView.xyz;
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float3 normal = getNormal(input.face);
@@ -67,7 +50,8 @@ float4 main(vsOutput input) : SV_TARGET
     else
     {
         // absorption factor
-        float objectDistance = length(texcoordToView(screenTexcoord, input.posProj.xy, input.sampleIndex));
+        float depth = msaaDepthTex.Load(input.posProj.xy, input.sampleIndex).r;
+        float objectDistance = length(convertViewPos(screenTexcoord, depth));
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
         float absorptionCoeff = 0.1;

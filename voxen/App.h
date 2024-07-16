@@ -48,6 +48,7 @@ private:
 	void RenderCloud();
 	void RenderFogFilter();
 	void RenderWaterFilter();
+	void RenderSSAO();
 
 	HWND m_hwnd;
 

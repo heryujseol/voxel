@@ -54,6 +54,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
 	extern ComPtr<ID3D11PixelShader> blurXPS;
 	extern ComPtr<ID3D11PixelShader> blurYPS;
+	extern ComPtr<ID3D11PixelShader> ssaoPS;
 
 
 	// Rasterizer State
@@ -106,6 +107,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> normalMapBuffer;
 	extern ComPtr<ID3D11RenderTargetView> normalMapRTV;
+
+	extern ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	
 
 	// DSV & Buffer
@@ -150,6 +154,10 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
+
+	extern ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
+
+	extern ComPtr<ID3D11ShaderResourceView> normalMapSRV;
 
 
 	// Viewport
@@ -201,4 +209,5 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
+	extern GraphicsPSO ssaoPSO;
 }

@@ -107,4 +107,18 @@ float2 getVoxelTexcoord(float3 pos, uint face)
     return texcoord;
 }
 
+float3 convertViewPos(float2 texcoord, float depth)
+{
+    float4 posProj;
+    
+    posProj.xy = texcoord * 2.0 - 1.0;
+    posProj.y *= -1;
+    posProj.z = depth;
+    posProj.w = 1.0;
+
+    float4 posView = mul(posProj, invProj);
+    posView.xyz /= posView.w;
+    
+    return posView.xyz;
+}
 #endif

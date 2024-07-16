@@ -165,6 +165,7 @@ void App::Render()
 
 	// Basic
 	RenderBasic();
+	RenderSSAO();
 
 	if (m_camera.IsUnderWater()) {
 		RenderFogFilter();
@@ -469,5 +470,26 @@ void App::RenderWaterFilter()
 		2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
+	m_postEffect.Render();
+}
+
+void App::RenderSSAO() 
+{
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
+
+	Graphics::context->OMSetRenderTargets(1, Graphics::ssaoRTV.GetAddressOf(), nullptr);
+
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::normalMapSRV.Get());
+	ppSRVs.push_back(Graphics::basicDepthSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+	std::vector<ID3D11Buffer*> ppConstants;
+	ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
+	ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
+	Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
+
+	Graphics::SetPipelineStates(Graphics::ssaoPSO);
 	m_postEffect.Render();
 }
