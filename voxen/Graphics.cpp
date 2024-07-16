@@ -97,6 +97,12 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
 
+	ComPtr<ID3D11Texture2D> albedoMapBuffer;
+	ComPtr<ID3D11RenderTargetView> albedoMapRTV;
+
+	ComPtr<ID3D11Texture2D> normalMapBuffer;
+	ComPtr<ID3D11RenderTargetView> normalMapRTV;
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -318,7 +324,6 @@ bool Graphics::InitRenderTargetBuffers()
 		std::cout << "failed create mirror world render buffer" << std::endl;
 		return false;
 	}
-
 	ret = Graphics::device->CreateRenderTargetView(
 		mirrorWorldRenderBuffer.Get(), nullptr, mirrorWorldRTV.GetAddressOf());
 	if (FAILED(ret)) {
@@ -333,7 +338,6 @@ bool Graphics::InitRenderTargetBuffers()
 			std::cout << "failed create mirror world blur buffer" << std::endl;
 			return false;
 		}
-
 		ret = Graphics::device->CreateRenderTargetView(
 			mirrorWorldBlurBuffer[i].Get(), nullptr, mirrorWorldBlurRTV[i].GetAddressOf());
 		if (FAILED(ret)) {
@@ -351,11 +355,42 @@ bool Graphics::InitRenderTargetBuffers()
 		std::cout << "failed create mirror plane depth render buffer" << std::endl;
 		return false;
 	}
-
 	ret = Graphics::device->CreateRenderTargetView(
 		mirrorPlaneDepthRenderBuffer.Get(), nullptr, mirrorPlaneDepthRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create mirror plane depth rtv" << std::endl;
+		return false;
+	}
+
+
+	// albedoMap RTV
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(albedoMapBuffer, App::WIDTH,
+			App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create albedo map buffer" << std::endl;
+		return false;
+	}
+	ret = Graphics::device->CreateRenderTargetView(
+		albedoMapBuffer.Get(), nullptr, albedoMapRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create albedo map rtv" << std::endl;
+		return false;
+	}
+
+
+	// normalMap RTV
+	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			normalMapBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create normal map buffer" << std::endl;
+		return false;
+	}
+	ret = Graphics::device->CreateRenderTargetView(
+		normalMapBuffer.Get(), nullptr, normalMapRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create normal map rtv" << std::endl;
 		return false;
 	}
 

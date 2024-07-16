@@ -100,6 +100,12 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
+
+	extern ComPtr<ID3D11Texture2D> albedoMapBuffer;
+	extern ComPtr<ID3D11RenderTargetView> albedoMapRTV;
+
+	extern ComPtr<ID3D11Texture2D> normalMapBuffer;
+	extern ComPtr<ID3D11RenderTargetView> normalMapRTV;
 	
 
 	// DSV & Buffer

@@ -16,7 +16,13 @@ struct vsOutput
     uint type : TYPE;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+struct psOutput
+{
+    float4 albedo : SV_TARGET0;
+    float4 normal : SV_TARGET1;
+};
+
+psOutput main(vsOutput input) : SV_TARGET
 {
     //float temperature = 0.5;
     //float downfall = 1.0;
@@ -44,32 +50,14 @@ float4 main(vsOutput input) : SV_TARGET
     }
 #endif
     
-    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
+    psOutput output;
     
-    float3 normal = getNormal(input.face);
+    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
+    output.albedo = float4(color, 1.0);
     
-    float ndotl = max(dot(sunDir, normal), 0.0);
+    float3 normalWorld = getNormal(input.face);
+    float4 normalView = mul(float4(normalWorld, 0.0), view); // must be [Normal * ITWorld * ITView]
+    output.normal = normalView;
     
-    float strength = sunStrength;
-    
-    if (13700 <= dateTime && dateTime <= 14700)
-    {
-        float w = (dateTime - 13700) / 1000.0;
-        color = lerp(color * (strength + 1.0) * (ndotl + 1.0), color, w);
-    }
-    else if (21300 <= dateTime && dateTime <= 22300)
-    {
-        float w = (dateTime - 21300) / 1000.0;
-        color = lerp(color, color * (strength + 1.0) * (ndotl + 1.0), w);
-    }
-    else if (14700 < dateTime && dateTime < 21300)
-    {
-        color = color * (strength + 1.0);
-    }
-    else
-    {
-        color = color * (strength + 1.0) * (ndotl + 1.0);
-    }
-
-    return float4(color, 1.0);
+    return output;
 }

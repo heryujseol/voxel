@@ -130,10 +130,10 @@ void App::Update(float dt)
 	if (!m_keyToggle['T']) {
 		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	}
-	
+
 	m_postEffect.Update(dt, m_camera);
 	ChunkManager::GetInstance()->Update(dt, m_camera);
-	
+
 	if (m_keyToggle['F']) {
 		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
@@ -144,8 +144,6 @@ void App::Update(float dt)
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 		m_light.Update(0.0f, m_camera);
 	}
-
-	
 }
 
 void App::Render()
@@ -182,7 +180,7 @@ void App::Render()
 		RenderSkybox();
 		RenderCloud();
 	}
-	
+
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -301,12 +299,21 @@ void App::RenderEnvMap()
 
 void App::RenderBasic()
 {
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::albedoMapRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
+	std::vector<ID3D11RenderTargetView*> ppRTVs;
+	ppRTVs.push_back(Graphics::albedoMapRTV.Get());
+	ppRTVs.push_back(Graphics::normalMapRTV.Get());
+	Graphics::context->OMSetRenderTargets(
+		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
+
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::shadowSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
 }
@@ -323,15 +330,13 @@ void App::RenderWaterPlane()
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
-	
+
 	if (!m_camera.IsUnderWater()) {
 		Graphics::context->CopyResource(
 			Graphics::copiedBasicDepthBuffer.Get(), Graphics::basicDepthBuffer.Get());
 
 		ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
 		ppSRVs.push_back(Graphics::copiedBasicDepthSRV.Get());
-
-		
 	}
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
@@ -453,8 +458,7 @@ void App::RenderFogFilter()
 
 void App::RenderWaterFilter()
 {
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), nullptr);
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());

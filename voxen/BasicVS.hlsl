@@ -1,8 +1,15 @@
 cbuffer CameraConstantBuffer : register(b0)
 {
-    matrix view;
-    matrix proj;
-}
+    Matrix view;
+    Matrix proj;
+    float3 eyePos;
+    float maxRenderDistance;
+    float3 eyeDir;
+    float lodRenderDistance;
+    Matrix invProj;
+    bool isUnderWater;
+    float3 cameraDummyData;
+};
 
 cbuffer ChunkConstantBuffer : register(b1)
 {
@@ -18,7 +25,7 @@ struct vsOutput
     uint type : TYPE;
 };
 
-vsOutput main(uint data : DATA, uint vertexID: SV_VertexID)
+vsOutput main(uint data : DATA)
 {
     vsOutput output;
     

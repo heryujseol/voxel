@@ -8,12 +8,19 @@ Texture2DArray atlasTextureArray : register(t0);
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
+    float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+struct psOutput
+{
+    float4 albedo : SV_TARGET0;
+    float4 normal : SV_TARGET1;
+};
+
+psOutput main(vsOutput input) : SV_TARGET
 {
     float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0).a;
     if (alpha != 1.0)
@@ -36,5 +43,17 @@ float4 main(vsOutput input) : SV_TARGET
 #else
     float4 color = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0);
 #endif
-    return color;
+    
+    psOutput output;
+    
+    output.albedo = color;
+    
+    // 스프라이트의 노멀벡터인 경우 보이는 쪽으로 설정
+    float3 toEye = eyePos - input.posWorld;
+    input.normal *= (dot(toEye, input.normal) < 0) ? -1 : 1; 
+    
+    float4 normalView = mul(float4(input.normal, 0.0), view); // must be [Normal * ITWorld * ITView]
+    output.normal = normalView;
+    
+    return output;
 }
