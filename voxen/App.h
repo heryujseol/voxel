@@ -43,12 +43,15 @@ private:
 	void RenderBasic();
 	void RenderWaterPlane();
 	void RenderMirrorWorld();
-	void BlurMirror(int blurLoopCount);
+	
 	void RenderSkybox();
 	void RenderCloud();
 	void RenderFogFilter();
 	void RenderWaterFilter();
 	void RenderSSAO();
+
+	void BlurMirror(int blurLoopCount);
+	void BlurSSAO(int blurLoopCount);
 
 	HWND m_hwnd;
 

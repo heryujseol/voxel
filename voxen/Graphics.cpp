@@ -67,6 +67,7 @@ namespace Graphics {
 	ComPtr<ID3D11SamplerState> linearClampSS;
 	ComPtr<ID3D11SamplerState> shadowPointSS;
 	ComPtr<ID3D11SamplerState> shadowCompareSS;
+	ComPtr<ID3D11SamplerState> pointClampSS;
 
 
 	// Depth Stencil State
@@ -103,6 +104,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> normalMapBuffer;
 	ComPtr<ID3D11RenderTargetView> normalMapRTV;
+
+	ComPtr<ID3D11Texture2D> depthMapBuffer;
+	ComPtr<ID3D11RenderTargetView> depthMapRTV;
 
 	ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
@@ -141,9 +145,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copiedBasicBuffer;
 	ComPtr<ID3D11ShaderResourceView> copiedBasicSRV;
 
-	ComPtr<ID3D11Texture2D> copiedBasicDepthBuffer;
-	ComPtr<ID3D11ShaderResourceView> copiedBasicDepthSRV;
-
 	ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
@@ -154,6 +155,8 @@ namespace Graphics {
 	ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
 
 	ComPtr<ID3D11ShaderResourceView> normalMapSRV;
+
+	ComPtr<ID3D11ShaderResourceView> depthMapSRV;
 
 
 	// Viewport
@@ -403,12 +406,28 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
-	
-	// ssao RTV
+
+	// depth map buffer
 	format = DXGI_FORMAT_R32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			ssaoRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			depthMapBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create depth map buffer" << std::endl;
+		return false;
+	}
+	ret = Graphics::device->CreateRenderTargetView(
+		depthMapBuffer.Get(), nullptr, depthMapRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create depth map rtv" << std::endl;
+		return false;
+	}
+
+	
+	// ssao RTV
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			ssaoRenderBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create ssao buffer" << std::endl;
 		return false;
 	}
@@ -577,25 +596,6 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	// copied basic depth srv
-	format = DXGI_FORMAT_R32_TYPELESS;
-	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			copiedBasicDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create shader resource buffer from copied basic depth" << std::endl;
-		return false;
-	}
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
-	ret = Graphics::device->CreateShaderResourceView(
-		copiedBasicDepthBuffer.Get(), &srvDesc, copiedBasicDepthSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from copied basic depth srv" << std::endl;
-		return false;
-	}
-
-
 	// envMapSRV
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -646,10 +646,18 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	// normal Map SRV
-	ret = device->CreateShaderResourceView(
+	ret = Graphics::device->CreateShaderResourceView(
 		normalMapBuffer.Get(), nullptr, normalMapSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from normal map srv" << std::endl;
+		return false;
+	}
+
+	// depth Map SRV
+	ret = Graphics::device->CreateShaderResourceView(
+		depthMapBuffer.Get(), nullptr, depthMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from depth map srv" << std::endl;
 		return false;
 	}
 
@@ -956,7 +964,7 @@ bool Graphics::InitSamplerStates()
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointWrapSS.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create point clamp SS" << std::endl;
+		std::cout << "failed create point wrap SS" << std::endl;
 		return false;
 	}
 
@@ -998,6 +1006,17 @@ bool Graphics::InitSamplerStates()
 	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shadowCompareSS" << std::endl;
+		return false;
+	}
+
+	// point clamp
+	desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create point clamp SS" << std::endl;
 		return false;
 	}
 
@@ -1105,6 +1124,7 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.samplerStates.push_back(linearClampSS.Get());
 	basicPSO.samplerStates.push_back(shadowPointSS.Get());
 	basicPSO.samplerStates.push_back(shadowCompareSS.Get());
+	basicPSO.samplerStates.push_back(pointClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
 	basicPSO.stencilRef = 0;
 	basicPSO.blendState = nullptr;

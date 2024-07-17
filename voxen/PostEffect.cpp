@@ -70,6 +70,7 @@ bool PostEffect::Initialize()
 		sampleKernel *= Utils::Lerp(0.1f, 1.0f, scale * scale);
 
 		m_ssaoConstantData.sampleKernel[i] = sampleKernel;
+		std::cout << sampleKernel.Length() << std::endl;
 	}
 	if (!DXUtils::CreateConstantBuffer(m_ssaoConstantBuffer, m_ssaoConstantData)) {
 		std::cout << "failed create ssao constant buffer" << std::endl;

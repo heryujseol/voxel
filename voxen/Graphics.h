@@ -69,6 +69,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
 	extern ComPtr<ID3D11SamplerState> shadowPointSS;
 	extern ComPtr<ID3D11SamplerState> shadowCompareSS;
+	extern ComPtr<ID3D11SamplerState> pointClampSS;
 
 
 
@@ -108,6 +109,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> normalMapBuffer;
 	extern ComPtr<ID3D11RenderTargetView> normalMapRTV;
 
+	extern ComPtr<ID3D11Texture2D> depthMapBuffer;
+	extern ComPtr<ID3D11RenderTargetView> depthMapRTV;
+
 	extern ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	
@@ -145,9 +149,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> copiedBasicBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copiedBasicSRV;
 
-	extern ComPtr<ID3D11Texture2D> copiedBasicDepthBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> copiedBasicDepthSRV;
-
 	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
@@ -156,8 +157,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
-
 	extern ComPtr<ID3D11ShaderResourceView> normalMapSRV;
+	extern ComPtr<ID3D11ShaderResourceView> depthMapSRV;
 
 
 	// Viewport

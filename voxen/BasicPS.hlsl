@@ -20,6 +20,7 @@ struct psOutput
 {
     float4 albedo : SV_TARGET0;
     float4 normal : SV_TARGET1;
+    float depth : SV_TARGET2;
 };
 
 psOutput main(vsOutput input)
@@ -58,6 +59,8 @@ psOutput main(vsOutput input)
     float3 normalWorld = getNormal(input.face);
     float4 normalView = mul(float4(normalWorld, 0.0), view); // must be [Normal * ITWorld * ITView]
     output.normal = normalView;
+    
+    output.depth = input.posProj.z;
     
     return output;
 }

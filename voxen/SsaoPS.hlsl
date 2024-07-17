@@ -1,7 +1,7 @@
 #include "Common.hlsli"
 
 Texture2DMS<float4, 4> normalMapTex : register(t0);
-Texture2DMS<float, 4> depthTex : register(t1);
+Texture2DMS<float, 4> depthMapTex : register(t1);
 
 cbuffer SsaoConstantBuffer : register(b2)
 {
@@ -13,18 +13,27 @@ cbuffer SsaoNoiseConstantBuffer : register(b3)
     float4 rotationNoise[16];
 }
 
+cbuffer TMPConstantBuffer : register(b4)
+{
+    float radius;
+    float bias;
+    float edgeBias;
+    float dummy2;
+}
+
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
-    uint sampleIndex : SV_SampleIndex;
 };
 
-float main(vsOutput input) : SV_TARGET
-{
-    float3 normal = normalMapTex.Load(input.posProj.xy, input.sampleIndex).xyz;
+float4 main(vsOutput input) : SV_TARGET
+{   
+    float3 normal = normalMapTex.Load(input.posProj.xy, 0).xyz;
+    normal = normalize(normal);
     
-    float depth = depthTex.Load(input.posProj.xy, input.sampleIndex).r;
+    float depth = depthMapTex.Load(input.posProj.xy, 0).r;
+    
     float3 viewPos = convertViewPos(input.texcoord, depth);
 
     // 200배 확대한 것을 frac연산으로 다시 하나씩 200개로 쪼갬 -> 4로 곱하여 인덱스로 사용
@@ -40,9 +49,9 @@ float main(vsOutput input) : SV_TARGET
     float3x3 TBN = float3x3(T, B, normal);
     
     float occlusionFactor = 0.0;
-    float radius = 1.0;
+    float radius = 0.5;
     float bias = 0.025;
-    
+    uint sampledCount = 0;
     [unroll]
     for (uint i = 0; i < 64; ++i)
     {
@@ -56,15 +65,22 @@ float main(vsOutput input) : SV_TARGET
         float2 sampleTexcoord = sampleProjPos.xy;
         sampleTexcoord.x = sampleTexcoord.x * 0.5 + 0.5; // [-1, 1] -> [0, 1]
         sampleTexcoord.y = -(sampleTexcoord.y * 0.5) + 0.5; // [-1, 1] -> [1, 0]
-        float2 screenCoord = float2(sampleTexcoord.x * 1920.0, sampleTexcoord.y * 1080.0);
+        if (0.0 <= sampleTexcoord.x && sampleTexcoord.x <= 1.0 && 0.0 <= sampleTexcoord.y && sampleTexcoord.y <= 1.0)
+        {
+            float2 screenCoord = float2(sampleTexcoord.x * 1920.0 - 0.5, sampleTexcoord.y * 1080.0 - 0.5);
+            float storedDepth = depthMapTex.Load(screenCoord, 0).r;
         
-        float storedDepth = depthTex.Load(screenCoord, input.sampleIndex).r;
-        
-        float3 storedViewPos = convertViewPos(sampleTexcoord, storedDepth);
-        
-        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(viewPos.z - storedViewPos.z));
-        occlusionFactor += (storedViewPos.z < sampleViewPos.z - bias ? 1.0 : 0.0) * rangeCheck;
+            float3 storedViewPos = convertViewPos(sampleTexcoord, storedDepth);
+            float rangeCheck = smoothstep(0.0, 1.0, radius / abs(viewPos.z - storedViewPos.z));
+            occlusionFactor += (storedViewPos.z < sampleViewPos.z - bias ? 1.0 : 0.0) * rangeCheck;
+            sampledCount++;
+        }
     }
-   
-    return 1.0 - (occlusionFactor / 64.0);
+    
+    if (sampledCount == 0)
+    {
+        return float4(1, 1, 1, 1);
+    }
+    float ret = 1.0 - (occlusionFactor / sampledCount);
+    return float4(ret, ret, ret, 1.0);
 }

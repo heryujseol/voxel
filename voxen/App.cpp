@@ -183,8 +183,9 @@ void App::Render()
 	}
 
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
-		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	//Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
+	//	Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	Graphics::context->CopyResource(Graphics::backBuffer.Get(), Graphics::ssaoRenderBuffer.Get());
 }
 
 bool App::InitWindow()
@@ -303,10 +304,13 @@ void App::RenderBasic()
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::albedoMapRTV.Get(), clearColor);
 	Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
+	clearColor[0] = 1.0f;
+	Graphics::context->ClearRenderTargetView(Graphics::depthMapRTV.Get(), clearColor);
 
 	std::vector<ID3D11RenderTargetView*> ppRTVs;
 	ppRTVs.push_back(Graphics::albedoMapRTV.Get());
 	ppRTVs.push_back(Graphics::normalMapRTV.Get());
+	ppRTVs.push_back(Graphics::depthMapRTV.Get());
 	Graphics::context->OMSetRenderTargets(
 		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
 
@@ -321,24 +325,17 @@ void App::RenderBasic()
 
 void App::RenderWaterPlane()
 {
-	// 공통
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
+	// ***
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
-
-	if (!m_camera.IsUnderWater()) {
-		Graphics::context->CopyResource(
-			Graphics::copiedBasicDepthBuffer.Get(), Graphics::basicDepthBuffer.Get());
-
-		ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
-		ppSRVs.push_back(Graphics::copiedBasicDepthSRV.Get());
-	}
+	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
+	ppSRVs.push_back(Graphics::depthMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
@@ -443,6 +440,7 @@ void App::RenderFogFilter()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
+	// ***
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
@@ -461,6 +459,7 @@ void App::RenderWaterFilter()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
+	// ***
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
@@ -482,7 +481,7 @@ void App::RenderSSAO()
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::normalMapSRV.Get());
-	ppSRVs.push_back(Graphics::basicDepthSRV.Get());
+	ppSRVs.push_back(Graphics::depthMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	std::vector<ID3D11Buffer*> ppConstants;
@@ -492,4 +491,37 @@ void App::RenderSSAO()
 
 	Graphics::SetPipelineStates(Graphics::ssaoPSO);
 	m_postEffect.Render();
+
+	// hlsl에서
+	// blur SSAO
+	//BlurSSAO(5)
+}
+
+void App::BlurSSAO(int blurLoopCount)
+{
+	Graphics::context->PSSetConstantBuffers(2, 1, m_postEffect.m_blurConstantBuffer.GetAddressOf());
+
+	for (int i = 0; i < blurLoopCount; ++i) {
+		Graphics::context->OMSetRenderTargets(
+			1, Graphics::mirrorWorldBlurRTV[0].GetAddressOf(), nullptr);
+		if (i != 0)
+			Graphics::context->PSSetShaderResources(
+				0, 1, Graphics::mirrorWorldBlurSRV[1].GetAddressOf());
+		else
+			Graphics::context->PSSetShaderResources(0, 1, Graphics::mirrorWorldSRV.GetAddressOf());
+		Graphics::context->PSSetShader(Graphics::blurXPS.Get(), nullptr, 0);
+
+		m_postEffect.Render();
+
+		if (i != blurLoopCount - 1)
+			Graphics::context->OMSetRenderTargets(
+				1, Graphics::mirrorWorldBlurRTV[1].GetAddressOf(), nullptr);
+		else
+			Graphics::context->OMSetRenderTargets(
+				1, Graphics::mirrorWorldRTV.GetAddressOf(), nullptr);
+		Graphics::context->PSSetShaderResources(
+			0, 1, Graphics::mirrorWorldBlurSRV[0].GetAddressOf());
+		Graphics::context->PSSetShader(Graphics::blurYPS.Get(), nullptr, 0);
+		m_postEffect.Render();
+	}
 }
