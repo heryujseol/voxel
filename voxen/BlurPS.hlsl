@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2D mirrorWorldTex : register(t0);
+Texture2D renderTex : register(t0);
 
 cbuffer postEffectConstantBuffer : register(b2)
 {
@@ -24,6 +24,12 @@ float4 main(vsOutput input) : SV_TARGET
     float2 offset = float2(0.0, 0.0);
     float totalAlpha = 0.0;
     
+    float width, height, lod;
+    renderTex.GetDimensions(0, width, height, lod);
+    
+    float dx = 1.0 / width;
+    float dy = 1.0 / height;
+    
     [unroll]
     for (int i = 0; i < 5; ++i)
     {
@@ -33,7 +39,7 @@ float4 main(vsOutput input) : SV_TARGET
 #ifdef BLUR_Y
         offset = float2(0.0, dy * (i - 2));
 #endif
-        float4 sampleColor = mirrorWorldTex.Sample(linearClampSS, input.texcoord + offset);
+        float4 sampleColor = renderTex.Sample(linearClampSS, input.texcoord + offset);
 
         sampleColor.rgb *= sampleColor.a;
         

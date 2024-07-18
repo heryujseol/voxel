@@ -50,9 +50,6 @@ private:
 	void RenderWaterFilter();
 	void RenderSSAO();
 
-	void BlurMirror(int blurLoopCount);
-	void BlurSSAO(int blurLoopCount);
-
 	HWND m_hwnd;
 
 	Camera m_camera;

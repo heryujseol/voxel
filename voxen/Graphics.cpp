@@ -111,6 +111,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
 
+	ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
+	ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -153,10 +156,11 @@ namespace Graphics {
 	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 	ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
-
 	ComPtr<ID3D11ShaderResourceView> normalMapSRV;
-
 	ComPtr<ID3D11ShaderResourceView> depthMapSRV;
+
+	ComPtr<ID3D11ShaderResourceView> ssaoSRV;
+	ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
 
 
 	// Viewport
@@ -202,7 +206,7 @@ namespace Graphics {
 	GraphicsPSO instancePSO;
 	GraphicsPSO instanceMirrorPSO;
 	GraphicsPSO mirrorMaskingPSO;
-	GraphicsPSO mirrorBlurPSO;
+	GraphicsPSO blurPSO;
 	GraphicsPSO waterPlanePSO;
 	GraphicsPSO waterFilterPSO;
 	GraphicsPSO basicDepthPSO;
@@ -438,6 +442,24 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
+
+	// ssao blur RTV
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	for (int i = 0; i < 2; ++i) {
+		if (!DXUtils::CreateTextureBuffer(ssaoBlurBuffer[i], App::WIDTH,
+				App::HEIGHT, false, format, bindFlag)) {
+			std::cout << "failed create ssao blur buffer" << std::endl;
+			return false;
+		}
+		ret = Graphics::device->CreateRenderTargetView(
+			ssaoBlurBuffer[i].Get(), nullptr, ssaoBlurRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create ssao blur rtv" << std::endl;
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -659,6 +681,25 @@ bool Graphics::InitShaderResourceBuffers()
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from depth map srv" << std::endl;
 		return false;
+	}
+
+	// ssao SRV
+	ret = Graphics::device->CreateShaderResourceView(
+		ssaoRenderBuffer.Get(), nullptr, ssaoSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from ssao srv" << std::endl;
+		return false;
+	}
+
+	// ssao blur SRV
+	for (int i = 0; i < 2; ++i) {
+		ret = Graphics::device->CreateShaderResourceView(
+			ssaoBlurBuffer[i].Get(), nullptr, ssaoBlurSRV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create shader resource view from ssao blur srv"
+					  << std::endl;
+			return false;
+		}
 	}
 
 	return true;
@@ -1195,11 +1236,11 @@ void Graphics::InitGraphicsPSO()
 	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
 	mirrorMaskingPSO.stencilRef = 1;
 
-	// mirrorBlur PSO
-	mirrorBlurPSO = basicPSO;
-	mirrorBlurPSO.inputLayout = samplingIL;
-	mirrorBlurPSO.vertexShader = samplingVS;
-	mirrorBlurPSO.pixelShader = blurXPS;
+	// blurPSO
+	blurPSO = basicPSO;
+	blurPSO.inputLayout = samplingIL;
+	blurPSO.vertexShader = samplingVS;
+	blurPSO.pixelShader = blurXPS;
 
 	// waterPlanePSO
 	waterPlanePSO = basicPSO;

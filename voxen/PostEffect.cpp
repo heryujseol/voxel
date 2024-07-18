@@ -9,7 +9,7 @@
 #include <random>
 
 PostEffect::PostEffect()
-	: m_blurConstantBuffer(nullptr), m_fogFilterConstantBuffer(nullptr),
+	: m_fogFilterConstantBuffer(nullptr),
 	  m_waterFilterConstantBuffer(nullptr), m_ssaoConstantBuffer(nullptr),
 	  m_stride(sizeof(SamplingVertex)), m_offset(0), m_vertexBuffer(nullptr),
 	  m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f), m_waterMaxDuration(2.5f){};
@@ -27,13 +27,6 @@ bool PostEffect::Initialize()
 
 	if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
 		std::cout << "failed create fog index buffer" << std::endl;
-		return false;
-	}
-
-	m_blurConstantData.dx = 1.0f / (float)App::MIRROR_WIDTH;
-	m_blurConstantData.dy = 1.0f / (float)App::MIRROR_HEIGHT;
-	if (!DXUtils::CreateConstantBuffer(m_blurConstantBuffer, m_blurConstantData)) {
-		std::cout << "failed create blur constant buffer" << std::endl;
 		return false;
 	}
 
@@ -70,7 +63,6 @@ bool PostEffect::Initialize()
 		sampleKernel *= Utils::Lerp(0.1f, 1.0f, scale * scale);
 
 		m_ssaoConstantData.sampleKernel[i] = sampleKernel;
-		std::cout << sampleKernel.Length() << std::endl;
 	}
 	if (!DXUtils::CreateConstantBuffer(m_ssaoConstantBuffer, m_ssaoConstantData)) {
 		std::cout << "failed create ssao constant buffer" << std::endl;
@@ -130,4 +122,34 @@ void PostEffect::Render()
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
+}
+
+void PostEffect::Blur(int count, ComPtr<ID3D11ShaderResourceView> src,
+	ComPtr<ID3D11RenderTargetView> dst, ComPtr<ID3D11ShaderResourceView> blurSRV[2],
+	ComPtr<ID3D11RenderTargetView> blurRTV[2])
+{
+	Graphics::SetPipelineStates(Graphics::blurPSO);
+
+	for (int i = 0; i < count; ++i) {
+		Graphics::context->OMSetRenderTargets(1, blurRTV[0].GetAddressOf(), nullptr);
+
+		if (i == 0)
+			Graphics::context->PSSetShaderResources(0, 1, src.GetAddressOf());
+		else
+			Graphics::context->PSSetShaderResources(0, 1, blurSRV[1].GetAddressOf());
+
+		Graphics::context->PSSetShader(Graphics::blurXPS.Get(), nullptr, 0);
+		Render();
+
+		if (i == count - 1)
+			Graphics::context->OMSetRenderTargets(
+				1, dst.GetAddressOf(), nullptr);
+		else
+			Graphics::context->OMSetRenderTargets(1, blurRTV[1].GetAddressOf(), nullptr);
+			
+		Graphics::context->PSSetShaderResources(0, 1, blurSRV[0].GetAddressOf());
+
+		Graphics::context->PSSetShader(Graphics::blurYPS.Get(), nullptr, 0);
+		Render();
+	}
 }

@@ -56,9 +56,10 @@ psOutput main(vsOutput input)
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
     output.albedo = float4(color, 1.0);
     
+    // must be [Normal * ITWorld * ITView]
     float3 normalWorld = getNormal(input.face);
-    float4 normalView = mul(float4(normalWorld, 0.0), view); // must be [Normal * ITWorld * ITView]
-    output.normal = normalView;
+    float3 normalView = mul(float4(normalWorld, 0.0), invTrasposeView).xyz;
+    output.normal = float4(normalize(normalView), 0.0);
     
     output.depth = input.posProj.z;
     

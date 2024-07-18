@@ -30,6 +30,8 @@ struct vsOutput
 float4 main(vsOutput input) : SV_TARGET
 {   
     float3 normal = normalMapTex.Load(input.posProj.xy, 0).xyz;
+    if (length(normal) == 0)
+        return float4(1, 1, 1, 1);
     normal = normalize(normal);
     
     float depth = depthMapTex.Load(input.posProj.xy, 0).r;
@@ -49,7 +51,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3x3 TBN = float3x3(T, B, normal);
     
     float occlusionFactor = 0.0;
-    float radius = 0.5;
+    float radius = 1.0;
     float bias = 0.025;
     uint sampledCount = 0;
     [unroll]

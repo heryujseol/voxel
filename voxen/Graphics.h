@@ -114,6 +114,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
+
+	extern ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
+	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
 	
 
 	// DSV & Buffer
@@ -160,6 +163,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> normalMapSRV;
 	extern ComPtr<ID3D11ShaderResourceView> depthMapSRV;
 
+	extern ComPtr<ID3D11ShaderResourceView> ssaoSRV;
+	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
+
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
@@ -204,7 +210,7 @@ namespace Graphics {
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
-	extern GraphicsPSO mirrorBlurPSO;
+	extern GraphicsPSO blurPSO;
 	extern GraphicsPSO waterPlanePSO;
 	extern GraphicsPSO waterFilterPSO;
 	extern GraphicsPSO basicDepthPSO;

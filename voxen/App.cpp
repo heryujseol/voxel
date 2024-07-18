@@ -380,42 +380,13 @@ void App::RenderMirrorWorld()
 	ChunkManager::GetInstance()->RenderMirrorWorld();
 
 	// blur mirror world
-	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
-	BlurMirror(5);
+	m_postEffect.Blur(5, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
+		Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV);
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-}
-
-void App::BlurMirror(int blurLoopCount)
-{
-	Graphics::context->PSSetConstantBuffers(2, 1, m_postEffect.m_blurConstantBuffer.GetAddressOf());
-
-	for (int i = 0; i < blurLoopCount; ++i) {
-		Graphics::context->OMSetRenderTargets(
-			1, Graphics::mirrorWorldBlurRTV[0].GetAddressOf(), nullptr);
-		if (i != 0)
-			Graphics::context->PSSetShaderResources(
-				0, 1, Graphics::mirrorWorldBlurSRV[1].GetAddressOf());
-		else
-			Graphics::context->PSSetShaderResources(0, 1, Graphics::mirrorWorldSRV.GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurXPS.Get(), nullptr, 0);
-
-		m_postEffect.Render();
-
-		if (i != blurLoopCount - 1)
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldBlurRTV[1].GetAddressOf(), nullptr);
-		else
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(
-			0, 1, Graphics::mirrorWorldBlurSRV[0].GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurYPS.Get(), nullptr, 0);
-		m_postEffect.Render();
-	}
 }
 
 void App::RenderSkybox()
@@ -492,36 +463,6 @@ void App::RenderSSAO()
 	Graphics::SetPipelineStates(Graphics::ssaoPSO);
 	m_postEffect.Render();
 
-	// hlsl에서
-	// blur SSAO
-	//BlurSSAO(5)
-}
-
-void App::BlurSSAO(int blurLoopCount)
-{
-	Graphics::context->PSSetConstantBuffers(2, 1, m_postEffect.m_blurConstantBuffer.GetAddressOf());
-
-	for (int i = 0; i < blurLoopCount; ++i) {
-		Graphics::context->OMSetRenderTargets(
-			1, Graphics::mirrorWorldBlurRTV[0].GetAddressOf(), nullptr);
-		if (i != 0)
-			Graphics::context->PSSetShaderResources(
-				0, 1, Graphics::mirrorWorldBlurSRV[1].GetAddressOf());
-		else
-			Graphics::context->PSSetShaderResources(0, 1, Graphics::mirrorWorldSRV.GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurXPS.Get(), nullptr, 0);
-
-		m_postEffect.Render();
-
-		if (i != blurLoopCount - 1)
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldBlurRTV[1].GetAddressOf(), nullptr);
-		else
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::mirrorWorldRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(
-			0, 1, Graphics::mirrorWorldBlurSRV[0].GetAddressOf());
-		Graphics::context->PSSetShader(Graphics::blurYPS.Get(), nullptr, 0);
-		m_postEffect.Render();
-	}
+	m_postEffect.Blur(
+		3, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV, Graphics::ssaoBlurRTV);
 }

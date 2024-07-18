@@ -53,7 +53,8 @@ psOutput main(vsOutput input)
     float3 toEye = eyePos - input.posWorld;
     input.normal *= (dot(toEye, input.normal) < 0) ? -1 : 1; 
     
-    float4 normalView = mul(float4(input.normal, 0.0), view); // must be [Normal * ITWorld * ITView]
+    // must be [Normal * ITWorld * ITView]
+    float4 normalView = mul(float4(input.normal, 0.0), invTrasposeView);
     output.normal = normalView;
     
     output.depth = input.posProj.z;
