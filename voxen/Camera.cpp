@@ -26,7 +26,6 @@ bool Camera::Initialize(Vector3 pos)
 	m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
 	m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 	m_constantData.isUnderWater = m_isUnderWater;
-	m_constantData.invTransposeView = GetViewMatrix().Invert(); // v * Inv * (Transpose * Transpose)
 
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create camera constant buffer" << std::endl;
@@ -71,7 +70,6 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 		m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
 		m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
 		m_constantData.isUnderWater = m_isUnderWater;
-		m_constantData.invTransposeView = GetViewMatrix().Invert();
 
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 

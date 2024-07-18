@@ -14,14 +14,7 @@ struct vsOutput
     uint type : TYPE;
 };
 
-struct psOutput
-{
-    float4 albedo : SV_TARGET0;
-    float4 normal : SV_TARGET1;
-    float depth : SV_TARGET2;
-};
-
-psOutput main(vsOutput input)
+float4 main(vsOutput input) : SV_TARGET
 {
     float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0).a;
     if (alpha != 1.0)
@@ -44,20 +37,5 @@ psOutput main(vsOutput input)
 #else
     float4 color = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0);
 #endif
-    
-    psOutput output;
-    
-    output.albedo = color;
-    
-    // 스프라이트의 노멀벡터인 경우 보이는 쪽으로 설정
-    float3 toEye = eyePos - input.posWorld;
-    input.normal *= (dot(toEye, input.normal) < 0) ? -1 : 1; 
-    
-    // must be [Normal * ITWorld * ITView]
-    float4 normalView = mul(float4(input.normal, 0.0), invTrasposeView);
-    output.normal = normalView;
-    
-    output.depth = input.posProj.z;
-    
-    return output;
+    return color;
 }

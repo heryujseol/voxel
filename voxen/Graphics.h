@@ -54,6 +54,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
 	extern ComPtr<ID3D11PixelShader> blurXPS;
 	extern ComPtr<ID3D11PixelShader> blurYPS;
+	extern ComPtr<ID3D11PixelShader> normalPassBasicPS;
+	extern ComPtr<ID3D11PixelShader> normalPassInstancePS;
 	extern ComPtr<ID3D11PixelShader> ssaoPS;
 
 
@@ -103,14 +105,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
 
-	extern ComPtr<ID3D11Texture2D> albedoMapBuffer;
-	extern ComPtr<ID3D11RenderTargetView> albedoMapRTV;
-
 	extern ComPtr<ID3D11Texture2D> normalMapBuffer;
 	extern ComPtr<ID3D11RenderTargetView> normalMapRTV;
-
-	extern ComPtr<ID3D11Texture2D> depthMapBuffer;
-	extern ComPtr<ID3D11RenderTargetView> depthMapRTV;
 
 	extern ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
@@ -131,6 +127,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
+
+	extern ComPtr<ID3D11Texture2D> normalPassDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> normalPassDSV;
 
 
 	// SRV & Buffer
@@ -159,7 +158,6 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
-	extern ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
 	extern ComPtr<ID3D11ShaderResourceView> normalMapSRV;
 	extern ComPtr<ID3D11ShaderResourceView> depthMapSRV;
 
@@ -216,5 +214,8 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
+	extern GraphicsPSO normalPassBasicPSO;
+	extern GraphicsPSO normalPassSemiAlphaPSO;
+	extern GraphicsPSO normalPassInstancePSO;
 	extern GraphicsPSO ssaoPSO;
 }

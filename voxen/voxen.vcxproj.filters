@@ -176,5 +176,11 @@
     <FxCompile Include="SsaoPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
+    <FxCompile Include="NormalPassBasicPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="NormalPassInstancePS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

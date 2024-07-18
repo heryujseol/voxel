@@ -19,7 +19,6 @@ cbuffer CameraConstantBuffer : register(b0)
     Matrix invProj;
     bool isUnderWater;
     float3 cameraDummyData;
-    Matrix invTrasposeView;
 };
 
 cbuffer SkyboxConstantBuffer : register(b1)

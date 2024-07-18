@@ -51,6 +51,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> waterFilterPS;
 	ComPtr<ID3D11PixelShader> blurXPS;
 	ComPtr<ID3D11PixelShader> blurYPS;
+	ComPtr<ID3D11PixelShader> normalPassBasicPS;
+	ComPtr<ID3D11PixelShader> normalPassInstancePS;
 	ComPtr<ID3D11PixelShader> ssaoPS;
 
 
@@ -99,14 +101,8 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
 
-	ComPtr<ID3D11Texture2D> albedoMapBuffer;
-	ComPtr<ID3D11RenderTargetView> albedoMapRTV;
-
 	ComPtr<ID3D11Texture2D> normalMapBuffer;
 	ComPtr<ID3D11RenderTargetView> normalMapRTV;
-
-	ComPtr<ID3D11Texture2D> depthMapBuffer;
-	ComPtr<ID3D11RenderTargetView> depthMapRTV;
 
 	ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
@@ -127,6 +123,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
+
+	ComPtr<ID3D11Texture2D> normalPassDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> normalPassDSV;
 
 
 	// SRV & Buffer
@@ -155,13 +154,11 @@ namespace Graphics {
 
 	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
-	ComPtr<ID3D11ShaderResourceView> albedoMapSRV;
 	ComPtr<ID3D11ShaderResourceView> normalMapSRV;
 	ComPtr<ID3D11ShaderResourceView> depthMapSRV;
 
 	ComPtr<ID3D11ShaderResourceView> ssaoSRV;
 	ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
-
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -212,6 +209,9 @@ namespace Graphics {
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
+	GraphicsPSO normalPassBasicPSO;
+	GraphicsPSO normalPassSemiAlphaPSO;
+	GraphicsPSO normalPassInstancePSO;
 	GraphicsPSO ssaoPSO;
 }
 
@@ -379,27 +379,11 @@ bool Graphics::InitRenderTargetBuffers()
 	}
 
 
-	// albedoMap RTV
-	format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(albedoMapBuffer, App::WIDTH,
-			App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create albedo map buffer" << std::endl;
-		return false;
-	}
-	ret = Graphics::device->CreateRenderTargetView(
-		albedoMapBuffer.Get(), nullptr, albedoMapRTV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create albedo map rtv" << std::endl;
-		return false;
-	}
-
-
 	// normalMap RTV
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			normalMapBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			normalMapBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create normal map buffer" << std::endl;
 		return false;
 	}
@@ -407,22 +391,6 @@ bool Graphics::InitRenderTargetBuffers()
 		normalMapBuffer.Get(), nullptr, normalMapRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create normal map rtv" << std::endl;
-		return false;
-	}
-
-
-	// depth map buffer
-	format = DXGI_FORMAT_R32_FLOAT;
-	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			depthMapBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create depth map buffer" << std::endl;
-		return false;
-	}
-	ret = Graphics::device->CreateRenderTargetView(
-		depthMapBuffer.Get(), nullptr, depthMapRTV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create depth map rtv" << std::endl;
 		return false;
 	}
 
@@ -548,6 +516,25 @@ bool Graphics::InitDepthStencilBuffers()
 		return false;
 	}
 
+
+	// normal Pass DSV
+	format = DXGI_FORMAT_R32_TYPELESS;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(normalPassDepthBuffer, App::WIDTH, App::HEIGHT,
+			false, format, bindFlag)) {
+		std::cout << "failed create normal pass depth stencil buffer" << std::endl;
+		return false;
+	}
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	ret = Graphics::device->CreateDepthStencilView(
+		normalPassDepthBuffer.Get(), &dsvDesc, normalPassDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create normal pass depth stencil view" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -659,14 +646,6 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	// albedo Map SRV
-	ret = device->CreateShaderResourceView(
-		albedoMapBuffer.Get(), nullptr, albedoMapSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from albedo map srv" << std::endl;
-		return false;
-	}
-
 	// normal Map SRV
 	ret = Graphics::device->CreateShaderResourceView(
 		normalMapBuffer.Get(), nullptr, normalMapSRV.GetAddressOf());
@@ -676,8 +655,13 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	// depth Map SRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
 	ret = Graphics::device->CreateShaderResourceView(
-		depthMapBuffer.Get(), nullptr, depthMapSRV.GetAddressOf());
+		normalPassDepthBuffer.Get(), &srvDesc, depthMapSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from depth map srv" << std::endl;
 		return false;
@@ -932,6 +916,18 @@ bool Graphics::InitPixelShaders()
 	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurYPS, macros.data())) {
 		std::cout << "failed create blur y ps" << std::endl;
+		return false;
+	}
+
+	// NormalPassBasicPS
+	if (!DXUtils::CreatePixelShader(L"NormalPassBasicPS.hlsl", normalPassBasicPS)) {
+		std::cout << "failed create normal pass basic ps" << std::endl;
+		return false;
+	}
+
+	// NormalPassInstancePS
+	if (!DXUtils::CreatePixelShader(L"NormalPassInstancePS.hlsl", normalPassInstancePS)) {
+		std::cout << "failed create normal pass instance ps" << std::endl;
 		return false;
 	}
 
@@ -1259,6 +1255,18 @@ void Graphics::InitGraphicsPSO()
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
+
+	// normalPassBasicPSO
+	normalPassBasicPSO = basicPSO;
+	normalPassBasicPSO.pixelShader = normalPassBasicPS;
+
+	// normalPassSemiAlphaPSO
+	normalPassSemiAlphaPSO = semiAlphaPSO;
+	normalPassSemiAlphaPSO.pixelShader = normalPassBasicPS;
+
+	// normalPassInstancePSO
+	normalPassInstancePSO = instancePSO;
+	normalPassInstancePSO.pixelShader = normalPassInstancePS;
 
 	// ssaoPSO
 	ssaoPSO = basicPSO;

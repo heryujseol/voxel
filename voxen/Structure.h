@@ -41,7 +41,6 @@ struct CameraConstantData {
 	Matrix invProj;
 	int isUnderWater;
 	Vector3 dummy;
-	Matrix invTransposeView;
 };
 
 struct ChunkConstantData {

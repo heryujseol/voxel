@@ -246,6 +246,7 @@ namespace DXUtils {
 
 		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
 			"main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		std::cout << compileFlags << std::endl;
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());

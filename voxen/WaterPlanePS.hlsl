@@ -3,7 +3,7 @@
 Texture2DArray atlasTextureArray : register(t0);
 Texture2DMS<float4, 4> msaaRenderTex : register(t1);
 Texture2D mirrorWorldTex : register(t2);
-Texture2DMS<float, 4> msaaDepthTex : register(t3);
+Texture2D depthMapTex : register(t3);
 
 struct vsOutput
 {
@@ -36,8 +36,8 @@ float4 main(vsOutput input) : SV_TARGET
     // absorption color
     float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
     
-    float width, height, sampleCount;
-    msaaDepthTex.GetDimensions(width, height, sampleCount);
+    float width, height, lod;
+    depthMapTex.GetDimensions(0, width, height, lod);
     float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
         
     // origin render color
@@ -50,7 +50,7 @@ float4 main(vsOutput input) : SV_TARGET
     else
     {
         // absorption factor
-        float depth = msaaDepthTex.Load(input.posProj.xy, input.sampleIndex).r;
+        float depth = depthMapTex.Sample(linearClampSS, screenTexcoord).r;
         float objectDistance = length(convertViewPos(screenTexcoord, depth));
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
