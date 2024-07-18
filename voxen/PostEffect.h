@@ -18,8 +18,9 @@ public:
 	bool Initialize();
 	void Update(float dt, Camera& camera);
 	void Render();
-	void Blur(int count, ComPtr<ID3D11ShaderResourceView> src, ComPtr<ID3D11RenderTargetView> dst,
-		ComPtr<ID3D11ShaderResourceView> blurSRV[2], ComPtr<ID3D11RenderTargetView> blurRTV[2]);
+	void Blur(int count, ComPtr<ID3D11ShaderResourceView>& src, ComPtr<ID3D11RenderTargetView>& dst,
+		ComPtr<ID3D11ShaderResourceView> blurSRV[2], ComPtr<ID3D11RenderTargetView> blurRTV[2],
+		ComPtr<ID3D11PixelShader> blurPS[2]);
 
 	ComPtr<ID3D11Buffer> m_fogFilterConstantBuffer;
 	ComPtr<ID3D11Buffer> m_waterFilterConstantBuffer;

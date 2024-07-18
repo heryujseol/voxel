@@ -19,11 +19,11 @@ struct vsOutput
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+float main(vsOutput input) : SV_TARGET
 {   
     float3 normal = normalMapTex.Sample(pointClampSS, input.texcoord).xyz;
     if (length(normal) == 0)
-        return float4(1, 1, 1, 1);
+        return 1.0;
     normal = normalize(normal);
     
     float depth = depthMapTex.Sample(pointClampSS, input.texcoord).r;
@@ -70,6 +70,5 @@ float4 main(vsOutput input) : SV_TARGET
         }
     }
     
-    float ret = 1.0 - (occlusionFactor / 64);
-    return float4(ret, ret, ret, 1.0);
+    return 1.0 - (occlusionFactor / 64);
 }

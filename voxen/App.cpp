@@ -185,9 +185,8 @@ void App::Render()
 	}
 
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-	//Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
-	//	Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-	Graphics::context->CopyResource(Graphics::backBuffer.Get(), Graphics::ssaoRenderBuffer.Get());
+	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
+		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
 bool App::InitWindow()
@@ -306,9 +305,12 @@ void App::RenderBasic()
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get(), Graphics::shadowSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::shadowSRV.Get());
+	ppSRVs.push_back(Graphics::ssaoSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), false);
 }
@@ -370,8 +372,9 @@ void App::RenderMirrorWorld()
 	ChunkManager::GetInstance()->RenderMirrorWorld();
 
 	// blur mirror world
+	Graphics::SetPipelineStates(Graphics::blurPSO);
 	m_postEffect.Blur(5, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
-		Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV);
+		Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV, Graphics::blurMirrorPS);
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
@@ -467,6 +470,7 @@ void App::RenderSSAO()
 
 
 	// blur SSAO 
-	m_postEffect.Blur(
-		5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV, Graphics::ssaoBlurRTV);
+	Graphics::SetPipelineStates(Graphics::blurPSO);
+	m_postEffect.Blur(5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
+		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
 }
