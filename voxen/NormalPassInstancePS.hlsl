@@ -13,7 +13,7 @@ struct vsOutput
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0).a;
+    float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float)input.type), 0.0).a;
     if (alpha != 1.0)
         discard;
     

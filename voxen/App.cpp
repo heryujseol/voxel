@@ -168,7 +168,7 @@ void App::Render()
 
 	// Basic
 	RenderBasic();
-	
+
 	if (m_camera.IsUnderWater()) {
 		RenderFogFilter();
 		RenderSkybox();
@@ -404,7 +404,6 @@ void App::RenderFogFilter()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
-	// ***
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
@@ -423,7 +422,6 @@ void App::RenderWaterFilter()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
-	// ***
 	Graphics::context->CopyResource(
 		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
@@ -436,14 +434,14 @@ void App::RenderWaterFilter()
 	m_postEffect.Render();
 }
 
-void App::RenderSSAO() 
+void App::RenderSSAO()
 {
 	// Depth & Normal Pass
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
 		Graphics::normalPassDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	
+
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::normalMapRTV.GetAddressOf(), Graphics::normalPassDSV.Get());
 
@@ -468,8 +466,7 @@ void App::RenderSSAO()
 	Graphics::SetPipelineStates(Graphics::ssaoPSO);
 	m_postEffect.Render();
 
-
-	// blur SSAO 
+	// blur SSAO
 	Graphics::SetPipelineStates(Graphics::blurPSO);
 	m_postEffect.Blur(5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
 		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);

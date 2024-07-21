@@ -15,7 +15,7 @@ struct vsInput
 
 struct vsOutput
 {
-    float4 posProj : SV_POSITION;
+    sample float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;

@@ -7,6 +7,8 @@ Texture2D grassColorMap : register(t1);
     Texture2D depthTex : register(t2);
 #endif
 
+Texture2D ssaoTex : register(t3);
+
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
@@ -14,7 +16,28 @@ struct vsOutput
     sample float3 posModel : POSITION2;
     uint face : FACE;
     uint type : TYPE;
+    uint sampleIndex : SV_SampleIndex;
 };
+
+float3 getFaceColor(uint face)
+{
+    if (face == 0 || face == 1)
+    {
+        return float3(0.81, 0.81, 0.81);
+    }
+    else if (face == 4 || face == 5)
+    {
+        return float3(0.87, 0.87, 0.87);
+    }
+    else if (face == 3)
+    {
+        return float3(1.0, 1.0, 1.0);
+    }
+    else
+    {
+        return float3(0.75, 0.75, 0.75);
+    }
+}
 
 float4 main(vsOutput input) : SV_TARGET
 {
@@ -44,32 +67,40 @@ float4 main(vsOutput input) : SV_TARGET
     }
 #endif
     
-    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
-    
-    float3 normal = getNormal(input.face);
-    
-    float ndotl = max(dot(sunDir, normal), 0.0);
-    
-    float strength = sunStrength;
-    
-    if (13700 <= dateTime && dateTime <= 14700)
+    float2 MSAAOffsets[4] =
     {
-        float w = (dateTime - 13700) / 1000.0;
-        color = lerp(color * (strength + 1.0) * (ndotl + 1.0), color, w);
-    }
-    else if (21300 <= dateTime && dateTime <= 22300)
-    {
-        float w = (dateTime - 21300) / 1000.0;
-        color = lerp(color, color * (strength + 1.0) * (ndotl + 1.0), w);
-    }
-    else if (14700 < dateTime && dateTime < 21300)
-    {
-        color = color * (strength + 1.0);
-    }
-    else
-    {
-        color = color * (strength + 1.0) * (ndotl + 1.0);
-    }
+        float2(-0.25, -0.25),
+        float2(0.25, -0.25),
+        float2(-0.25, 0.25),
+        float2(0.25, 0.25)
+    };
+    
+    input.posProj.xy += MSAAOffsets[input.sampleIndex];
+    float2 msaaScreenTex = float2(input.posProj.x / 1920.0, input.posProj.y / 1080.0);
+    float ao = ssaoTex.Sample(pointClampSS, msaaScreenTex);
+    
+    float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
 
-    return float4(color, 1.0);
+    float3 normal = getNormal(input.face);
+    normal = mul(float4(normal, 0.0), view);
+    
+    float3 ambient = 0.3 * albedo * ao;
+    float3 lighting = ambient;
+    
+    float3 viewPos = mul(float4(input.posWorld, 1.0), view); // sample?
+    float3 viewDir = normalize(-viewPos);
+    
+    // diffuse
+    float3 lightDir = sunDir;
+    lightDir = mul(float4(lightDir, 0.0), view);
+    float3 diffuse = max(dot(normal, lightDir), 0.0) * albedo;
+    
+    // specular
+    float3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), 16.0);
+    float3 specular = float3(spec, spec, spec);
+    
+    lighting += diffuse + specular;
+    
+    return float4(lighting, 1.0);
 }

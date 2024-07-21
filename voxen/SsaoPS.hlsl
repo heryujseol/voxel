@@ -27,7 +27,7 @@ float main(vsOutput input) : SV_TARGET
     normal = normalize(normal);
     
     float depth = depthMapTex.Sample(pointClampSS, input.texcoord).r;
-    
+
     float3 viewPos = convertViewPos(input.texcoord, depth);
 
     // 200배 확대한 것을 frac연산으로 다시 하나씩 200개로 쪼갬 -> 4로 곱하여 인덱스로 사용
@@ -63,12 +63,11 @@ float main(vsOutput input) : SV_TARGET
         
         float3 storedViewPos = convertViewPos(sampleTexcoord, storedDepth);
         
-        //float rangeCheck = smoothstep(0.0, 1.0, radius / abs(viewPos.z - storedViewPos.z));
-        if (length(viewPos - storedViewPos) <= radius)
-        {
-            occlusionFactor += (storedViewPos.z < samplePos.z - bias ? 1.0 : 0.0);// * rangeCheck;
-        }
+        float w = smoothstep(0.0, 1.0, radius / length(viewPos - storedViewPos));
+        float rangeCheck = pow(w, 3.0);
+        
+        occlusionFactor += (storedViewPos.z < samplePos.z - bias ? 1.0 : 0.0) * rangeCheck;
     }
     
-    return 1.0 - (occlusionFactor / 64);
+    return 1.0 - (occlusionFactor / 64.0);
 }
