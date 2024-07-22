@@ -367,7 +367,6 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoEdgeSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	ppSRVs.push_back(Graphics::coverageSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicNormalPSO);

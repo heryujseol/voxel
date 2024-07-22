@@ -4,7 +4,6 @@ Texture2DMS<float4, SAMPLE_COUNT> normalTex : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 Texture2DMS<float4, SAMPLE_COUNT> albedoEdgeTex : register(t2);
 Texture2D ssaoTex : register(t3);
-Texture2DMS<uint, SAMPLE_COUNT> coverageTex : register(t4);
 
 struct vsOutput
 {
@@ -36,7 +35,7 @@ float3 getAmbientLighting(float2 texcoord, float3 albedo)
 {
     float ambientOcclusion = ssaoTex.Sample(pointClampSS, texcoord);
 
-    return ambientOcclusion * albedo * 0.5f;
+    return ambientOcclusion * albedo * 0.3f;
 }
 
 float3 getShadowFactor()
