@@ -96,7 +96,7 @@ float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
     return occlusionFactor / 64.0;
 }
 
-float4 main(vsOutput input) : SV_TARGET
+float main(vsOutput input) : SV_TARGET
 {   
     float3 normal = normalTex.Load(input.posProj.xy, 0).xyz;
     if (length(normal) == 0)
@@ -107,12 +107,10 @@ float4 main(vsOutput input) : SV_TARGET
     
     float occlusionFactor = getOcclusionFactor(input.texcoord, viewPos, normal);
     
-    float ret = 1.0 - occlusionFactor;
-    return float4(ret, ret, ret, 1.0);
-    // return 1.0 - occlusionFactor;
+    return 1.0 - occlusionFactor;
 }
 
-float4 mainMSAA(vsOutput input) : SV_TARGET
+float mainMSAA(vsOutput input) : SV_TARGET
 {
     uint4 coverage;
     coverage.x = coverageTex.Load(input.posProj.xy, 0);
@@ -144,6 +142,5 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
     
     sumOcclusionFactor *= 0.25;
     
-    float ret = 1.0 - sumOcclusionFactor;
-    return float4(ret, ret, ret, 1.0);
+    return 1.0 - sumOcclusionFactor;
 }

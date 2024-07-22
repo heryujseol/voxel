@@ -172,11 +172,6 @@ void App::Render()
 	MaskMSAAEdge();
 	RenderSSAO();
 	/*
-	// DepthNormalPass -> SSAO
-	RenderSSAO();
-
-	// Basic
-	RenderBasic();
 
 	if (m_camera.IsUnderWater()) {
 		RenderFogFilter(); // 뎁스 후처리임
@@ -339,10 +334,10 @@ void App::MaskMSAAEdge()
 void App::RenderSSAO() 
 {
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::backBufferRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
 
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::backBufferRTV.GetAddressOf(), Graphics::deferredDSV.Get());
+		1, Graphics::ssaoRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
 	std::vector<ID3D11Buffer*> ppConstants;
 	ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
@@ -360,6 +355,11 @@ void App::RenderSSAO()
 
 	Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
 	m_postEffect.Render();
+
+	//blur
+	Graphics::SetPipelineStates(Graphics::blurPSO);
+	m_postEffect.Blur(3, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
+		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
 }
 /*
 void App::RenderBasic()

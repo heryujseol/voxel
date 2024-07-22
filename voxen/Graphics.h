@@ -113,6 +113,10 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	extern ComPtr<ID3D11ShaderResourceView> ssaoSRV;
 
+	extern ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
+	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
+	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
+
 
 	// Depth Stencil Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;

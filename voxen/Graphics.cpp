@@ -110,6 +110,10 @@ namespace Graphics {
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	ComPtr<ID3D11ShaderResourceView> ssaoSRV;
 
+	ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
+	ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
+	ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
+
 
 	// Depth Stencil Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -395,6 +399,30 @@ bool Graphics::InitRenderTargetBuffers()
 		std::cout << "failed create ssao srv" << std::endl;
 		return false;
 	}
+
+	// blur
+	format = DXGI_FORMAT_R32_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	for (int i = 0; i < 2; ++i) {
+		if (!DXUtils::CreateTextureBuffer(
+				ssaoBlurBuffer[i], App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			std::cout << "failed create ssao blur buffer" << std::endl;
+			return false;
+		}
+		ret = device->CreateRenderTargetView(
+			ssaoBlurBuffer[i].Get(), nullptr, ssaoBlurRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create ssao blur rtv" << std::endl;
+			return false;
+		}
+		ret = device->CreateShaderResourceView(
+			ssaoBlurBuffer[i].Get(), nullptr, ssaoBlurSRV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create ssao blur srv" << std::endl;
+			return false;
+		}
+	}
+	
 
 
 	return true;
