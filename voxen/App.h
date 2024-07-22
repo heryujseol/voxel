@@ -41,6 +41,7 @@ private:
 	void FillGBuffer();
 	void MaskMSAAEdge();
 	void RenderSSAO();
+	void ShadingBasic();
 
 	HWND m_hwnd;
 

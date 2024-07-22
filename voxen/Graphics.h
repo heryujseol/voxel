@@ -52,6 +52,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> ssaoNormalPS;
 	extern ComPtr<ID3D11PixelShader> ssaoEdgePS;
 	extern ComPtr<ID3D11PixelShader> edgeMaskingPS;
+	extern ComPtr<ID3D11PixelShader> lightingNormalPS;
+	extern ComPtr<ID3D11PixelShader> lightingEdgePS;
 
 
 	// Rasterizer State
@@ -190,4 +192,6 @@ namespace Graphics {
 	extern GraphicsPSO ssaoNormalPSO;
 	extern GraphicsPSO ssaoEdgePSO;
 	extern GraphicsPSO edgeMaskingPSO;
+	extern GraphicsPSO shadingBasicNormalPSO;
+	extern GraphicsPSO shadingBasicEdgePSO;
 }

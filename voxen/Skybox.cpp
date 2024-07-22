@@ -122,12 +122,12 @@ void Skybox::Update(float dt)
 
 	m_constantData.dateTime = m_dateTime % DATE_CYCLE_AMOUNT;
 	m_constantData.sunDir = sunDir;
-	m_constantData.normalHorizonColor = normalHorizonColor;
-	m_constantData.normalZenithColor = normalZenithColor;
-	m_constantData.sunHorizonColor = sunHorizonColor;
-	m_constantData.sunZenithColor = sunZenithColor;
-	m_constantData.sunStrength = sunStrength;
-	m_constantData.moonStrength = 1.0f - sunStrength;
+	m_constantData.normalHorizonColor = normalHorizonColor * m_constantData.dummy;
+	m_constantData.normalZenithColor = normalZenithColor * m_constantData.dummy;
+	m_constantData.sunHorizonColor = sunHorizonColor * m_constantData.dummy;
+	m_constantData.sunZenithColor = sunZenithColor * m_constantData.dummy;
+	m_constantData.sunStrength = sunStrength * m_constantData.dummy;
+	m_constantData.moonStrength = m_constantData.dummy - sunStrength * m_constantData.dummy;
 
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }

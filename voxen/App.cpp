@@ -112,6 +112,8 @@ void App::Run()
 			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
 
+			ImGui::SliderFloat("sun weight", &m_skybox.m_constantData.dummy, 0.0f, 10.0f);
+
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -157,22 +159,12 @@ void App::Render()
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
-	/*
-	 * GBuffer
-	 * Masking MSAA Edge
-	 * SSAO
-	 * Shading
-	 *
-	 * FogFilter
-	 * SkyFilter
-	 * Cloud Render
-	 *
-	 */
 	FillGBuffer();
 	MaskMSAAEdge();
 	RenderSSAO();
-	/*
+	ShadingBasic();
 
+	/*
 	if (m_camera.IsUnderWater()) {
 		RenderFogFilter(); // 뎁스 후처리임
 		RenderSkybox();    // 단순한 필터
@@ -289,29 +281,32 @@ bool App::InitScene()
 
 void App::FillGBuffer()
 {
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float clearPositionColor[4] = { 0.0f, 0.0f, 1000.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::normalRTV.Get(), clearColor);
-	Graphics::context->ClearRenderTargetView(Graphics::positionRTV.Get(), clearPositionColor);
-	Graphics::context->ClearRenderTargetView(Graphics::albedoEdgeRTV.Get(), clearColor);
-	Graphics::context->ClearRenderTargetView(Graphics::coverageRTV.Get(), clearColor);
-	Graphics::context->ClearDepthStencilView(
-		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	// basic
+	{
+		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		float clearPositionColor[4] = { 0.0f, 0.0f, 1000.0f, 0.0f };
+		Graphics::context->ClearRenderTargetView(Graphics::normalRTV.Get(), clearColor);
+		Graphics::context->ClearRenderTargetView(Graphics::positionRTV.Get(), clearPositionColor);
+		Graphics::context->ClearRenderTargetView(Graphics::albedoEdgeRTV.Get(), clearColor);
+		Graphics::context->ClearRenderTargetView(Graphics::coverageRTV.Get(), clearColor);
+		Graphics::context->ClearDepthStencilView(
+			Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	std::vector<ID3D11RenderTargetView*> ppRTVs;
-	ppRTVs.push_back(Graphics::normalRTV.Get());
-	ppRTVs.push_back(Graphics::positionRTV.Get());
-	ppRTVs.push_back(Graphics::albedoEdgeRTV.Get());
-	ppRTVs.push_back(Graphics::coverageRTV.Get());
-	Graphics::context->OMSetRenderTargets(
-		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
+		std::vector<ID3D11RenderTargetView*> ppRTVs;
+		ppRTVs.push_back(Graphics::normalRTV.Get());
+		ppRTVs.push_back(Graphics::positionRTV.Get());
+		ppRTVs.push_back(Graphics::albedoEdgeRTV.Get());
+		ppRTVs.push_back(Graphics::coverageRTV.Get());
+		Graphics::context->OMSetRenderTargets(
+			(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
 
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+		std::vector<ID3D11ShaderResourceView*> ppSRVs;
+		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
-	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
+		ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
+	}
 }
 
 void App::MaskMSAAEdge()
@@ -331,7 +326,7 @@ void App::MaskMSAAEdge()
 	m_postEffect.Render();
 }
 
-void App::RenderSSAO() 
+void App::RenderSSAO()
 {
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
@@ -356,10 +351,30 @@ void App::RenderSSAO()
 	Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
 	m_postEffect.Render();
 
-	//blur
+	// blur
 	Graphics::SetPipelineStates(Graphics::blurPSO);
 	m_postEffect.Blur(3, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
 		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
+}
+
+void App::ShadingBasic()
+{ 
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::backBufferRTV.GetAddressOf(), Graphics::deferredDSV.Get());
+
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::normalSRV.Get());
+	ppSRVs.push_back(Graphics::positionSRV.Get());
+	ppSRVs.push_back(Graphics::albedoEdgeSRV.Get());
+	ppSRVs.push_back(Graphics::ssaoSRV.Get());
+	ppSRVs.push_back(Graphics::coverageSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+	Graphics::SetPipelineStates(Graphics::shadingBasicNormalPSO);
+	m_postEffect.Render();
+
+	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
+	m_postEffect.Render();
 }
 /*
 void App::RenderBasic()
@@ -404,7 +419,7 @@ Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
 const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
 Graphics::context->ClearRenderTargetView(Graphics::mirrorPlaneDepthRTV.Get(), clearColor);
-Graphics::context->ClearDepthStencilView(
+Graphics::contClearDepthStencilView(ext->
 	Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 std::vector<ID3D11RenderTargetView*> ppRTVs;
@@ -494,43 +509,4 @@ Graphics::context->PSSetConstantBuffers(
 
 Graphics::SetPipelineStates(Graphics::waterFilterPSO);
 m_postEffect.Render();
-}
-
-void App::RenderSSAO()
-{
-// Depth & Normal Pass
-float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
-Graphics::context->ClearDepthStencilView(
-	Graphics::normalPassDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-Graphics::context->OMSetRenderTargets(
-	1, Graphics::normalMapRTV.GetAddressOf(), Graphics::normalPassDSV.Get());
-	
-Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
-ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), true);
-
-
-// making SSAO
-Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
-Graphics::context->OMSetRenderTargets(1, Graphics::ssaoRTV.GetAddressOf(), nullptr);
-
-std::vector<ID3D11ShaderResourceView*> ppSRVs;
-ppSRVs.push_back(Graphics::depthMapSRV.Get());
-ppSRVs.push_back(Graphics::normalMapSRV.Get());
-Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
-std::vector<ID3D11Buffer*> ppConstants;
-ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
-ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
-Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
-
-Graphics::SetPipelineStates(Graphics::ssaoPSO);
-m_postEffect.Render();
-
-// blur SSAO
-Graphics::SetPipelineStates(Graphics::blurPSO);
-m_postEffect.Blur(5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
-	Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
-}
-*/
+}*/

@@ -49,6 +49,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> ssaoNormalPS;
 	ComPtr<ID3D11PixelShader> ssaoEdgePS;
 	ComPtr<ID3D11PixelShader> edgeMaskingPS;
+	ComPtr<ID3D11PixelShader> lightingNormalPS;
+	ComPtr<ID3D11PixelShader> lightingEdgePS;
 
 
 	// Rasterizer State
@@ -184,6 +186,8 @@ namespace Graphics {
 	GraphicsPSO ssaoNormalPSO;
 	GraphicsPSO ssaoEdgePSO;
 	GraphicsPSO edgeMaskingPSO;
+	GraphicsPSO shadingBasicNormalPSO;
+	GraphicsPSO shadingBasicEdgePSO;
 }
 
 
@@ -422,8 +426,6 @@ bool Graphics::InitRenderTargetBuffers()
 			return false;
 		}
 	}
-	
-
 
 	return true;
 }
@@ -714,6 +716,16 @@ bool Graphics::InitPixelShaders()
 	// EdgeMaskingPS
 	if (!DXUtils::CreatePixelShader(L"EdgeMaskingPS.hlsl", edgeMaskingPS)) {
 		std::cout << "failed create edge masking ps" << std::endl;
+		return false;
+	}
+
+	// lightingPS
+	if (!DXUtils::CreatePixelShader(L"LightingPS.hlsl", lightingNormalPS)) {
+		std::cout << "failed create lighting normal ps" << std::endl;
+		return false;
+	}
+	if (!DXUtils::CreatePixelShader(L"LightingPS.hlsl", lightingEdgePS, nullptr, "mainMSAA")) {
+		std::cout << "failed create lighting edge ps" << std::endl;
 		return false;
 	}
 
@@ -1091,6 +1103,19 @@ void Graphics::InitGraphicsPSO()
 	edgeMaskingPSO.pixelShader = edgeMaskingPS;
 	edgeMaskingPSO.depthStencilState = edgeMaskingDSS;
 	edgeMaskingPSO.stencilRef = 1;
+
+	// shadingBasicNormalPSO
+	shadingBasicNormalPSO = basicPSO;
+	shadingBasicNormalPSO.inputLayout = samplingIL;
+	shadingBasicNormalPSO.vertexShader = samplingVS;
+	shadingBasicNormalPSO.pixelShader = lightingNormalPS;
+	shadingBasicNormalPSO.depthStencilState = stencilEqualDrawDSS;
+	shadingBasicNormalPSO.stencilRef = 0;
+
+	// shadingBasicEdgePSO
+	shadingBasicEdgePSO = shadingBasicNormalPSO;
+	shadingBasicEdgePSO.pixelShader = lightingEdgePS;
+	shadingBasicEdgePSO.stencilRef = 1;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

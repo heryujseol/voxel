@@ -27,26 +27,6 @@ uint getClosestSampleIndex(float2 screenCoord)
     return fracCoord.x < 0.5 ? ((fracCoord.y < 0.5) ? 0 : 1) : ((fracCoord.y < 0.5) ? 2 : 3);
 }
 
-uint4 coverageAnalysis(uint4 coverage)
-{
-    uint4 sampleWeight = uint4(1, 1, 1, 1);
-    
-    if (coverage.x == coverage.y) { ++sampleWeight.x; coverage.y = 0;}
-    if (coverage.x == coverage.z) { ++sampleWeight.x; coverage.z = 0;}
-    if (coverage.x == coverage.w) { ++sampleWeight.x; coverage.w = 0;}
-    if (coverage.y == coverage.z) { ++sampleWeight.y; coverage.z = 0;}
-    if (coverage.y == coverage.w) { ++sampleWeight.y; coverage.w = 0;}
-    if (coverage.z == coverage.w) { ++sampleWeight.z; coverage.w = 0;}
-
-    // 재조정 : coverage가 0인 것은 마스킹이 안된 샘플이거나, 같은 마스킹이 있는 경우
-    sampleWeight.x = (coverage.x > 0) ? sampleWeight.x : 0;
-    sampleWeight.y = (coverage.y > 0) ? sampleWeight.y : 0;
-    sampleWeight.z = (coverage.z > 0) ? sampleWeight.z : 0;
-    sampleWeight.w = (coverage.w > 0) ? sampleWeight.w : 0;
-    
-    return sampleWeight;
-}
-
 float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
 {
     // 200배 확대한 것을 frac연산으로 다시 하나씩 200개로 쪼갬 -> 4로 곱하여 인덱스로 사용
@@ -140,7 +120,7 @@ float mainMSAA(vsOutput input) : SV_TARGET
         sumOcclusionFactor += getOcclusionFactor(input.texcoord, viewPos, normal) * sampleWeightArray[i];
     }
     
-    sumOcclusionFactor *= 0.25;
+    sumOcclusionFactor /= SAMPLE_COUNT;
     
     return 1.0 - sumOcclusionFactor;
 }

@@ -36,7 +36,7 @@ vsOutput main(uint data : DATA)
     
     output.texcoord = getVoxelTexcoord(position, face);
     
-    output.type = (type - 1) * 6;
+    output.type = (type - 1) * 6 + face;
     
     return output;
 }
