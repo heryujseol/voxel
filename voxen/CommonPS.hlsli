@@ -35,8 +35,8 @@ cbuffer SkyboxConstantBuffer : register(b1)
     float skyboxDummyData;
 };
 
-static const float PI = 3.14159265;
-static const float invPI = 1.0 / 3.14159265;
+#define PI 3.14159265
+#define SAMPLE_COUNT 4
 
 float henyeyGreensteinPhase(float3 L, float3 V, float aniso)
 {
@@ -48,73 +48,13 @@ float henyeyGreensteinPhase(float3 L, float3 V, float aniso)
     return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
 }
 
-float3 getNormal(uint face)
-{
-    if (face == 0)
-    {
-        return float3(-1.0, 0.0, 0.0);
-    }
-    else if (face == 1)
-    {
-        return float3(1.0, 0.0, 0.0);
-    }
-    else if (face == 2)
-    {
-        return float3(0.0, -1.0, 0.0);
-    }
-    else if (face == 3)
-    {
-        return float3(0.0, 1.0, 0.0);
-    }
-    else if (face == 4)
-    {
-        return float3(0.0, 0.0, -1.0);
-    }
-    else
-    {
-        return float3(0.0, 0.0, 1.0);
-    }
-}
-
-float2 getVoxelTexcoord(float3 pos, uint face)
-{
-    float2 texcoord = float2(0.0, 0.0);
-    
-    if (face == 0) // left
-    {
-        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
-    }
-    else if (face == 1) // right
-    {
-        texcoord = float2(pos.z, -pos.y + 32.0);
-    }
-    else if (face == 2) // bottom
-    {
-        texcoord = float2(pos.x, pos.z);
-    }
-    else if (face == 3) // top
-    {
-        texcoord = float2(pos.x, -pos.z + 32.0);
-    }
-    else if (face == 4) // front
-    {
-        texcoord = float2(pos.x, -pos.y + 32.0);
-    }
-    else // back
-    {
-        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
-    }
-
-    return texcoord;
-}
-
-float3 convertViewPos(float2 texcoord, float depth)
+float3 texcoordToViewPos(float2 texcoord, float projDepth)
 {
     float4 posProj;
     
     posProj.xy = texcoord * 2.0 - 1.0;
     posProj.y *= -1;
-    posProj.z = depth;
+    posProj.z = projDepth;
     posProj.w = 1.0;
 
     float4 posView = mul(posProj, invProj);
@@ -122,4 +62,5 @@ float3 convertViewPos(float2 texcoord, float depth)
     
     return posView.xyz;
 }
+
 #endif

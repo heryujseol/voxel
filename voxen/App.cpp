@@ -148,21 +148,30 @@ void App::Update(float dt)
 
 void App::Render()
 {
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+
 	// 공통 로직
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
-	// making env map
-	RenderEnvMap();
-
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
-	Graphics::context->ClearDepthStencilView(Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
+	/*
+	 * GBuffer
+	 * Masking MSAA Edge
+	 * SSAO
+	 * Shading
+	 *
+	 * FogFilter
+	 * SkyFilter
+	 * Cloud Render
+	 *
+	 */
+	FillGBuffer();
+	MaskMSAAEdge();
+	RenderSSAO();
+	/*
 	// DepthNormalPass -> SSAO
 	RenderSSAO();
 
@@ -170,11 +179,11 @@ void App::Render()
 	RenderBasic();
 
 	if (m_camera.IsUnderWater()) {
-		RenderFogFilter();
-		RenderSkybox();
-		RenderCloud();
-		RenderWaterPlane();
-		RenderWaterFilter();
+		RenderFogFilter(); // 뎁스 후처리임
+		RenderSkybox();    // 단순한 필터
+		RenderCloud();     // 단순한 메쉬
+		RenderWaterPlane();//
+		RenderWaterFilter();//
 	}
 	else {
 		RenderMirrorWorld();
@@ -187,6 +196,7 @@ void App::Render()
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+		*/
 }
 
 bool App::InitWindow()
@@ -282,192 +292,245 @@ bool App::InitScene()
 	return true;
 }
 
-void App::RenderEnvMap()
+void App::FillGBuffer()
 {
-	Graphics::context->ClearDepthStencilView(Graphics::envMapDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::envMapRTV.Get(), clearColor);
-
-	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
-	Graphics::context->RSSetViewports(1, &Graphics::envMapViewPort);
-
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::envMapRTV.GetAddressOf(), Graphics::envMapDSV.Get());
-
-	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_envMapConstantBuffer.GetAddressOf());
-
-	Graphics::SetPipelineStates(Graphics::skyboxEnvMapPSO);
-	m_skybox.Render();
-}
-
-void App::RenderBasic()
-{
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
-	ppSRVs.push_back(Graphics::shadowSRV.Get());
-	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
-	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), false);
-}
-
-void App::RenderWaterPlane()
-{
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-	// ***
-	Graphics::context->CopyResource(
-		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
-
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-	ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
-	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
-	ppSRVs.push_back(Graphics::depthMapSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
-	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
-	ChunkManager::GetInstance()->RenderTransparency();
-}
-
-void App::RenderMirrorWorld()
-{
-	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
-
-	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
-	Graphics::context->ClearRenderTargetView(Graphics::mirrorPlaneDepthRTV.Get(), clearColor);
+	float clearPositionColor[4] = { 0.0f, 0.0f, 1000.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::normalRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::positionRTV.Get(), clearPositionColor);
+	Graphics::context->ClearRenderTargetView(Graphics::albedoEdgeRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::coverageRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
-		Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	std::vector<ID3D11RenderTargetView*> ppRTVs;
-	ppRTVs.push_back(Graphics::mirrorWorldRTV.Get());
-	ppRTVs.push_back(Graphics::mirrorPlaneDepthRTV.Get());
+	ppRTVs.push_back(Graphics::normalRTV.Get());
+	ppRTVs.push_back(Graphics::positionRTV.Get());
+	ppRTVs.push_back(Graphics::albedoEdgeRTV.Get());
+	ppRTVs.push_back(Graphics::coverageRTV.Get());
 	Graphics::context->OMSetRenderTargets(
-		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::mirrorWorldDSV.Get());
+		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
 
-	// plane stencil and envMap
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
-	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
-	ChunkManager::GetInstance()->RenderTransparency();
-
-	// mirror cloud
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
-	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
-	Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
-	m_cloud.Render();
-
-	// mirror low lod world
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
-	ppSRVs.push_back(Graphics::mirrorPlaneDepthSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-	ChunkManager::GetInstance()->RenderMirrorWorld();
 
-	// blur mirror world
-	Graphics::SetPipelineStates(Graphics::blurPSO);
-	m_postEffect.Blur(5, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
-		Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV, Graphics::blurMirrorPS);
-
-	// 원래의 글로벌로 두기
-	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
 }
 
-void App::RenderSkybox()
+void App::MaskMSAAEdge()
 {
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	Graphics::context->ResolveSubresource(Graphics::resolvedEdgeBuffer.Get(), 0,
+		Graphics::albedoEdgeBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
-	Graphics::SetPipelineStates(Graphics::skyboxPSO);
-	m_skybox.Render();
-}
-
-void App::RenderCloud()
-{
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	Graphics::SetPipelineStates(Graphics::cloudPSO);
-	m_cloud.Render();
-}
-
-void App::RenderFogFilter()
-{
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
-
-	Graphics::context->CopyResource(
-		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
-
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::copiedBasicSRV.Get(),
-		Graphics::basicDepthSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
-	Graphics::context->PSSetConstantBuffers(
-		2, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
-
-	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
-	m_postEffect.Render();
-}
-
-void App::RenderWaterFilter()
-{
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
-
-	Graphics::context->CopyResource(
-		Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
-
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::copiedBasicSRV.GetAddressOf());
-
-	Graphics::context->PSSetConstantBuffers(
-		2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
-
-	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
-	m_postEffect.Render();
-}
-
-void App::RenderSSAO()
-{
-	// Depth & Normal Pass
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
-		Graphics::normalPassDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		Graphics::deferredDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::normalMapRTV.GetAddressOf(), Graphics::normalPassDSV.Get());
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
-	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), true);
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::resolvedEdgeSRV.GetAddressOf());
 
+	Graphics::SetPipelineStates(Graphics::edgeMaskingPSO);
+	m_postEffect.Render();
+}
 
-	// making SSAO
-	Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
-	Graphics::context->OMSetRenderTargets(1, Graphics::ssaoRTV.GetAddressOf(), nullptr);
+void App::RenderSSAO() 
+{
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::backBufferRTV.Get(), clearColor);
 
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::depthMapSRV.Get());
-	ppSRVs.push_back(Graphics::normalMapSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::backBufferRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
 	std::vector<ID3D11Buffer*> ppConstants;
 	ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
 	ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
 	Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
 
-	Graphics::SetPipelineStates(Graphics::ssaoPSO);
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::normalSRV.Get());
+	ppSRVs.push_back(Graphics::positionSRV.Get());
+	ppSRVs.push_back(Graphics::coverageSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+	Graphics::SetPipelineStates(Graphics::ssaoNormalPSO);
 	m_postEffect.Render();
 
-	// blur SSAO
-	Graphics::SetPipelineStates(Graphics::blurPSO);
-	m_postEffect.Blur(5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
-		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
+	Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
+	m_postEffect.Render();
 }
+/*
+void App::RenderBasic()
+{
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+std::vector<ID3D11ShaderResourceView*> ppSRVs;
+ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+ppSRVs.push_back(Graphics::shadowSRV.Get());
+ppSRVs.push_back(Graphics::ssaoSRV.Get());
+Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), false);
+}
+
+void App::RenderWaterPlane()
+{
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+// ***
+Graphics::context->CopyResource(
+	Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
+
+std::vector<ID3D11ShaderResourceView*> ppSRVs;
+ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
+ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
+ppSRVs.push_back(Graphics::depthMapSRV.Get());
+Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+Graphics::SetPipelineStates(Graphics::waterPlanePSO);
+ChunkManager::GetInstance()->RenderTransparency();
+}
+
+void App::RenderMirrorWorld()
+{
+DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
+Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
+
+const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
+Graphics::context->ClearRenderTargetView(Graphics::mirrorPlaneDepthRTV.Get(), clearColor);
+Graphics::context->ClearDepthStencilView(
+	Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+std::vector<ID3D11RenderTargetView*> ppRTVs;
+ppRTVs.push_back(Graphics::mirrorWorldRTV.Get());
+ppRTVs.push_back(Graphics::mirrorPlaneDepthRTV.Get());
+Graphics::context->OMSetRenderTargets(
+	(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::mirrorWorldDSV.Get());
+
+// plane stencil and envMap
+Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
+Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
+ChunkManager::GetInstance()->RenderTransparency();
+
+// mirror cloud
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
+Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
+Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
+m_cloud.Render();
+
+// mirror low lod world
+std::vector<ID3D11ShaderResourceView*> ppSRVs;
+ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+ppSRVs.push_back(Graphics::mirrorPlaneDepthSRV.Get());
+Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+ChunkManager::GetInstance()->RenderMirrorWorld();
+
+// blur mirror world
+Graphics::SetPipelineStates(Graphics::blurPSO);
+m_postEffect.Blur(5, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
+	Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV, Graphics::blurMirrorPS);
+
+// 원래의 글로벌로 두기
+Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
+Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+}
+
+void App::RenderSkybox()
+{
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+Graphics::SetPipelineStates(Graphics::skyboxPSO);
+m_skybox.Render();
+}
+
+void App::RenderCloud()
+{
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+Graphics::SetPipelineStates(Graphics::cloudPSO);
+m_cloud.Render();
+}
+
+void App::RenderFogFilter()
+{
+Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+Graphics::context->CopyResource(
+	Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
+
+std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::copiedBasicSRV.Get(),
+	Graphics::basicDepthSRV.Get() };
+Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+Graphics::context->PSSetConstantBuffers(
+	2, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
+
+Graphics::SetPipelineStates(Graphics::fogFilterPSO);
+m_postEffect.Render();
+}
+
+void App::RenderWaterFilter()
+{
+Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+Graphics::context->CopyResource(
+	Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
+
+Graphics::context->PSSetShaderResources(0, 1, Graphics::copiedBasicSRV.GetAddressOf());
+
+Graphics::context->PSSetConstantBuffers(
+	2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
+
+Graphics::SetPipelineStates(Graphics::waterFilterPSO);
+m_postEffect.Render();
+}
+
+void App::RenderSSAO()
+{
+// Depth & Normal Pass
+float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+Graphics::context->ClearRenderTargetView(Graphics::normalMapRTV.Get(), clearColor);
+Graphics::context->ClearDepthStencilView(
+	Graphics::normalPassDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+Graphics::context->OMSetRenderTargets(
+	1, Graphics::normalMapRTV.GetAddressOf(), Graphics::normalPassDSV.Get());
+	
+Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
+ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition(), true);
+
+
+// making SSAO
+Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
+Graphics::context->OMSetRenderTargets(1, Graphics::ssaoRTV.GetAddressOf(), nullptr);
+
+std::vector<ID3D11ShaderResourceView*> ppSRVs;
+ppSRVs.push_back(Graphics::depthMapSRV.Get());
+ppSRVs.push_back(Graphics::normalMapSRV.Get());
+Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+
+std::vector<ID3D11Buffer*> ppConstants;
+ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
+ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
+Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
+
+Graphics::SetPipelineStates(Graphics::ssaoPSO);
+m_postEffect.Render();
+
+// blur SSAO
+Graphics::SetPipelineStates(Graphics::blurPSO);
+m_postEffect.Blur(5, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
+	Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
+}
+*/

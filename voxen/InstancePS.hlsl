@@ -1,7 +1,8 @@
 #include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
-Texture2D ssaoTex : register(t3);
+Texture2D grassColorMap : register(t1);
+
 #ifdef USE_DEPTH_CLIP
     Texture2D depthTex : register(t2);
 #endif
@@ -38,7 +39,6 @@ float4 main(vsOutput input) : SV_TARGET
 #else
     float4 color = atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, (float) input.type), 0.0);
 #endif
-    float ao = ssaoTex.Sample(linearClampSS, float2(input.posProj.x / 1920.0, input.posProj.y / 1080.0));
   
-    return color * ao;
+    return color;
 }

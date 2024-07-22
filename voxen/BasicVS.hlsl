@@ -1,15 +1,4 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    Matrix view;
-    Matrix proj;
-    float3 eyePos;
-    float maxRenderDistance;
-    float3 eyeDir;
-    float lodRenderDistance;
-    Matrix invProj;
-    bool isUnderWater;
-    float3 cameraDummyData;
-};
+#include "CommonVS.hlsli"
 
 cbuffer ChunkConstantBuffer : register(b1)
 {
@@ -19,9 +8,9 @@ cbuffer ChunkConstantBuffer : register(b1)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
-    sample float3 posModel : POSITION2;
-    uint face : FACE;
+    float3 posWorld : POSITION;
+    float3 normal : NORMAL;
+    sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };
 
@@ -37,16 +26,17 @@ vsOutput main(uint data : DATA)
     
     float3 position = float3(float(x), float(y), float(z));
     
-    output.posModel = position;
-    
     output.posWorld = mul(float4(position, 1.0), world).xyz;
     
     output.posProj = float4(output.posWorld, 1.0);
     output.posProj = mul(output.posProj, view); 
     output.posProj = mul(output.posProj, proj);
     
-    output.face = face;
-    output.type = type;
+    output.normal = getNormal(face);
+    
+    output.texcoord = getVoxelTexcoord(position, face);
+    
+    output.type = (type - 1) * 6;
     
     return output;
 }

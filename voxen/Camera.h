@@ -23,7 +23,6 @@ public:
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
-	ComPtr<ID3D11Buffer> m_envMapConstantBuffer;
 
 	inline Vector3 GetPosition() { return m_eyePos; }
 	inline Vector3 GetChunkPosition() { return m_chunkPos; }
@@ -69,7 +68,6 @@ private:
 	bool m_isUnderWater;
 
 	CameraConstantData m_constantData;
-	EnvMapConstantData m_envMapConstantData;
 
 	Vector3 lookTo[6] = {
 		Vector3(1.0f, 0.0f, 0.0f),

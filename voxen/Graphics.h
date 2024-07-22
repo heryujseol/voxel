@@ -25,7 +25,6 @@ namespace Graphics {
 	// Vertex Shader
 	extern ComPtr<ID3D11VertexShader> basicVS;
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
-	extern ComPtr<ID3D11VertexShader> skyboxEnvMapVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
@@ -33,30 +32,26 @@ namespace Graphics {
 
 
 	// Geometry Shader
-	extern ComPtr<ID3D11GeometryShader> skyboxEnvMapGS;
 	extern ComPtr<ID3D11GeometryShader> basicShadowGS;
-
 
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
 	extern ComPtr<ID3D11PixelShader> basicAlphaClipPS;
 	extern ComPtr<ID3D11PixelShader> basicDepthClipPS;
+	extern ComPtr<ID3D11PixelShader> basicAlphaDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
-	extern ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
-	extern ComPtr<ID3D11PixelShader> instancePS;
-	extern ComPtr<ID3D11PixelShader> instanceDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> fogFilterPS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> waterPlanePS;
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
 	extern ComPtr<ID3D11PixelShader> blurMirrorPS[2];
 	extern ComPtr<ID3D11PixelShader> blurSsaoPS[2];
-	extern ComPtr<ID3D11PixelShader> normalPassBasicPS;
-	extern ComPtr<ID3D11PixelShader> normalPassInstancePS;
-	extern ComPtr<ID3D11PixelShader> ssaoPS;
+	extern ComPtr<ID3D11PixelShader> ssaoNormalPS;
+	extern ComPtr<ID3D11PixelShader> ssaoEdgePS;
+	extern ComPtr<ID3D11PixelShader> edgeMaskingPS;
 
 
 	// Rasterizer State
@@ -77,7 +72,8 @@ namespace Graphics {
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-	extern ComPtr<ID3D11DepthStencilState> basicNoneWriteDSS;
+	extern ComPtr<ID3D11DepthStencilState> edgeMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> stencilEqualDrawDSS;
 	extern ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
 	extern ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
 
@@ -86,53 +82,47 @@ namespace Graphics {
 	extern ComPtr<ID3D11BlendState> alphaBS;
 
 
-	// RTV & Buffer
+	// Render Target Buffer
 	extern ComPtr<ID3D11Texture2D> backBuffer;
 	extern ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
 	extern ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> basicRTV;
+	extern ComPtr<ID3D11ShaderResourceView> basicSRV;
 
-	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
+	extern ComPtr<ID3D11Texture2D> normalBuffer;
+	extern ComPtr<ID3D11RenderTargetView> normalRTV;
+	extern ComPtr<ID3D11ShaderResourceView> normalSRV;
 
-	extern ComPtr<ID3D11Texture2D> mirrorWorldRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
-	
-	extern ComPtr<ID3D11Texture2D> mirrorWorldBlurBuffer[2];
-	extern ComPtr<ID3D11RenderTargetView> mirrorWorldBlurRTV[2];
+	extern ComPtr<ID3D11Texture2D> positionBuffer;
+	extern ComPtr<ID3D11RenderTargetView> positionRTV;
+	extern ComPtr<ID3D11ShaderResourceView> positionSRV;
 
-	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> mirrorPlaneDepthRTV;
+	extern ComPtr<ID3D11Texture2D> albedoEdgeBuffer;
+	extern ComPtr<ID3D11RenderTargetView> albedoEdgeRTV;
+	extern ComPtr<ID3D11ShaderResourceView> albedoEdgeSRV;
 
-	extern ComPtr<ID3D11Texture2D> normalMapBuffer;
-	extern ComPtr<ID3D11RenderTargetView> normalMapRTV;
+	extern ComPtr<ID3D11Texture2D> coverageBuffer;
+	extern ComPtr<ID3D11RenderTargetView> coverageRTV;
+	extern ComPtr<ID3D11ShaderResourceView> coverageSRV;
 
-	extern ComPtr<ID3D11Texture2D> ssaoRenderBuffer;
+	extern ComPtr<ID3D11Texture2D> resolvedEdgeBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> resolvedEdgeSRV;
+
+	extern ComPtr<ID3D11Texture2D> ssaoBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
+	extern ComPtr<ID3D11ShaderResourceView> ssaoSRV;
 
-	extern ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
-	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
-	
 
-	// DSV & Buffer
+	// Depth Stencil Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> basicDSV;
 
-	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
-
-	extern ComPtr<ID3D11Texture2D> shadowBuffer;
-	extern ComPtr<ID3D11DepthStencilView> shadowDSV;
-
-	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
-
-	extern ComPtr<ID3D11Texture2D> normalPassDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> normalPassDSV;
+	extern ComPtr<ID3D11Texture2D> deferredDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> deferredDSV;
 
 
-	// SRV & Buffer
+	// Shadow Resource Buffer
 	extern ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
@@ -141,33 +131,14 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> sunBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> sunSRV;
+
 	extern ComPtr<ID3D11Texture2D> moonBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> moonSRV;
 
-	extern ComPtr<ID3D11ShaderResourceView> basicDepthSRV;
-
-	extern ComPtr<ID3D11ShaderResourceView> shadowSRV;
-
-	extern ComPtr<ID3D11Texture2D> copiedBasicBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> copiedBasicSRV;
-
-	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
-
-	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
-	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
-
-	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
-
-	extern ComPtr<ID3D11ShaderResourceView> normalMapSRV;
-	extern ComPtr<ID3D11ShaderResourceView> depthMapSRV;
-
-	extern ComPtr<ID3D11ShaderResourceView> ssaoSRV;
-	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
-
+	
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
-	extern D3D11_VIEWPORT envMapViewPort;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
 
 
@@ -197,11 +168,9 @@ namespace Graphics {
 	extern void InitGraphicsPSO();
 	extern void SetPipelineStates(GraphicsPSO& pso);
 	extern GraphicsPSO basicPSO;
-	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO basicMirrorPSO;
 	extern GraphicsPSO semiAlphaPSO;
 	extern GraphicsPSO skyboxPSO;
-	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudMirrorPSO;
 	extern GraphicsPSO fogFilterPSO;
@@ -214,8 +183,7 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
-	extern GraphicsPSO normalPassBasicPSO;
-	extern GraphicsPSO normalPassSemiAlphaPSO;
-	extern GraphicsPSO normalPassInstancePSO;
-	extern GraphicsPSO ssaoPSO;
+	extern GraphicsPSO ssaoNormalPSO;
+	extern GraphicsPSO ssaoEdgePSO;
+	extern GraphicsPSO edgeMaskingPSO;
 }

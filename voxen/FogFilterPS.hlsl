@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2DMS<float4, 4> msaaRenderTex : register(t0);
 Texture2DMS<float, 4> msaaDepthTex : register(t1);
@@ -37,7 +37,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     //Beer-Lambert law
     float depth = msaaDepthTex.Load(input.posProj.xy, input.sampleIndex).r;
-    float3 posView = convertViewPos(input.texcoord, depth);
+    float3 posView = texcoordToViewPos(input.texcoord, depth);
     float dist = length(posView);
         
     float distFog = saturate((dist - fogDistMin) / (fogDistMax - fogDistMin));

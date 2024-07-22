@@ -41,18 +41,6 @@ bool Camera::Initialize(Vector3 pos)
 		return false;
 	}
 
-	for (int i = 0; i < 6; ++i) {
-		m_envMapConstantData.view[i] = XMMatrixLookToLH(Vector3(0.0f), lookTo[i], up[i]);
-		m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
-	}
-	m_envMapConstantData.proj =
-		XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
-	m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
-	if (!DXUtils::CreateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData)) {
-		std::cout << "failed create env map constant buffer" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
@@ -61,6 +49,18 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 	UpdatePosition(keyPressed, dt);
 	UpdateViewDirection(mouseX, mouseY);
 
+	///////////////////
+	if (keyPressed['R']) {
+		m_isOnConstantDirtyFlag = true;
+		m_constantData.dummy.x = 0.0f;
+	}
+	else
+	{
+		m_isOnConstantDirtyFlag = true;
+		m_constantData.dummy.x = 1.0f;
+	}
+
+	///////////////////
 	if (m_isOnConstantDirtyFlag) {
 		m_constantData.view = GetViewMatrix().Transpose();
 		m_constantData.proj = GetProjectionMatrix().Transpose();

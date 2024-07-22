@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2DMS<float4, 4> msaaRenderTex : register(t1);
@@ -8,11 +8,10 @@ Texture2D depthMapTex : register(t3);
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
-    sample float3 posModel : POSITION2;
-    uint face : FACE;
+    float3 posWorld : POSITION;
+    float3 normal : NORMAL;
+    sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
-    uint sampleIndex : SV_SampleIndex;
 };
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
@@ -24,24 +23,23 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
-    float3 normal = getNormal(input.face);
+    float3 normal = input.normal;
     if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
         
-    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
-    uint index = (input.type - 1) * 6 + input.face;
+    uint index = input.type;
     
     // absorption color
-    float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
+    float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, index));
     
     float width, height, lod;
     depthMapTex.GetDimensions(0, width, height, lod);
     float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
         
     // origin render color
-    float3 originColor = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+    float3 originColor = msaaRenderTex.Load(input.posProj.xy, sampleIndex).rgb;
    
     if (isUnderWater)
     {
@@ -51,7 +49,7 @@ float4 main(vsOutput input) : SV_TARGET
     {
         // absorption factor
         float depth = depthMapTex.Sample(linearClampSS, screenTexcoord).r;
-        float objectDistance = length(convertViewPos(screenTexcoord, depth));
+        float objectDistance = length(texcoordToViewPos(screenTexcoord, depth));
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
         float absorptionCoeff = 0.1;

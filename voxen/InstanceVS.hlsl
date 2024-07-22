@@ -15,7 +15,7 @@ struct vsInput
 
 struct vsOutput
 {
-    sample float4 posProj : SV_POSITION;
+    float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
@@ -32,7 +32,9 @@ vsOutput main(vsInput input)
     output.posProj = mul(output.posProj, proj);
     
     output.normal = input.normal; // invTranspose 고려하지 않음 -> ununiform scaling X
+    
     output.texcoord = input.texcoord;
+    
     output.type = input.type;
     
     return output;

@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2D sunTexture : register(t0);
 Texture2D moonTexture : register(t1);

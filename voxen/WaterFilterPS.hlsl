@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2DMS<float4, 4> msaaRenderTex : register(t0);
 

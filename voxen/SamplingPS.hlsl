@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2D samplingTexture : register(t0);
 

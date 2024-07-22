@@ -66,11 +66,6 @@ struct CloudConstantData {
 	float cloudScale;
 };
 
-struct EnvMapConstantData {
-	Matrix view[6];
-	Matrix proj;
-};
-
 struct BlurConstantData {
 	float dx;
 	float dy;
