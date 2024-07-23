@@ -87,9 +87,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> backBuffer;
 	ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
-	ComPtr<ID3D11Texture2D> basicRenderBuffer;
-	ComPtr<ID3D11RenderTargetView> basicRTV;
-	ComPtr<ID3D11ShaderResourceView> basicSRV;
+	ComPtr<ID3D11Texture2D> basicRenderBuffer[2];
+	ComPtr<ID3D11RenderTargetView> basicRTV[2];
+	ComPtr<ID3D11ShaderResourceView> basicSRV[2];
 
 	ComPtr<ID3D11Texture2D> normalBuffer;
 	ComPtr<ID3D11RenderTargetView> normalRTV;
@@ -278,21 +278,24 @@ bool Graphics::InitRenderTargetBuffers()
 	// basic render
 	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			basicRenderBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create basic render buffer" << std::endl;
-		return false;
-	}
-	ret = device->CreateRenderTargetView(basicRenderBuffer.Get(), nullptr, basicRTV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create basic rtv" << std::endl;
-		return false;
-	}
-	ret =
-		device->CreateShaderResourceView(basicRenderBuffer.Get(), nullptr, basicSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create basic srv" << std::endl;
-		return false;
+	for (int i = 0; i < 2; ++i) {
+		if (!DXUtils::CreateTextureBuffer(
+				basicRenderBuffer[i], App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			std::cout << "failed create basic render buffer" << std::endl;
+			return false;
+		}
+		ret = device->CreateRenderTargetView(
+			basicRenderBuffer[i].Get(), nullptr, basicRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create basic rtv" << std::endl;
+			return false;
+		}
+		ret = device->CreateShaderResourceView(
+			basicRenderBuffer[i].Get(), nullptr, basicSRV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create basic srv" << std::endl;
+			return false;
+		}
 	}
 
 	// normal
@@ -432,27 +435,6 @@ bool Graphics::InitRenderTargetBuffers()
 			std::cout << "failed create ssao blur srv" << std::endl;
 			return false;
 		}
-	}
-
-	// fog filter 
-	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			fogFilterBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create fog filter buffer" << std::endl;
-		return false;
-	}
-	ret = device->CreateRenderTargetView(
-		fogFilterBuffer.Get(), nullptr, fogFilterRTV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create fog filter rtv" << std::endl;
-		return false;
-	}
-	ret = device->CreateShaderResourceView(
-		fogFilterBuffer.Get(), nullptr, fogFilterSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create fog filter srv" << std::endl;
-		return false;
 	}
 
 	return true;

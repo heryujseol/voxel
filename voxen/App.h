@@ -47,6 +47,7 @@ private:
 	void RenderCloud();
 
 	void FogFilter();
+	void WaterFilter();
 
 	HWND m_hwnd;
 

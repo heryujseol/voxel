@@ -57,9 +57,6 @@ float4 main(vsOutput input) : SV_TARGET
 
 float4 mainMSAA(vsOutput input) : SV_TARGET
 {
-    if (cameraDummyData.x == 0)
-        return main(input);
-    
     float3 fogColor = getFogColor(sunDir, eyeDir);
     float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
     

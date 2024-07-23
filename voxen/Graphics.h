@@ -90,9 +90,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> backBuffer;
 	extern ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
-	extern ComPtr<ID3D11Texture2D> basicRenderBuffer;
-	extern ComPtr<ID3D11RenderTargetView> basicRTV;
-	extern ComPtr<ID3D11ShaderResourceView> basicSRV;
+	extern ComPtr<ID3D11Texture2D> basicRenderBuffer[2];
+	extern ComPtr<ID3D11RenderTargetView> basicRTV[2];
+	extern ComPtr<ID3D11ShaderResourceView> basicSRV[2];
 
 	extern ComPtr<ID3D11Texture2D> normalBuffer;
 	extern ComPtr<ID3D11RenderTargetView> normalRTV;
@@ -120,10 +120,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> ssaoBlurBuffer[2];
 	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
 	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
-
-	extern ComPtr<ID3D11Texture2D> fogFilterBuffer;
-	extern ComPtr<ID3D11RenderTargetView> fogFilterRTV;
-	extern ComPtr<ID3D11ShaderResourceView> fogFilterSRV;
 
 
 	// Depth Stencil Buffer
