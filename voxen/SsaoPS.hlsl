@@ -20,6 +20,11 @@ struct vsOutput
     float2 texcoord : TEXCOORD;
 };
 
+float2 texcoordToScreen(float2 texcoord, float width, float height)
+{
+    return float2(texcoord.x * (width - 1.0) + 0.5, texcoord.y * (height - 1.0) + 0.5);
+}
+
 float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
 {
     // 200배 확대한 것을 frac연산으로 다시 하나씩 200개로 쪼갬 -> 4로 곱하여 인덱스로 사용
@@ -52,10 +57,7 @@ float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
         sampleTexcoord.x = saturate(sampleTexcoord.x * 0.5 + 0.5); // [-1, 1] -> [0, 1]
         sampleTexcoord.y = saturate(-(sampleTexcoord.y * 0.5) + 0.5); // [-1, 1] -> [1, 0]
         
-        float width, height, sampleCount;
-        positionTex.GetDimensions(width, height, sampleCount);
-        
-        float2 sampleScreenCoord = float2(sampleTexcoord.x * (width - 1.0) + 0.5, sampleTexcoord.y * (height - 1.0) + 0.5);
+        float2 sampleScreenCoord = texcoordToScreen(sampleTexcoord, appWidth, appHeight);
         // SampleIndex 중 아무거나 하나 집어도 무관: 샘플의 위치가 다르다고 가정하면 됨
         float4 storedViewPos = positionTex.Load(sampleScreenCoord, 0); 
         if (storedViewPos.w == -1.0)

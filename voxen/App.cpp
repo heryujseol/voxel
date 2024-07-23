@@ -156,6 +156,7 @@ void App::Render()
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
+	Graphics::context->PSSetConstantBuffers(8, 1, m_constantBuffer.GetAddressOf());
 
 	FillGBuffer();
 	MaskMSAAEdge();
@@ -164,13 +165,16 @@ void App::Render()
 
 	// RenderSkybox();
 	// RenderCloud();
-	FogFilter();
-	WaterFilter();
-	
+	// RenderWaterPlane()
+	// RenderMirrorWorld(); //*
+	// RenderFogFilter(); //*
+	// RenderWaterFilter(); //*
+
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV[0].GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::toneMappingPSO);
 	m_postEffect.Render();
+
 	/*
 	if (m_camera.IsUnderWater()) {
 		RenderFogFilter(); // 뎁스 후처리임
@@ -279,6 +283,15 @@ bool App::InitScene()
 	if (!m_postEffect.Initialize())
 		return false;
 
+	m_constantData.appWidth = WIDTH;
+	m_constantData.appHeight = HEIGHT;
+	m_constantData.mirrorWidth = MIRROR_WIDTH;
+	m_constantData.mirrorHeight = MIRROR_HEIGHT;
+	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
+		std::cout << "failed create constant buffer in app" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -330,33 +343,38 @@ void App::MaskMSAAEdge()
 
 void App::RenderSSAO()
 {
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
+	// SSAO
+	{
+		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		Graphics::context->ClearRenderTargetView(Graphics::ssaoRTV.Get(), clearColor);
 
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::ssaoRTV.GetAddressOf(), Graphics::deferredDSV.Get());
+		Graphics::context->OMSetRenderTargets(
+			1, Graphics::ssaoRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
-	std::vector<ID3D11Buffer*> ppConstants;
-	ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
-	ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
-	Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
+		std::vector<ID3D11Buffer*> ppConstants;
+		ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
+		ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
+		Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
 
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::normalSRV.Get());
-	ppSRVs.push_back(Graphics::positionSRV.Get());
-	ppSRVs.push_back(Graphics::coverageSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+		std::vector<ID3D11ShaderResourceView*> ppSRVs;
+		ppSRVs.push_back(Graphics::normalSRV.Get());
+		ppSRVs.push_back(Graphics::positionSRV.Get());
+		ppSRVs.push_back(Graphics::coverageSRV.Get());
+		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
-	Graphics::SetPipelineStates(Graphics::ssaoNormalPSO);
-	m_postEffect.Render();
+		Graphics::SetPipelineStates(Graphics::ssaoPSO);
+		m_postEffect.Render();
 
-	Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
-	m_postEffect.Render();
-
+		Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
+		m_postEffect.Render();
+	}
+	
 	// blur
-	Graphics::SetPipelineStates(Graphics::blurPSO);
-	m_postEffect.Blur(3, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
-		Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
+	{
+		Graphics::SetPipelineStates(Graphics::blurPSO);
+		m_postEffect.Blur(3, Graphics::ssaoSRV, Graphics::ssaoRTV, Graphics::ssaoBlurSRV,
+			Graphics::ssaoBlurRTV, Graphics::blurSsaoPS);
+	}
 }
 
 void App::ShadingBasic()
@@ -371,7 +389,7 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
-	Graphics::SetPipelineStates(Graphics::shadingBasicNormalPSO);
+	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
 	m_postEffect.Render();
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
@@ -381,11 +399,6 @@ void App::ShadingBasic()
 void App::RenderSkybox()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV[0].GetAddressOf(), nullptr);
-
-	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::sunSRV.Get());
-	ppSRVs.push_back(Graphics::moonSRV.Get());
-	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
@@ -400,7 +413,7 @@ void App::RenderCloud()
 	m_cloud.Render();
 }
 
-void App::FogFilter()
+void App::RenderFogFilter()
 {
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV[1].GetAddressOf(), Graphics::deferredDSV.Get());
@@ -413,14 +426,14 @@ void App::FogFilter()
 	Graphics::context->PSSetConstantBuffers(
 		2, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
 
-	Graphics::SetPipelineStates(Graphics::fogFilterNormalPSO);
+	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
 	m_postEffect.Render();
 
 	Graphics::SetPipelineStates(Graphics::fogFilterEdgePSO);
 	m_postEffect.Render();
 }
 
-void App::WaterFilter()
+void App::RenderWaterFilter()
 {
 	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV[0].GetAddressOf(), nullptr);
 
@@ -433,6 +446,71 @@ void App::WaterFilter()
 	m_postEffect.Render();
 }
 
+void App::RenderMirrorWorld()
+{
+	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
+	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
+
+	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::mirrorDepthRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
+	Graphics::context->ClearDepthStencilView(
+		Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	// stencil
+	{
+		Graphics::context->OMSetRenderTargets(
+			1, Graphics::mirrorDepthRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::positionSRV.GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
+		ChunkManager::GetInstance()->RenderTransparency();
+	}
+
+	// mirror sky shader
+	{
+		Graphics::context->OMSetRenderTargets(
+			1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
+		Graphics::SetPipelineStates(Graphics::skyboxMirrorPSO);
+		m_skybox.Render();
+	}
+
+	// mirror cloud
+	{
+		// mirror constant buffer: mirror plane view matrix
+		Graphics::context->VSSetConstantBuffers(
+			0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
+		m_cloud.Render();
+	}
+
+	// mirror low lod world
+	{
+		std::vector<ID3D11ShaderResourceView*> ppSRVs;
+		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+		ppSRVs.push_back(Graphics::mirrorDepthSRV.Get());
+		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+		ChunkManager::GetInstance()->RenderMirrorWorld();
+	}
+
+	// blur mirror world
+	{
+		Graphics::SetPipelineStates(Graphics::blurPSO);
+		m_postEffect.Blur(3, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
+			Graphics::mirrorBlurSRV, Graphics::mirrorBlurRTV, Graphics::blurMirrorPS);
+	}
+	
+	// 원래의 글로벌로 두기
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+}
+
+void App::RenderWaterPlane() 
+{
+
+}
+
 /*
 void App::RenderWaterPlane()
 {
@@ -443,61 +521,14 @@ Graphics::context->CopyResource(
 	Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
 std::vector<ID3D11ShaderResourceView*> ppSRVs;
-ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-ppSRVs.push_back(Graphics::copiedBasicSRV.Get());
-ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
-ppSRVs.push_back(Graphics::depthMapSRV.Get());
+ppSRVs.push_back(Graphics::atlasMapSRV.Get()); // 
+ppSRVs.push_back(Graphics::copiedBasicSRV.Get()); // basic rtv
+ppSRVs.push_back(Graphics::mirrorWorldSRV.Get()); // o -> mirrorWorldSRV
+ppSRVs.push_back(Graphics::depthMapSRV.Get()); // o -> positionSRV
 Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 Graphics::SetPipelineStates(Graphics::waterPlanePSO);
 ChunkManager::GetInstance()->RenderTransparency();
 }
 
-void App::RenderMirrorWorld()
-{
-DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
-Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
-
-const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
-Graphics::context->ClearRenderTargetView(Graphics::mirrorPlaneDepthRTV.Get(), clearColor);
-Graphics::contClearDepthStencilView(ext->
-	Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-std::vector<ID3D11RenderTargetView*> ppRTVs;
-ppRTVs.push_back(Graphics::mirrorWorldRTV.Get());
-ppRTVs.push_back(Graphics::mirrorPlaneDepthRTV.Get());
-Graphics::context->OMSetRenderTargets(
-	(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::mirrorWorldDSV.Get());
-
-// plane stencil and envMap
-Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
-Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
-ChunkManager::GetInstance()->RenderTransparency();
-
-// mirror cloud
-Graphics::context->OMSetRenderTargets(
-	1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
-Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
-Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
-m_cloud.Render();
-
-// mirror low lod world
-std::vector<ID3D11ShaderResourceView*> ppSRVs;
-ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
-ppSRVs.push_back(Graphics::mirrorPlaneDepthSRV.Get());
-Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-ChunkManager::GetInstance()->RenderMirrorWorld();
-
-// blur mirror world
-Graphics::SetPipelineStates(Graphics::blurPSO);
-m_postEffect.Blur(5, Graphics::mirrorWorldSRV, Graphics::mirrorWorldRTV,
-	Graphics::mirrorWorldBlurSRV, Graphics::mirrorWorldBlurRTV, Graphics::blurMirrorPS);
-
-// 원래의 글로벌로 두기
-Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
-DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-}
 */

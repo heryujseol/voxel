@@ -2,10 +2,7 @@
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
-
-#ifdef USE_DEPTH_CLIP
-    Texture2D depthTex : register(t2);
-#endif
+Texture2D mirrorDepthTex : register(t2);
 
 struct vsOutput
 {
@@ -29,18 +26,6 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     //float temperature = 0.5;
     //float downfall = 1.0;
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
-    
-#ifdef USE_DEPTH_CLIP
-    float width, height, lod;
-    depthTex.GetDimensions(0, width, height, lod);
-    
-    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
-    float planeDepth = depthTex.Sample(linearClampSS, screenTexcoord).r;
-    float pixelDepth = input.posProj.z;
-
-    if (pixelDepth < planeDepth)
-        discard;
-#endif
     
 #ifdef USE_ALPHA_CLIP 
     if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
@@ -77,4 +62,22 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     output.coverage = coverage;
     
     return output;
+}
+
+float4 mainMirror(vsOutput input) : SV_TARGET
+{
+#ifdef USE_ALPHA_CLIP 
+    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
+        discard;
+#endif
+    
+    float2 screenTexcoord = float2(input.posProj.x / mirrorWidth, input.posProj.y / mirrorHeight);
+    float planeDepth = mirrorDepthTex.Sample(linearClampSS, screenTexcoord).r;
+    float pixelDepth = input.posProj.z;
+
+    if (pixelDepth <= planeDepth) // 거울보다 가까운 미러월드는 필요 없음
+        discard;
+    
+    float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type)).rgb;
+    return float4(albedo, 1.0);
 }

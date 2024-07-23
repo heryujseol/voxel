@@ -101,3 +101,10 @@ struct SsaoConstantData {
 struct SsaoNoiseConstantData {
 	Vector4 rotationNoise[16];
 };
+
+struct AppConstantData {
+	float appWidth;
+	float appHeight;
+	float mirrorWidth;
+	float mirrorHeight;
+};

@@ -38,23 +38,24 @@ namespace Graphics {
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
 	extern ComPtr<ID3D11PixelShader> basicAlphaClipPS;
-	extern ComPtr<ID3D11PixelShader> basicDepthClipPS;
-	extern ComPtr<ID3D11PixelShader> basicAlphaDepthClipPS;
+	extern ComPtr<ID3D11PixelShader> basicMirrorPS;
+	extern ComPtr<ID3D11PixelShader> basicMirrorAlphaClipPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
+	extern ComPtr<ID3D11PixelShader> skyboxMirrorPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
-	extern ComPtr<ID3D11PixelShader> fogFilterNormalPS;
+	extern ComPtr<ID3D11PixelShader> fogFilterPS;
 	extern ComPtr<ID3D11PixelShader> fogFilterEdgePS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> waterPlanePS;
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
 	extern ComPtr<ID3D11PixelShader> blurMirrorPS[2];
 	extern ComPtr<ID3D11PixelShader> blurSsaoPS[2];
-	extern ComPtr<ID3D11PixelShader> ssaoNormalPS;
+	extern ComPtr<ID3D11PixelShader> ssaoPS;
 	extern ComPtr<ID3D11PixelShader> ssaoEdgePS;
 	extern ComPtr<ID3D11PixelShader> edgeMaskingPS;
-	extern ComPtr<ID3D11PixelShader> lightingNormalPS;
-	extern ComPtr<ID3D11PixelShader> lightingEdgePS;
+	extern ComPtr<ID3D11PixelShader> shadingBasicPS;
+	extern ComPtr<ID3D11PixelShader> shadingBasicEdgePS;
 	extern ComPtr<ID3D11PixelShader> toneMappingPS;
 
 
@@ -76,9 +77,8 @@ namespace Graphics {
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-	extern ComPtr<ID3D11DepthStencilState> edgeMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> stencilMaskDSS;
 	extern ComPtr<ID3D11DepthStencilState> stencilEqualDrawDSS;
-	extern ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
 	extern ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
 
 	
@@ -121,6 +121,18 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
 	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
 
+	extern ComPtr<ID3D11Texture2D> mirrorWorldBuffer;
+	extern ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
+	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorDepthRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> mirrorDepthRTV;
+	extern ComPtr<ID3D11ShaderResourceView> mirrorDepthSRV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorBlurBuffer[2];
+	extern ComPtr<ID3D11RenderTargetView> mirrorBlurRTV[2];
+	extern ComPtr<ID3D11ShaderResourceView> mirrorBlurSRV[2];
+
 
 	// Depth Stencil Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -128,6 +140,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> deferredDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> deferredDSV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
 
 	// Shadow Resource Buffer
@@ -144,7 +159,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> moonSRV;
 
 	
-
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
@@ -179,9 +193,10 @@ namespace Graphics {
 	extern GraphicsPSO basicMirrorPSO;
 	extern GraphicsPSO semiAlphaPSO;
 	extern GraphicsPSO skyboxPSO;
+	extern GraphicsPSO skyboxMirrorPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudMirrorPSO;
-	extern GraphicsPSO fogFilterNormalPSO;
+	extern GraphicsPSO fogFilterPSO;
 	extern GraphicsPSO fogFilterEdgePSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
@@ -192,10 +207,10 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
-	extern GraphicsPSO ssaoNormalPSO;
+	extern GraphicsPSO ssaoPSO;
 	extern GraphicsPSO ssaoEdgePSO;
 	extern GraphicsPSO edgeMaskingPSO;
-	extern GraphicsPSO shadingBasicNormalPSO;
+	extern GraphicsPSO shadingBasicPSO;
 	extern GraphicsPSO shadingBasicEdgePSO;
 	extern GraphicsPSO toneMappingPSO;
 }

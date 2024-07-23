@@ -34,9 +34,7 @@ float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     // absorption color
     float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, index));
     
-    float width, height, lod;
-    depthMapTex.GetDimensions(0, width, height, lod);
-    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
+    float2 screenTexcoord = float2(input.posProj.x / appWidth, input.posProj.y / appHeight);
         
     // origin render color
     float3 originColor = msaaRenderTex.Load(input.posProj.xy, sampleIndex).rgb;
@@ -57,19 +55,19 @@ float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     
         float3 projColor = lerp(originColor, textureColor.rgb, absorptionFactor);
     
-    // reflect color
+        // reflect color
         float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
         
-    // fresnel factor
+        // fresnel factor
         float3 toEye = normalize(eyePos - input.posWorld);
         float3 reflectCoeff = float3(0.2, 0.2, 0.2);
         float3 fresnelFactor = schlickFresnel(normal, toEye, reflectCoeff);
         
-    // blending 3 colors
+        // blending 3 colors
         projColor *= (1.0 - fresnelFactor);
         float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
         
-    // alpha blend
+        // alpha blend
         float fresnelAvg = dot(fresnelFactor, float3(1, 1, 1)) / 3.0;
         float alpha = lerp(1.0, mirrorColor.a, fresnelAvg);
         

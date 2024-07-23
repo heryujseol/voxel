@@ -46,10 +46,15 @@ private:
 	void RenderSkybox();
 	void RenderCloud();
 
-	void FogFilter();
-	void WaterFilter();
+	void RenderFogFilter();
+	void RenderWaterFilter();
+
+	void RenderMirrorWorld();
+	void RenderWaterPlane();
 
 	HWND m_hwnd;
+	ComPtr<ID3D11Buffer> m_constantBuffer;
+	AppConstantData m_constantData;
 
 	Camera m_camera;
 	Skybox m_skybox;

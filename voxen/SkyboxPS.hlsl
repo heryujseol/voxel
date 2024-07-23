@@ -7,10 +7,6 @@ struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
-
-#ifdef USE_RENDER_TARGET_ARRAY_INDEX
-    uint renderTargetArrayIndex : SV_RenderTargetArrayIndex;
-#endif
 };
 
 bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 texcoord)
@@ -74,23 +70,25 @@ float4 main(vsOutput input) : SV_TARGET
 {
     float3 color = float3(0.0, 0.0, 0.0);
     float3 posDir = normalize(input.posWorld);
+#ifdef USE_MIRROR
+    posDir.y *= -1;
+#endif
     
     float sunAltitude = sin(sunDir.y);
     float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
     // sun
     float maxSunSize = 220.0f;
-    float minSunSize = 50.0f;
+    float minSunSize = 100.0f;
     float sunSize = lerp(minSunSize, maxSunSize, pow(max(dot(sunDir, eyeDir), 0.0), 3.0));
     float2 sunTexcoord;
     if (sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
     {
-#ifdef USE_RENDER_TARGET_ARRAY_INDEX
+#ifdef USE_MIRROR
         color += sunTexture.SampleLevel(linearClampSS, sunTexcoord, 0.0).rgb * sunStrength;
 #else
         color += sunTexture.SampleLevel(pointWrapSS, sunTexcoord, 0.0).rgb * sunStrength;
-    #endif
-        
+#endif
     }
     
     // moon
@@ -109,7 +107,7 @@ float4 main(vsOutput input) : SV_TARGET
         moonTexcoord += indexUV; // moonTexcoord : [0,0]~[4,2] 
         moonTexcoord = float2(moonTexcoord.x / col, moonTexcoord.y / row); // [4,2]->[1,1]
         
-#ifdef USE_RENDER_TARGET_ARRAY_INDEX
+#ifdef USE_MIRROR
         color += moonTexture.SampleLevel(linearClampSS, moonTexcoord, 0.0).rgb * moonStrength;
 #else
         color += moonTexture.SampleLevel(pointWrapSS, moonTexcoord, 0.0).rgb * moonStrength;
@@ -118,7 +116,6 @@ float4 main(vsOutput input) : SV_TARGET
    
     // background sky
     float sunDirWeight = sunAltitude > showSectionAltitude ? henyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
-    //float sunDirWeight = sunAltitude > showSectionAltitude ? max(dot(sunDir, eyeDir), 0.0) : 0.0;
     color += getSkyColor(posDir, sunDirWeight);
 
     return float4(color, 1.0);

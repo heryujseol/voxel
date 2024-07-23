@@ -173,7 +173,7 @@
     <FxCompile Include="EdgeMaskingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="LightingPS.hlsl">
+    <FxCompile Include="ShadingBasicPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="ToneMappingPS.hlsl">
