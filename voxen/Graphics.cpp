@@ -40,7 +40,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> skyboxPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
-	ComPtr<ID3D11PixelShader> fogFilterPS;
+	ComPtr<ID3D11PixelShader> fogFilterNormalPS;
+	ComPtr<ID3D11PixelShader> fogFilterEdgePS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	ComPtr<ID3D11PixelShader> waterPlanePS;
 	ComPtr<ID3D11PixelShader> waterFilterPS;
@@ -51,6 +52,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> edgeMaskingPS;
 	ComPtr<ID3D11PixelShader> lightingNormalPS;
 	ComPtr<ID3D11PixelShader> lightingEdgePS;
+	ComPtr<ID3D11PixelShader> toneMappingPS;
 
 
 	// Rasterizer State
@@ -116,6 +118,9 @@ namespace Graphics {
 	ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
 	ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
 
+	ComPtr<ID3D11Texture2D> fogFilterBuffer;
+	ComPtr<ID3D11RenderTargetView> fogFilterRTV;
+	ComPtr<ID3D11ShaderResourceView> fogFilterSRV;
 
 	// Depth Stencil Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -173,7 +178,8 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudMirrorPSO;
-	GraphicsPSO fogFilterPSO;
+	GraphicsPSO fogFilterNormalPSO;
+	GraphicsPSO fogFilterEdgePSO;
 	GraphicsPSO instancePSO;
 	GraphicsPSO instanceMirrorPSO;
 	GraphicsPSO mirrorMaskingPSO;
@@ -188,6 +194,7 @@ namespace Graphics {
 	GraphicsPSO edgeMaskingPSO;
 	GraphicsPSO shadingBasicNormalPSO;
 	GraphicsPSO shadingBasicEdgePSO;
+	GraphicsPSO toneMappingPSO;
 }
 
 
@@ -427,6 +434,27 @@ bool Graphics::InitRenderTargetBuffers()
 		}
 	}
 
+	// fog filter 
+	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			fogFilterBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create fog filter buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateRenderTargetView(
+		fogFilterBuffer.Get(), nullptr, fogFilterRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create fog filter rtv" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(
+		fogFilterBuffer.Get(), nullptr, fogFilterSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create fog filter srv" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -649,8 +677,12 @@ bool Graphics::InitPixelShaders()
 	}
 
 	// fogFilterPS
-	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterPS)) {
-		std::cout << "failed create fog filter ps" << std::endl;
+	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterNormalPS)) {
+		std::cout << "failed create fog filter normal ps" << std::endl;
+		return false;
+	}
+	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterEdgePS, nullptr, "mainMSAA")) {
+		std::cout << "failed create fog filter edge ps" << std::endl;
 		return false;
 	}
 
@@ -727,6 +759,12 @@ bool Graphics::InitPixelShaders()
 	}
 	if (!DXUtils::CreatePixelShader(L"LightingPS.hlsl", lightingEdgePS, nullptr, "mainMSAA")) {
 		std::cout << "failed create lighting edge ps" << std::endl;
+		return false;
+	}
+
+	// toneMappingPS
+	if (!DXUtils::CreatePixelShader(L"ToneMappingPS.hlsl", toneMappingPS)) {
+		std::cout << "failed create tone mapping ps" << std::endl;
 		return false;
 	}
 
@@ -1035,11 +1073,18 @@ void Graphics::InitGraphicsPSO()
 	cloudMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
 	cloudMirrorPSO.stencilRef = 1;
 
-	// fogFilterPSO
-	fogFilterPSO = basicPSO;
-	fogFilterPSO.inputLayout = samplingIL;
-	fogFilterPSO.vertexShader = samplingVS;
-	fogFilterPSO.pixelShader = fogFilterPS;
+	// fogFilterNormalPSO
+	fogFilterNormalPSO = basicPSO;
+	fogFilterNormalPSO.inputLayout = samplingIL;
+	fogFilterNormalPSO.vertexShader = samplingVS;
+	fogFilterNormalPSO.pixelShader = fogFilterNormalPS;
+	fogFilterNormalPSO.depthStencilState = stencilEqualDrawDSS;
+	fogFilterNormalPSO.stencilRef = 0;
+
+	// fogFilterEdgePSO
+	fogFilterEdgePSO = fogFilterNormalPSO;
+	fogFilterEdgePSO.pixelShader = fogFilterEdgePS;
+	fogFilterEdgePSO.stencilRef = 1;
 
 	// instancePSO
 	instancePSO = basicPSO;
@@ -1117,6 +1162,11 @@ void Graphics::InitGraphicsPSO()
 	shadingBasicEdgePSO = shadingBasicNormalPSO;
 	shadingBasicEdgePSO.pixelShader = lightingEdgePS;
 	shadingBasicEdgePSO.stencilRef = 1;
+
+	toneMappingPSO = basicPSO;
+	toneMappingPSO.inputLayout = samplingIL;
+	toneMappingPSO.vertexShader = samplingVS;
+	toneMappingPSO.pixelShader = toneMappingPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

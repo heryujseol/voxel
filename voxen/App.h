@@ -43,6 +43,11 @@ private:
 	void RenderSSAO();
 	void ShadingBasic();
 
+	void RenderSkybox();
+	void RenderCloud();
+
+	void FogFilter();
+
 	HWND m_hwnd;
 
 	Camera m_camera;

@@ -1,7 +1,7 @@
 #include "CommonPS.hlsli"
 
-Texture2DMS<float4, 4> msaaRenderTex : register(t0);
-Texture2DMS<float, 4> msaaDepthTex : register(t1);
+Texture2D renderTex : register(t0);
+Texture2DMS<float4, 4> positionTex : register(t1);
 
 cbuffer FogConstantBuffer : register(b2)
 {
@@ -15,37 +15,65 @@ struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
-    uint sampleIndex : SV_SampleIndex;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+float3 getFogColor(float3 sunDir, float3 eyeDir)
 {
     float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+    
     float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     if (isUnderWater)
-    {
         fogColor = float3(0.12, 0.26, 0.65);
-    }
     
-    /*
-    float3 fogColor = isUnderWater ? float3(1.0, 1.0, 1.0) : normalHorizonColor;
-    if (!isUnderWater && (0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700) || (22300 <= dateTime && dateTime <= 23999))
-    {
-        float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
-        fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
-    }*/
-    
+    return fogColor;
+}
+
+float getFogFactor(float2 screenCoord, uint sampleIndex)
+{
     //Beer-Lambert law
-    float depth = msaaDepthTex.Load(input.posProj.xy, input.sampleIndex).r;
-    float3 posView = texcoordToViewPos(input.texcoord, depth);
-    float dist = length(posView);
+    float4 viewPos = positionTex.Load(screenCoord, sampleIndex);
+    if (viewPos.w == -1.0)
+        viewPos.xyz = float3(0.0, 0.0, 0.0);
+    
+    float dist = length(viewPos.xyz);
         
     float distFog = saturate((dist - fogDistMin) / (fogDistMax - fogDistMin));
     float fogFactor = exp(-fogStrength * distFog);
+    
+    return fogFactor;
+}
+
+float4 main(vsOutput input) : SV_TARGET
+{
+    float3 fogColor = getFogColor(sunDir, eyeDir);
+    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
+    
+    float fogFactor = getFogFactor(input.posProj.xy, 0);
+    
+    float3 blendColor = lerp(fogColor, renderColor, fogFactor);
+    
+    return float4(blendColor, 1.0);
+}
+
+float4 mainMSAA(vsOutput input) : SV_TARGET
+{
+    if (cameraDummyData.x == 0)
+        return main(input);
+    
+    float3 fogColor = getFogColor(sunDir, eyeDir);
+    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
+    
+    float3 sumColor = float3(0.0, 0.0, 0.0);
+    
+    [loop]
+    for (uint i = 0; i < SAMPLE_COUNT; ++i)
+    {
+        float fogFactor = getFogFactor(input.posProj.xy, i);
         
-    float3 color = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+        float3 blendColor = lerp(fogColor, renderColor, fogFactor);
+        
+        sumColor += blendColor;
+    }
     
-    color = lerp(fogColor, color, fogFactor);
-    
-    return float4(color, 1.0);
+    return float4(sumColor / SAMPLE_COUNT, 1.0);
 }

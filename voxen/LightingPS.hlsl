@@ -80,18 +80,6 @@ float3 getDirectLighting(float2 screencoord, uint sampleIndex, float3 albedo)
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }
 
-float3 linearToneMapping(float3 color)
-{
-    float3 invGamma = float3(1, 1, 1) / 2.2;
-
-    float exposure = 1.0f;
-    
-    color = clamp(exposure * color, 0.0, 1.0);
-    color = pow(color, invGamma);
-    
-    return color;
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float3 albedo = float3(0.0, 0.0, 0.0);
@@ -107,8 +95,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3 lighting = ambientLighting + directLighting;
     float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
     
-    //return float4(clampLighting, 1.0);
-    return float4(linearToneMapping(clampLighting), 1.0);
+    return float4(clampLighting, 1.0);
 }
 
 float4 mainMSAA(vsOutput input) : SV_TARGET
@@ -131,27 +118,5 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
         sumClampLighting += clampLighting;
     }
     
-    //return float4(sumClampLighting / SAMPLE_COUNT, 1.0);
-    return float4(linearToneMapping(sumClampLighting / SAMPLE_COUNT), 1.0);
+    return float4(sumClampLighting / SAMPLE_COUNT, 1.0);
 }
-
-/*
-1. 샘플링할 추가 데이터 -> 텍스쳐 구할 필요가 존재
-roughness
-metalic
-
-2. 태양의 빛 연산
-- 태양의 빛을 GUI 연결하여 수정
- -> Lighting 로적에 어떤 빛을 radiance로 사용할지 결정하면 됨
-
-3. linearToneMapping때 사용할 데이터
-후처리 때 사용해야하지만 실험을 위해 테스팅
-- exposure 값 1.0
-- 감마는 2.2 고정
-
-4. 현재 albedo가 unorm Texture라서 f16라고 생각하고 임시 gamma correction을 진행 중
-- 원래의 텍스쳐가 f16 형태의 HDR 텍스쳐라면 굳이 할 필요 없음
- -> 임시 로직: unorm -> gamma correction으로 fp로 다운 -> 연산 모두 진행 후 tone mapping으로 다시 gamma correction
-
-5. position 텍스쳐는 world 좌표가 아닌 view 좌표임
-*/

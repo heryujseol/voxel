@@ -43,7 +43,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
-	extern ComPtr<ID3D11PixelShader> fogFilterPS;
+	extern ComPtr<ID3D11PixelShader> fogFilterNormalPS;
+	extern ComPtr<ID3D11PixelShader> fogFilterEdgePS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> waterPlanePS;
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
@@ -54,6 +55,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> edgeMaskingPS;
 	extern ComPtr<ID3D11PixelShader> lightingNormalPS;
 	extern ComPtr<ID3D11PixelShader> lightingEdgePS;
+	extern ComPtr<ID3D11PixelShader> toneMappingPS;
 
 
 	// Rasterizer State
@@ -119,6 +121,10 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> ssaoBlurRTV[2];
 	extern ComPtr<ID3D11ShaderResourceView> ssaoBlurSRV[2];
 
+	extern ComPtr<ID3D11Texture2D> fogFilterBuffer;
+	extern ComPtr<ID3D11RenderTargetView> fogFilterRTV;
+	extern ComPtr<ID3D11ShaderResourceView> fogFilterSRV;
+
 
 	// Depth Stencil Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -179,7 +185,8 @@ namespace Graphics {
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudMirrorPSO;
-	extern GraphicsPSO fogFilterPSO;
+	extern GraphicsPSO fogFilterNormalPSO;
+	extern GraphicsPSO fogFilterEdgePSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
@@ -194,4 +201,5 @@ namespace Graphics {
 	extern GraphicsPSO edgeMaskingPSO;
 	extern GraphicsPSO shadingBasicNormalPSO;
 	extern GraphicsPSO shadingBasicEdgePSO;
+	extern GraphicsPSO toneMappingPSO;
 }

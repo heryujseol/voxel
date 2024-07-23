@@ -122,12 +122,12 @@ void Skybox::Update(float dt)
 
 	m_constantData.dateTime = m_dateTime % DATE_CYCLE_AMOUNT;
 	m_constantData.sunDir = sunDir;
-	m_constantData.normalHorizonColor = normalHorizonColor * m_constantData.dummy;
-	m_constantData.normalZenithColor = normalZenithColor * m_constantData.dummy;
-	m_constantData.sunHorizonColor = sunHorizonColor * m_constantData.dummy;
-	m_constantData.sunZenithColor = sunZenithColor * m_constantData.dummy;
-	m_constantData.sunStrength = sunStrength * m_constantData.dummy;
-	m_constantData.moonStrength = m_constantData.dummy - sunStrength * m_constantData.dummy;
+	m_constantData.normalHorizonColor = normalHorizonColor;
+	m_constantData.normalZenithColor = normalZenithColor;
+	m_constantData.sunHorizonColor = sunHorizonColor;
+	m_constantData.sunZenithColor = sunZenithColor;
+	m_constantData.sunStrength = sunStrength;
+	m_constantData.moonStrength = 1.0f - sunStrength;
 
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
@@ -137,10 +137,6 @@ void Skybox::Render()
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::sunSRV.Get(),
-		Graphics::moonSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }

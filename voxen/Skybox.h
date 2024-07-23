@@ -23,9 +23,9 @@ public:
 	Vector3 GetSun() { return m_constantData.sunDir; };
 	uint32_t GetTime() { return m_constantData.dateTime; };
 
+private:
 	SkyboxConstantData m_constantData;
 
-private:
 	uint32_t m_dateTime;
 	float m_speed;
 
@@ -52,7 +52,6 @@ private:
 
 	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
-	
 
 	UINT m_stride;
 	UINT m_offset;

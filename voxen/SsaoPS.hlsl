@@ -58,6 +58,8 @@ float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
         float2 sampleScreenCoord = float2(sampleTexcoord.x * (width - 1.0) + 0.5, sampleTexcoord.y * (height - 1.0) + 0.5);
         // SampleIndex 중 아무거나 하나 집어도 무관: 샘플의 위치가 다르다고 가정하면 됨
         float4 storedViewPos = positionTex.Load(sampleScreenCoord, 0); 
+        if (storedViewPos.w == -1.0)
+            storedViewPos.xyz = float3(0, 0, 1000.0);
         
         float w = smoothstep(0.0, 1.0, radius / length(viewPos - storedViewPos.xyz));
         float rangeCheck = pow(w, 3.0);
@@ -75,9 +77,11 @@ float main(vsOutput input) : SV_TARGET
         return 1.0;
     normal = normalize(normal);
     
-    float3 viewPos = positionTex.Load(input.posProj.xy, 0).xyz;
+    float4 viewPos = positionTex.Load(input.posProj.xy, 0);
+    if (viewPos.w == -1.0)
+        return 1.0;
     
-    float occlusionFactor = getOcclusionFactor(input.texcoord, viewPos, normal);
+    float occlusionFactor = getOcclusionFactor(input.texcoord, viewPos.xyz, normal);
     
     return 1.0 - occlusionFactor;
 }
@@ -104,12 +108,14 @@ float mainMSAA(vsOutput input) : SV_TARGET
         
         float3 normal = normalTex.Load(input.posProj.xy, i).xyz;
         if (length(normal) == 0)
-            return 1.0;
+            continue;
         normal = normalize(normal);
 
-        float3 viewPos = positionTex.Load(input.posProj.xy, i).xyz;
+        float4 viewPos = positionTex.Load(input.posProj.xy, i);
+        if (viewPos.w == -1.0)
+            continue;
         
-        sumOcclusionFactor += getOcclusionFactor(input.texcoord, viewPos, normal) * sampleWeightArray[i];
+        sumOcclusionFactor += getOcclusionFactor(input.texcoord, viewPos.xyz, normal) * sampleWeightArray[i];
     }
     
     sumOcclusionFactor /= SAMPLE_COUNT;
