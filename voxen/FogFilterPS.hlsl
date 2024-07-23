@@ -1,7 +1,7 @@
 #include "CommonPS.hlsli"
 
 Texture2D renderTex : register(t0);
-Texture2DMS<float4, 4> positionTex : register(t1);
+Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 
 cbuffer FogConstantBuffer : register(b2)
 {
@@ -62,7 +62,7 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
     
     float3 sumColor = float3(0.0, 0.0, 0.0);
     
-    [loop]
+    [unroll]
     for (uint i = 0; i < SAMPLE_COUNT; ++i)
     {
         float fogFactor = getFogFactor(input.posProj.xy, i);

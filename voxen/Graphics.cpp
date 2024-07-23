@@ -91,24 +91,21 @@ namespace Graphics {
 	ComPtr<ID3D11RenderTargetView> basicRTV[2];
 	ComPtr<ID3D11ShaderResourceView> basicSRV[2];
 
-	ComPtr<ID3D11Texture2D> normalBuffer;
-	ComPtr<ID3D11RenderTargetView> normalRTV;
-	ComPtr<ID3D11ShaderResourceView> normalSRV;
+	ComPtr<ID3D11Texture2D> normalEdgeBuffer;
+	ComPtr<ID3D11RenderTargetView> normalEdgeRTV;
+	ComPtr<ID3D11ShaderResourceView> normalEdgeSRV;
 
 	ComPtr<ID3D11Texture2D> positionBuffer;
 	ComPtr<ID3D11RenderTargetView> positionRTV;
 	ComPtr<ID3D11ShaderResourceView> positionSRV;
 
-	ComPtr<ID3D11Texture2D> albedoEdgeBuffer;
-	ComPtr<ID3D11RenderTargetView> albedoEdgeRTV;
-	ComPtr<ID3D11ShaderResourceView> albedoEdgeSRV;
+	ComPtr<ID3D11Texture2D> albedoBuffer;
+	ComPtr<ID3D11RenderTargetView> albedoRTV;
+	ComPtr<ID3D11ShaderResourceView> albedoSRV;
 
 	ComPtr<ID3D11Texture2D> coverageBuffer;
 	ComPtr<ID3D11RenderTargetView> coverageRTV;
 	ComPtr<ID3D11ShaderResourceView> coverageSRV;
-
-	ComPtr<ID3D11Texture2D> resolvedEdgeBuffer;
-	ComPtr<ID3D11ShaderResourceView> resolvedEdgeSRV;
 
 	ComPtr<ID3D11Texture2D> ssaoBuffer;
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
@@ -313,22 +310,23 @@ bool Graphics::InitRenderTargetBuffers()
 		}
 	}
 
-	// normal
+	// normal edge
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			normalBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create normal buffer" << std::endl;
+			normalEdgeBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create normal edge buffer" << std::endl;
 		return false;
 	}
-	ret = device->CreateRenderTargetView(normalBuffer.Get(), nullptr, normalRTV.GetAddressOf());
+	ret = device->CreateRenderTargetView(normalEdgeBuffer.Get(), nullptr, normalEdgeRTV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create normal rtv" << std::endl;
+		std::cout << "failed create normal edge rtv" << std::endl;
 		return false;
 	}
-	ret = device->CreateShaderResourceView(normalBuffer.Get(), nullptr, normalSRV.GetAddressOf());
+	ret =
+		device->CreateShaderResourceView(normalEdgeBuffer.Get(), nullptr, normalEdgeSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create normal srv" << std::endl;
+		std::cout << "failed create normal edge srv" << std::endl;
 		return false;
 	}
 
@@ -352,24 +350,24 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
-	// albedo edge
+	// albedo
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			albedoEdgeBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create albedo edge buffer" << std::endl;
+			albedoBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create albedo buffer" << std::endl;
 		return false;
 	}
 	ret = device->CreateRenderTargetView(
-		albedoEdgeBuffer.Get(), nullptr, albedoEdgeRTV.GetAddressOf());
+		albedoBuffer.Get(), nullptr, albedoRTV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create albedo edge rtv" << std::endl;
+		std::cout << "failed create albedo rtv" << std::endl;
 		return false;
 	}
 	ret = device->CreateShaderResourceView(
-		albedoEdgeBuffer.Get(), nullptr, albedoEdgeSRV.GetAddressOf());
+		albedoBuffer.Get(), nullptr, albedoSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create albedo edge srv" << std::endl;
+		std::cout << "failed create albedo srv" << std::endl;
 		return false;
 	}
 
@@ -390,21 +388,6 @@ bool Graphics::InitRenderTargetBuffers()
 		device->CreateShaderResourceView(coverageBuffer.Get(), nullptr, coverageSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create coverage srv" << std::endl;
-		return false;
-	}
-
-	// resolved edge
-	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			resolvedEdgeBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create resolved edge buffer" << std::endl;
-		return false;
-	}
-	ret = device->CreateShaderResourceView(
-		resolvedEdgeBuffer.Get(), nullptr, resolvedEdgeSRV.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create resolved edge srv" << std::endl;
 		return false;
 	}
 

@@ -94,24 +94,21 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> basicRTV[2];
 	extern ComPtr<ID3D11ShaderResourceView> basicSRV[2];
 
-	extern ComPtr<ID3D11Texture2D> normalBuffer;
-	extern ComPtr<ID3D11RenderTargetView> normalRTV;
-	extern ComPtr<ID3D11ShaderResourceView> normalSRV;
+	extern ComPtr<ID3D11Texture2D> normalEdgeBuffer;
+	extern ComPtr<ID3D11RenderTargetView> normalEdgeRTV;
+	extern ComPtr<ID3D11ShaderResourceView> normalEdgeSRV;
 
 	extern ComPtr<ID3D11Texture2D> positionBuffer;
 	extern ComPtr<ID3D11RenderTargetView> positionRTV;
 	extern ComPtr<ID3D11ShaderResourceView> positionSRV;
 
-	extern ComPtr<ID3D11Texture2D> albedoEdgeBuffer;
-	extern ComPtr<ID3D11RenderTargetView> albedoEdgeRTV;
-	extern ComPtr<ID3D11ShaderResourceView> albedoEdgeSRV;
+	extern ComPtr<ID3D11Texture2D> albedoBuffer;
+	extern ComPtr<ID3D11RenderTargetView> albedoRTV;
+	extern ComPtr<ID3D11ShaderResourceView> albedoSRV;
 
 	extern ComPtr<ID3D11Texture2D> coverageBuffer;
 	extern ComPtr<ID3D11RenderTargetView> coverageRTV;
 	extern ComPtr<ID3D11ShaderResourceView> coverageSRV;
-
-	extern ComPtr<ID3D11Texture2D> resolvedEdgeBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> resolvedEdgeSRV;
 
 	extern ComPtr<ID3D11Texture2D> ssaoBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;

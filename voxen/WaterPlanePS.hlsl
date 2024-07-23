@@ -1,7 +1,7 @@
 #include "CommonPS.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
-Texture2DMS<float4, 4> msaaRenderTex : register(t1);
+Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t1);
 Texture2D mirrorWorldTex : register(t2);
 Texture2D depthMapTex : register(t3);
 

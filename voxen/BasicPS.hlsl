@@ -15,9 +15,9 @@ struct vsOutput
 
 struct psOutput
 {
-    float4 normal : SV_Target0;
+    float4 normalEdge : SV_Target0;
     float4 position : SV_Target1;
-    float4 albedoEdge : SV_Target2;
+    float4 albedo : SV_Target2;
     uint coverage : SV_Target3;
 };
 
@@ -48,16 +48,17 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     
     psOutput output;
     
+    float edge = coverage != 0xf; // 0b1111 -> 1111은 모서리가 아닌 픽셀임
+    
     float3 viewNormal = mul(float4(input.normal, 0.0), view).xyz; // must be [n * ITworld * ITview]
-    output.normal = float4(normalize(viewNormal), 0.0);
+    output.normalEdge = float4(normalize(viewNormal), edge);
     
     float3 viewPosition = mul(float4(input.posWorld, 1.0), view).xyz;
     output.position = float4(viewPosition, 1.0);
     
-    float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type)).rgb;
+    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
     
-    float edge = coverage != 0xf; // 0b1111 -> 1111은 모서리가 아닌 픽셀임
-    output.albedoEdge = float4(albedo, edge);
+    output.albedo = float4(albedo);
     
     output.coverage = coverage;
     
@@ -78,6 +79,6 @@ float4 mainMirror(vsOutput input) : SV_TARGET
     if (pixelDepth <= planeDepth) // 거울보다 가까운 미러월드는 필요 없음
         discard;
     
-    float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type)).rgb;
-    return float4(albedo, 1.0);
+    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
+    return albedo;
 }

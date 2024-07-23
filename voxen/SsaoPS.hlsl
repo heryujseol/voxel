@@ -1,6 +1,6 @@
 #include "CommonPS.hlsli"
 
-Texture2DMS<float4, SAMPLE_COUNT> normalTex : register(t0);
+Texture2DMS<float4, SAMPLE_COUNT> normalEdgeTex : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 Texture2DMS<uint, SAMPLE_COUNT> coverageTex : register(t2);
 
@@ -74,7 +74,7 @@ float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
 
 float main(vsOutput input) : SV_TARGET
 {   
-    float3 normal = normalTex.Load(input.posProj.xy, 0).xyz;
+    float3 normal = normalEdgeTex.Load(input.posProj.xy, 0).xyz;
     if (length(normal) == 0)
         return 1.0;
     normal = normalize(normal);
@@ -108,7 +108,7 @@ float mainMSAA(vsOutput input) : SV_TARGET
         if (sampleWeightArray[i] == 0)
             continue;
         
-        float3 normal = normalTex.Load(input.posProj.xy, i).xyz;
+        float3 normal = normalEdgeTex.Load(input.posProj.xy, i).xyz;
         if (length(normal) == 0)
             continue;
         normal = normalize(normal);
