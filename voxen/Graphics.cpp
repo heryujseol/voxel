@@ -469,24 +469,25 @@ bool Graphics::InitDepthStencilBuffers()
 bool Graphics::InitShaderResourceBuffers()
 {
 	// Asset Files
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png", format)) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
 
 	/*if (!DXUtils::CreateTextureFromFile(
-			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png", format)) {
 		std::cout << "failed create texture from grass color map file" << std::endl;
 		return false;
 	}*/
 
-	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png", format)) {
 		std::cout << "failed create texture from sun file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png", format)) {
 		std::cout << "failed create texture from moon file" << std::endl;
 		return false;
 	}

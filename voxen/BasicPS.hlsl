@@ -63,14 +63,11 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     
     psOutput output;
     
-    float3 viewNormal = mul(float4(input.normal, 0.0), view).xyz; // must be n * * ITworld * ITview
+    float3 viewNormal = mul(float4(input.normal, 0.0), view).xyz; // must be [n * ITworld * ITview]
     output.normal = float4(normalize(viewNormal), 0.0);
     
     float3 viewPosition = mul(float4(input.posWorld, 1.0), view).xyz;
     output.position = float4(viewPosition, 1.0);
-
-    
-
     
     float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type)).rgb;
     

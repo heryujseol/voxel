@@ -34,7 +34,10 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
 float3 getAmbientLighting(float2 texcoord, float3 albedo)
 {
     float ambientOcclusion = ssaoTex.Sample(pointClampSS, texcoord);
-
+    /*
+    // todo
+    라이팅에 무관하게 "시간"에 의존적
+    */
     return ambientOcclusion * albedo * 0.3f;
 }
 
@@ -56,7 +59,7 @@ float3 getDirectLighting(float2 screencoord, uint sampleIndex, float3 albedo)
     float NdotH = max(0.0, dot(normal, halfway));
     float NdotO = max(0.0, dot(normal, pixelToEye));
     
-    // need to sample on tex
+    // todo
     float metallic = 0.0;
     float roughness = 0.8;
     
@@ -70,8 +73,9 @@ float3 getDirectLighting(float2 screencoord, uint sampleIndex, float3 albedo)
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
+    // todo
     float3 shadowFactor = getShadowFactor();
-    float3 radiance = normalZenithColor * shadowFactor;
+    float3 radiance = normalZenithColor * shadowFactor; // radiance 값 수정
 
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }
@@ -97,8 +101,6 @@ float4 main(vsOutput input) : SV_TARGET
     albedo += albedoEdgeTex.Load(input.posProj.xy, 3).rgb;
     albedo /= SAMPLE_COUNT;
     
-    albedo = pow(albedo, 2.2); // temp albedo gamma correction
-    
     float3 ambientLighting = getAmbientLighting(input.texcoord, albedo);
     float3 directLighting = getDirectLighting(input.posProj.xy, 0, albedo);
     
@@ -106,15 +108,11 @@ float4 main(vsOutput input) : SV_TARGET
     float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
     
     //return float4(clampLighting, 1.0);
-    
     return float4(linearToneMapping(clampLighting), 1.0);
 }
 
 float4 mainMSAA(vsOutput input) : SV_TARGET
-{
-    if (cameraDummyData.x == 0)
-        return main(input);
-    
+{   
     float3 sumClampLighting = float3(0.0, 0.0, 0.0);
     
     [unroll]
@@ -123,7 +121,6 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
         // point clamp를 이용해서 albedo를 구성했기 때문에 다른 샘플사이에서 다른 컬러를 사용할 가능성이 높음
         // sampleWeight를 사용하지 않음
         float3 albedo = albedoEdgeTex.Load(input.posProj.xy, i); 
-        albedo = pow(albedo, 2.2); // temp albedo gamma correction
         
         float3 ambientLighting = getAmbientLighting(input.texcoord, albedo);
         float3 directLighting = getDirectLighting(input.posProj.xy, i, albedo);
@@ -135,7 +132,6 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
     }
     
     //return float4(sumClampLighting / SAMPLE_COUNT, 1.0);
-    
     return float4(linearToneMapping(sumClampLighting / SAMPLE_COUNT), 1.0);
 }
 
@@ -157,4 +153,5 @@ metalic
 - 원래의 텍스쳐가 f16 형태의 HDR 텍스쳐라면 굳이 할 필요 없음
  -> 임시 로직: unorm -> gamma correction으로 fp로 다운 -> 연산 모두 진행 후 tone mapping으로 다시 gamma correction
 
+5. position 텍스쳐는 world 좌표가 아닌 view 좌표임
 */

@@ -282,7 +282,7 @@ bool App::InitScene()
 void App::FillGBuffer()
 {
 	// basic
-	{
+	{ // 
 		float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		float clearPositionColor[4] = { 0.0f, 0.0f, 1000.0f, 0.0f };
 		Graphics::context->ClearRenderTargetView(Graphics::normalRTV.Get(), clearColor);
