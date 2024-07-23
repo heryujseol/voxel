@@ -70,7 +70,6 @@ namespace Graphics {
 	ComPtr<ID3D11SamplerState> pointClampSS;
 
 
-
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
 	ComPtr<ID3D11DepthStencilState> stencilMaskDSS;
@@ -86,13 +85,13 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> backBuffer;
 	ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
-	ComPtr<ID3D11Texture2D> deferredRenderBuffer;
-	ComPtr<ID3D11RenderTargetView> deferredRTV;
-	ComPtr<ID3D11ShaderResourceView> deferredSRV;
+	ComPtr<ID3D11Texture2D> basicBuffer;
+	ComPtr<ID3D11RenderTargetView> basicRTV;
+	ComPtr<ID3D11ShaderResourceView> basicSRV;
 
-	ComPtr<ID3D11Texture2D> forwardRenderBuffer;
-	ComPtr<ID3D11RenderTargetView> forwardRTV;
-	ComPtr<ID3D11ShaderResourceView> forwardSRV;
+	ComPtr<ID3D11Texture2D> basicMSBuffer;
+	ComPtr<ID3D11RenderTargetView> basicMSRTV;
+	ComPtr<ID3D11ShaderResourceView> basicMSSRV;
 
 	ComPtr<ID3D11Texture2D> normalEdgeBuffer;
 	ComPtr<ID3D11RenderTargetView> normalEdgeRTV;
@@ -129,6 +128,10 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> mirrorBlurBuffer[2];
 	ComPtr<ID3D11RenderTargetView> mirrorBlurRTV[2];
 	ComPtr<ID3D11ShaderResourceView> mirrorBlurSRV[2];
+
+	ComPtr<ID3D11Texture2D> bloomBuffer[4];
+	ComPtr<ID3D11RenderTargetView> bloomRTV[4];
+	ComPtr<ID3D11ShaderResourceView> bloomSRV[4];
 
 
 	// Depth Stencil Buffer
@@ -293,45 +296,41 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
-	// deferred render
+	// basic buffer
 	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			deferredRenderBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-		std::cout << "failed create deferred render buffer" << std::endl;
+			basicBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create basic buffer" << std::endl;
 		return false;
 	}
-	ret = device->CreateRenderTargetView(
-		deferredRenderBuffer.Get(), nullptr, deferredRTV.GetAddressOf());
+	ret = device->CreateRenderTargetView(basicBuffer.Get(), nullptr, basicRTV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create deferred rtv" << std::endl;
+		std::cout << "failed create basic rtv" << std::endl;
 		return false;
 	}
-	ret = device->CreateShaderResourceView(
-		deferredRenderBuffer.Get(), nullptr, deferredSRV.GetAddressOf());
+	ret = device->CreateShaderResourceView(basicBuffer.Get(), nullptr, basicSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create deferred srv" << std::endl;
+		std::cout << "failed create basic srv" << std::endl;
 		return false;
 	}
 
-	// forward render
+	// basic MS buffer
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			forwardRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
-		std::cout << "failed create forward render buffer" << std::endl;
+			basicMSBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create basic MS buffer" << std::endl;
 		return false;
 	}
-	ret = device->CreateRenderTargetView(
-		forwardRenderBuffer.Get(), nullptr, forwardRTV.GetAddressOf());
+	ret = device->CreateRenderTargetView(basicMSBuffer.Get(), nullptr, basicMSRTV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create forward rtv" << std::endl;
+		std::cout << "failed create basic MS rtv" << std::endl;
 		return false;
 	}
-	ret = device->CreateShaderResourceView(
-		forwardRenderBuffer.Get(), nullptr, forwardSRV.GetAddressOf());
+	ret = device->CreateShaderResourceView(basicMSBuffer.Get(), nullptr, basicMSSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create forward srv" << std::endl;
+		std::cout << "failed create basic MS srv" << std::endl;
 		return false;
 	}
 
@@ -343,13 +342,14 @@ bool Graphics::InitRenderTargetBuffers()
 		std::cout << "failed create normal edge buffer" << std::endl;
 		return false;
 	}
-	ret = device->CreateRenderTargetView(normalEdgeBuffer.Get(), nullptr, normalEdgeRTV.GetAddressOf());
+	ret = device->CreateRenderTargetView(
+		normalEdgeBuffer.Get(), nullptr, normalEdgeRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create normal edge rtv" << std::endl;
 		return false;
 	}
-	ret =
-		device->CreateShaderResourceView(normalEdgeBuffer.Get(), nullptr, normalEdgeSRV.GetAddressOf());
+	ret = device->CreateShaderResourceView(
+		normalEdgeBuffer.Get(), nullptr, normalEdgeSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create normal edge srv" << std::endl;
 		return false;
@@ -383,14 +383,12 @@ bool Graphics::InitRenderTargetBuffers()
 		std::cout << "failed create albedo buffer" << std::endl;
 		return false;
 	}
-	ret = device->CreateRenderTargetView(
-		albedoBuffer.Get(), nullptr, albedoRTV.GetAddressOf());
+	ret = device->CreateRenderTargetView(albedoBuffer.Get(), nullptr, albedoRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create albedo rtv" << std::endl;
 		return false;
 	}
-	ret = device->CreateShaderResourceView(
-		albedoBuffer.Get(), nullptr, albedoSRV.GetAddressOf());
+	ret = device->CreateShaderResourceView(albedoBuffer.Get(), nullptr, albedoSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create albedo srv" << std::endl;
 		return false;
@@ -482,8 +480,8 @@ bool Graphics::InitRenderTargetBuffers()
 	// mirrorDepth render
 	format = DXGI_FORMAT_R32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(
-			mirrorDepthRenderBuffer, App::MIRROR_WIDTH, App::MIRROR_HEIGHT, false, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(mirrorDepthRenderBuffer, App::MIRROR_WIDTH,
+			App::MIRROR_HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create mirror depth render buffer" << std::endl;
 		return false;
 	}
@@ -504,8 +502,8 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	for (int i = 0; i < 2; ++i) {
-		if (!DXUtils::CreateTextureBuffer(
-				mirrorBlurBuffer[i], App::MIRROR_WIDTH, App::MIRROR_HEIGHT, false, format, bindFlag)) {
+		if (!DXUtils::CreateTextureBuffer(mirrorBlurBuffer[i], App::MIRROR_WIDTH,
+				App::MIRROR_HEIGHT, false, format, bindFlag)) {
 			std::cout << "failed create mirror blur buffer" << std::endl;
 			return false;
 		}
@@ -521,6 +519,34 @@ bool Graphics::InitRenderTargetBuffers()
 			std::cout << "failed create mirror blur srv" << std::endl;
 			return false;
 		}
+	}
+
+	// bloom buffer
+	UINT bloomWidth = App::WIDTH;
+	UINT bloomHeight = App::HEIGHT;
+	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	for (int i = 0; i < 3; ++i) {
+		if (!DXUtils::CreateTextureBuffer(
+				bloomBuffer[i], bloomWidth, bloomHeight, false, format, bindFlag)) {
+			std::cout << "failed create bloom buffer" << std::endl;
+			return false;
+		}
+		ret = device->CreateRenderTargetView(
+			bloomBuffer[i].Get(), nullptr, bloomRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create bloom rtv" << std::endl;
+			return false;
+		}
+		ret = device->CreateShaderResourceView(
+			bloomBuffer[i].Get(), nullptr, bloomSRV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create bloom srv" << std::endl;
+			return false;
+		}
+
+		bloomWidth /= 2;
+		bloomHeight /= 2;
 	}
 
 	return true;
@@ -869,7 +895,8 @@ bool Graphics::InitPixelShaders()
 		std::cout << "failed create shading basic ps" << std::endl;
 		return false;
 	}
-	if (!DXUtils::CreatePixelShader(L"ShadingBasicPS.hlsl", shadingBasicEdgePS, nullptr, "mainMSAA")) {
+	if (!DXUtils::CreatePixelShader(
+			L"ShadingBasicPS.hlsl", shadingBasicEdgePS, nullptr, "mainMSAA")) {
 		std::cout << "failed create shading basic edge ps" << std::endl;
 		return false;
 	}

@@ -48,12 +48,13 @@ private:
 	void RenderSkybox();
 	void RenderCloud();
 
-
 	void RenderFogFilter();
 	void RenderWaterFilter();
 
 	void RenderMirrorWorld();
 	void RenderWaterPlane();
+
+	void Bloom();
 
 	HWND m_hwnd;
 	ComPtr<ID3D11Buffer> m_constantBuffer;

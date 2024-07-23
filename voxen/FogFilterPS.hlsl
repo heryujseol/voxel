@@ -25,7 +25,7 @@ float3 getFogColor(float3 sunDir, float3 eyeDir)
     if (isUnderWater)
         fogColor = float3(0.12, 0.26, 0.65);
     
-    return fogColor;
+    return toSRGB(fogColor);
 }
 
 float getFogFactor(float3 pos)

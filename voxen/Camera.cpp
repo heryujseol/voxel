@@ -49,18 +49,6 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 	UpdatePosition(keyPressed, dt);
 	UpdateViewDirection(mouseX, mouseY);
 
-	///////////////////
-	if (keyPressed['R']) {
-		m_isOnConstantDirtyFlag = true;
-		m_constantData.dummy.x = 0.0f;
-	}
-	else
-	{
-		m_isOnConstantDirtyFlag = true;
-		m_constantData.dummy.x = 1.0f;
-	}
-
-	///////////////////
 	if (m_isOnConstantDirtyFlag) {
 		m_constantData.view = GetViewMatrix().Transpose();
 		m_constantData.proj = GetProjectionMatrix().Transpose();

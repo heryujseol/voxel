@@ -181,7 +181,7 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			RenderFogFilter();
+			RenderFogFilter(); // **Fog Depth 상이 안맺힌 곳 처리가 필요
 			RenderSkybox();
 			RenderCloud();
 		}
@@ -189,18 +189,18 @@ void App::Render()
 
 	// 4. Post Effect
 	{
-		// resolve
+		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
+			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
-		if (m_camera.IsUnderWater())
+		if (m_camera.IsUnderWater()) {
 			RenderWaterFilter();
-
-		// HDR Bloom + Fog Depth Error
+		}
+		
+		Bloom();
 	}
 	
-	Graphics::context->ResolveSubresource(Graphics::deferredRenderBuffer.Get(), 0,
-		Graphics::forwardRenderBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::deferredSRV.GetAddressOf());
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::toneMappingPSO);
 	m_postEffect.Render();
 }
@@ -339,7 +339,7 @@ void App::MaskMSAAEdge()
 		Graphics::deferredDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::deferredRTV.GetAddressOf(), Graphics::deferredDSV.Get());
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
@@ -389,7 +389,7 @@ void App::RenderSSAO()
 void App::ShadingBasic()
 {
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::deferredRTV.GetAddressOf(), Graphics::deferredDSV.Get());
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::normalEdgeSRV.Get());
@@ -407,9 +407,9 @@ void App::ShadingBasic()
 
 void App::ConvertToMSAA()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::forwardRTV.GetAddressOf(), nullptr);
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicMSRTV.GetAddressOf(), nullptr);
 
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::deferredSRV.GetAddressOf());
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::samplingPSO);
 	m_postEffect.Render();
@@ -417,7 +417,7 @@ void App::ConvertToMSAA()
 
 void App::RenderSkybox()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::forwardRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
@@ -426,7 +426,7 @@ void App::RenderSkybox()
 void App::RenderCloud()
 {
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::forwardRTV.GetAddressOf(), Graphics::basicDSV.Get());
+		1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
@@ -434,10 +434,10 @@ void App::RenderCloud()
 
 void App::RenderFogFilter()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::forwardRTV.GetAddressOf(), nullptr);
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicMSRTV.GetAddressOf(), nullptr);
 
 	Graphics::context->CopyResource(
-		Graphics::copyForwardRenderBuffer.Get(), Graphics::forwardRenderBuffer.Get());
+		Graphics::copyForwardRenderBuffer.Get(), Graphics::basicMSBuffer.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::copyForwardSRV.Get());
@@ -452,17 +452,21 @@ void App::RenderFogFilter()
 }
 
 void App::RenderWaterFilter()
-{ /*
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV[0].GetAddressOf(), nullptr);
+{
+	ComPtr<ID3D11Texture2D> tmpBuffer = Graphics::bloomBuffer[0].Get();
+	ComPtr<ID3D11ShaderResourceView> tmpSRV = Graphics::bloomSRV[0].Get();
 
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV[1].GetAddressOf());
+	Graphics::context->CopyResource(tmpBuffer.Get(), Graphics::basicBuffer.Get());
+
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+	Graphics::context->PSSetShaderResources(0, 1, tmpSRV.GetAddressOf());
 
 	Graphics::context->PSSetConstantBuffers(
 		2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
 	m_postEffect.Render();
-	*/
 }
 
 void App::RenderMirrorWorld()
@@ -528,10 +532,10 @@ void App::RenderMirrorWorld()
 void App::RenderWaterPlane() 
 {
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::forwardRTV.GetAddressOf(), Graphics::basicDSV.Get());
+		1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::context->CopyResource(
-		Graphics::copyForwardRenderBuffer.Get(), Graphics::forwardRenderBuffer.Get());
+		Graphics::copyForwardRenderBuffer.Get(), Graphics::basicMSBuffer.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
@@ -544,24 +548,7 @@ void App::RenderWaterPlane()
 	ChunkManager::GetInstance()->RenderTransparency();
 }
 
-/*
-void App::RenderWaterPlane()
+void App::Bloom()
 {
-Graphics::context->OMSetRenderTargets(
-	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-// ***
-Graphics::context->CopyResource(
-	Graphics::copiedBasicBuffer.Get(), Graphics::basicRenderBuffer.Get());
 
-std::vector<ID3D11ShaderResourceView*> ppSRVs;
-ppSRVs.push_back(Graphics::atlasMapSRV.Get()); //
-ppSRVs.push_back(Graphics::copiedBasicSRV.Get()); // basic rtv
-ppSRVs.push_back(Graphics::mirrorWorldSRV.Get()); // o -> mirrorWorldSRV
-ppSRVs.push_back(Graphics::depthMapSRV.Get()); // o -> positionSRV
-Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
-Graphics::SetPipelineStates(Graphics::waterPlanePSO);
-ChunkManager::GetInstance()->RenderTransparency();
 }
-
-*/

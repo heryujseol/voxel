@@ -174,4 +174,10 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }
 
+float3 toSRGB(float3 color)
+{
+    color = pow(color, 2.2);
+    return color;
+}
+
 #endif
