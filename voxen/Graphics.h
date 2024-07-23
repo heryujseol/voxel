@@ -45,7 +45,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> fogFilterPS;
-	extern ComPtr<ID3D11PixelShader> fogFilterEdgePS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	extern ComPtr<ID3D11PixelShader> waterPlanePS;
 	extern ComPtr<ID3D11PixelShader> waterFilterPS;
@@ -90,9 +89,13 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> backBuffer;
 	extern ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
-	extern ComPtr<ID3D11Texture2D> basicRenderBuffer[2];
-	extern ComPtr<ID3D11RenderTargetView> basicRTV[2];
-	extern ComPtr<ID3D11ShaderResourceView> basicSRV[2];
+	extern ComPtr<ID3D11Texture2D> deferredRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> deferredRTV;
+	extern ComPtr<ID3D11ShaderResourceView> deferredSRV;
+
+	extern ComPtr<ID3D11Texture2D> forwardRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> forwardRTV;
+	extern ComPtr<ID3D11ShaderResourceView> forwardSRV;
 
 	extern ComPtr<ID3D11Texture2D> normalEdgeBuffer;
 	extern ComPtr<ID3D11RenderTargetView> normalEdgeRTV;
@@ -134,6 +137,7 @@ namespace Graphics {
 	// Depth Stencil Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> basicDSV;
+	extern ComPtr<ID3D11ShaderResourceView> basicDepthSRV;
 
 	extern ComPtr<ID3D11Texture2D> deferredDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> deferredDSV;
@@ -154,6 +158,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> moonBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> moonSRV;
+
+	extern ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
 	
 	// Viewport
@@ -193,12 +200,11 @@ namespace Graphics {
 	extern GraphicsPSO skyboxMirrorPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudMirrorPSO;
+	extern GraphicsPSO samplingPSO;
 	extern GraphicsPSO fogFilterPSO;
-	extern GraphicsPSO fogFilterEdgePSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO instanceMirrorPSO;
 	extern GraphicsPSO mirrorMaskingPSO;
-	extern GraphicsPSO blurPSO;
 	extern GraphicsPSO waterPlanePSO;
 	extern GraphicsPSO waterFilterPSO;
 	extern GraphicsPSO basicDepthPSO;

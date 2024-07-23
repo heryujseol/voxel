@@ -23,9 +23,6 @@ float4 main(vsOutput input) : SV_TARGET
     albedo /= SAMPLE_COUNT;
     float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
     
-    if (position.w == -1.0)
-        return float4(albedo, 1.0); // skybox color 
-    
     // todo
     float metallic = 0.0;
     float roughness = 0.8;
@@ -53,23 +50,14 @@ float4 mainMSAA(vsOutput input) : SV_TARGET
         float3 albedo = albedoTex.Load(input.posProj.xy, i).rgb; 
         float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
         
-        float3 lighting = float3(0.0, 0.0, 0.0);
+        // todo
+        float metallic = 0.0;
+        float roughness = 0.8;
         
-        if (position.w == -1.0)
-        {
-            lighting = albedo; // skybox color
-        }
-        else
-        {
-            // todo
-            float metallic = 0.0;
-            float roughness = 0.8;
+        float3 ambientLighting = getAmbientLighting(ao, albedo);
+        float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
         
-            float3 ambientLighting = getAmbientLighting(ao, albedo);
-            float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
-        
-            lighting = ambientLighting + directLighting;
-        }
+        float3 lighting = ambientLighting + directLighting;
         
         float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
         sumClampLighting += clampLighting;

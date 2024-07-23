@@ -1,7 +1,7 @@
 #include "CommonPS.hlsli"
 
-Texture2D renderTex : register(t0);
-Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
+Texture2DMS<float4, SAMPLE_COUNT> renderTex : register(t0);
+Texture2DMS<float, SAMPLE_COUNT> depthTex : register(t1);
 
 cbuffer FogConstantBuffer : register(b2)
 {
@@ -28,49 +28,28 @@ float3 getFogColor(float3 sunDir, float3 eyeDir)
     return fogColor;
 }
 
-float getFogFactor(float2 screenCoord, uint sampleIndex)
+float getFogFactor(float3 pos)
 {
     //Beer-Lambert law
-    float4 viewPos = positionTex.Load(screenCoord, sampleIndex);
-    if (viewPos.w == -1.0)
-        viewPos.xyz = float3(0.0, 0.0, 0.0);
-    
-    float dist = length(viewPos.xyz);
+    float dist = length(pos.xyz);
         
     float distFog = saturate((dist - fogDistMin) / (fogDistMax - fogDistMin));
     float fogFactor = exp(-fogStrength * distFog);
     
     return fogFactor;
-}
+} 
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
     float3 fogColor = getFogColor(sunDir, eyeDir);
-    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
+    float3 renderColor = renderTex.Load(input.posProj.xy, sampleIndex).rgb;
     
-    float fogFactor = getFogFactor(input.posProj.xy, 0);
+    float depth = depthTex.Load(input.posProj.xy, sampleIndex).r;
+    float3 viewPos = texcoordToViewPos(input.texcoord, depth);
+    
+    float fogFactor = getFogFactor(viewPos);
     
     float3 blendColor = lerp(fogColor, renderColor, fogFactor);
     
     return float4(blendColor, 1.0);
-}
-
-float4 mainMSAA(vsOutput input) : SV_TARGET
-{
-    float3 fogColor = getFogColor(sunDir, eyeDir);
-    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
-    
-    float3 sumColor = float3(0.0, 0.0, 0.0);
-    
-    [unroll]
-    for (uint i = 0; i < SAMPLE_COUNT; ++i)
-    {
-        float fogFactor = getFogFactor(input.posProj.xy, i);
-        
-        float3 blendColor = lerp(fogColor, renderColor, fogFactor);
-        
-        sumColor += blendColor;
-    }
-    
-    return float4(sumColor / SAMPLE_COUNT, 1.0);
 }

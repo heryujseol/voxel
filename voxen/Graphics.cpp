@@ -42,7 +42,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> fogFilterPS;
-	ComPtr<ID3D11PixelShader> fogFilterEdgePS;
 	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 	ComPtr<ID3D11PixelShader> waterPlanePS;
 	ComPtr<ID3D11PixelShader> waterFilterPS;
@@ -87,9 +86,13 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> backBuffer;
 	ComPtr<ID3D11RenderTargetView> backBufferRTV;
 
-	ComPtr<ID3D11Texture2D> basicRenderBuffer[2];
-	ComPtr<ID3D11RenderTargetView> basicRTV[2];
-	ComPtr<ID3D11ShaderResourceView> basicSRV[2];
+	ComPtr<ID3D11Texture2D> deferredRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> deferredRTV;
+	ComPtr<ID3D11ShaderResourceView> deferredSRV;
+
+	ComPtr<ID3D11Texture2D> forwardRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> forwardRTV;
+	ComPtr<ID3D11ShaderResourceView> forwardSRV;
 
 	ComPtr<ID3D11Texture2D> normalEdgeBuffer;
 	ComPtr<ID3D11RenderTargetView> normalEdgeRTV;
@@ -131,6 +134,7 @@ namespace Graphics {
 	// Depth Stencil Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> basicDSV;
+	ComPtr<ID3D11ShaderResourceView> basicDepthSRV;
 
 	ComPtr<ID3D11Texture2D> deferredDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> deferredDSV;
@@ -151,6 +155,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> moonBuffer;
 	ComPtr<ID3D11ShaderResourceView> moonSRV;
+
+	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
+	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
 
 	// Viewport
@@ -190,12 +197,11 @@ namespace Graphics {
 	GraphicsPSO skyboxMirrorPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudMirrorPSO;
+	GraphicsPSO samplingPSO;
 	GraphicsPSO fogFilterPSO;
-	GraphicsPSO fogFilterEdgePSO;
 	GraphicsPSO instancePSO;
 	GraphicsPSO instanceMirrorPSO;
 	GraphicsPSO mirrorMaskingPSO;
-	GraphicsPSO blurPSO;
 	GraphicsPSO waterPlanePSO;
 	GraphicsPSO waterFilterPSO;
 	GraphicsPSO basicDepthPSO;
@@ -287,27 +293,46 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
-	// basic render
+	// deferred render
 	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	for (int i = 0; i < 2; ++i) {
-		if (!DXUtils::CreateTextureBuffer(
-				basicRenderBuffer[i], App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
-			std::cout << "failed create basic render buffer" << std::endl;
-			return false;
-		}
-		ret = device->CreateRenderTargetView(
-			basicRenderBuffer[i].Get(), nullptr, basicRTV[i].GetAddressOf());
-		if (FAILED(ret)) {
-			std::cout << "failed create basic rtv" << std::endl;
-			return false;
-		}
-		ret = device->CreateShaderResourceView(
-			basicRenderBuffer[i].Get(), nullptr, basicSRV[i].GetAddressOf());
-		if (FAILED(ret)) {
-			std::cout << "failed create basic srv" << std::endl;
-			return false;
-		}
+	if (!DXUtils::CreateTextureBuffer(
+			deferredRenderBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create deferred render buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateRenderTargetView(
+		deferredRenderBuffer.Get(), nullptr, deferredRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create deferred rtv" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(
+		deferredRenderBuffer.Get(), nullptr, deferredSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create deferred srv" << std::endl;
+		return false;
+	}
+
+	// forward render
+	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			forwardRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create forward render buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateRenderTargetView(
+		forwardRenderBuffer.Get(), nullptr, forwardRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create forward rtv" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(
+		forwardRenderBuffer.Get(), nullptr, forwardSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create forward srv" << std::endl;
+		return false;
 	}
 
 	// normal edge
@@ -504,18 +529,30 @@ bool Graphics::InitRenderTargetBuffers()
 bool Graphics::InitDepthStencilBuffers()
 {
 	// basic DSV
-	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	DXGI_FORMAT format = DXGI_FORMAT_R32_TYPELESS;
+	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
 			basicDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create basic depth stencil buffer" << std::endl;
 		return false;
 	}
-
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	HRESULT ret = Graphics::device->CreateDepthStencilView(
-		basicDepthBuffer.Get(), nullptr, basicDSV.GetAddressOf());
+		basicDepthBuffer.Get(), &dsvDesc, basicDSV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create basic dsv" << std::endl;
+		std::cout << "failed create basic depth stencil view" << std::endl;
+		return false;
+	}
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+	ret = Graphics::device->CreateShaderResourceView(
+		basicDepthBuffer.Get(), &srvDesc, basicDepthSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create basic depth srv" << std::endl;
 		return false;
 	}
 
@@ -575,6 +612,21 @@ bool Graphics::InitShaderResourceBuffers()
 
 	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png", format)) {
 		std::cout << "failed create texture from moon file" << std::endl;
+		return false;
+	}
+
+	// forward render
+	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	UINT bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			copyForwardRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create copy forward render buffer" << std::endl;
+		return false;
+	}
+	HRESULT ret = device->CreateShaderResourceView(
+		copyForwardRenderBuffer.Get(), nullptr, copyForwardSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create copy forward srv" << std::endl;
 		return false;
 	}
 
@@ -743,10 +795,6 @@ bool Graphics::InitPixelShaders()
 	// fogFilterPS
 	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterPS)) {
 		std::cout << "failed create fog filter ps" << std::endl;
-		return false;
-	}
-	if (!DXUtils::CreatePixelShader(L"FogFilterPS.hlsl", fogFilterEdgePS, nullptr, "mainMSAA")) {
-		std::cout << "failed create fog filter edge ps" << std::endl;
 		return false;
 	}
 
@@ -1120,18 +1168,15 @@ void Graphics::InitGraphicsPSO()
 	cloudMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
 	cloudMirrorPSO.stencilRef = 1;
 
-	// fogFilterPSO
-	fogFilterPSO = basicPSO;
-	fogFilterPSO.inputLayout = samplingIL;
-	fogFilterPSO.vertexShader = samplingVS;
-	fogFilterPSO.pixelShader = fogFilterPS;
-	fogFilterPSO.depthStencilState = stencilEqualDrawDSS;
-	fogFilterPSO.stencilRef = 0;
+	// samplingPSO
+	samplingPSO = basicPSO;
+	samplingPSO.inputLayout = samplingIL;
+	samplingPSO.vertexShader = samplingVS;
+	samplingPSO.pixelShader = samplingPS;
 
-	// fogFilterEdgePSO
-	fogFilterEdgePSO = fogFilterPSO;
-	fogFilterEdgePSO.pixelShader = fogFilterEdgePS;
-	fogFilterEdgePSO.stencilRef = 1;
+	// fogFilterPSO
+	fogFilterPSO = samplingPSO;
+	fogFilterPSO.pixelShader = fogFilterPS;
 
 	// instancePSO
 	instancePSO = basicPSO;
@@ -1152,22 +1197,13 @@ void Graphics::InitGraphicsPSO()
 	mirrorMaskingPSO.depthStencilState = stencilMaskDSS;
 	mirrorMaskingPSO.stencilRef = 1;
 
-	// blurPSO
-	blurPSO = basicPSO;
-	blurPSO.inputLayout = samplingIL;
-	blurPSO.vertexShader = samplingVS;
-	blurPSO.pixelShader = nullptr;
-
 	// waterPlanePSO
 	waterPlanePSO = basicPSO;
 	waterPlanePSO.rasterizerState = noneCullRS;
 	waterPlanePSO.pixelShader = waterPlanePS;
-	waterPlanePSO.blendState = alphaBS;
 
 	// waterFilterPSO
-	waterFilterPSO = basicPSO;
-	waterFilterPSO.inputLayout = samplingIL;
-	waterFilterPSO.vertexShader = samplingVS;
+	waterFilterPSO = samplingPSO;
 	waterFilterPSO.pixelShader = waterFilterPS;
 
 	// basicshadowPSO
@@ -1177,9 +1213,7 @@ void Graphics::InitGraphicsPSO()
 	basicShadowPSO.pixelShader = nullptr;
 
 	// ssaoPSO
-	ssaoPSO = basicPSO;
-	ssaoPSO.inputLayout = samplingIL;
-	ssaoPSO.vertexShader = samplingVS;
+	ssaoPSO = samplingPSO;
 	ssaoPSO.pixelShader = ssaoPS;
 	ssaoPSO.depthStencilState = stencilEqualDrawDSS;
 	ssaoPSO.stencilRef = 0;
@@ -1190,17 +1224,13 @@ void Graphics::InitGraphicsPSO()
 	ssaoEdgePSO.stencilRef = 1;
 
 	// edgeMaskingPSO
-	edgeMaskingPSO = basicPSO;
-	edgeMaskingPSO.inputLayout = samplingIL;
-	edgeMaskingPSO.vertexShader = samplingVS;
+	edgeMaskingPSO = samplingPSO;
 	edgeMaskingPSO.pixelShader = edgeMaskingPS;
 	edgeMaskingPSO.depthStencilState = stencilMaskDSS;
 	edgeMaskingPSO.stencilRef = 1;
 
 	// shadingBasicPSO
-	shadingBasicPSO = basicPSO;
-	shadingBasicPSO.inputLayout = samplingIL;
-	shadingBasicPSO.vertexShader = samplingVS;
+	shadingBasicPSO = samplingPSO;
 	shadingBasicPSO.pixelShader = shadingBasicPS;
 	shadingBasicPSO.depthStencilState = stencilEqualDrawDSS;
 	shadingBasicPSO.stencilRef = 0;
@@ -1211,9 +1241,7 @@ void Graphics::InitGraphicsPSO()
 	shadingBasicEdgePSO.stencilRef = 1;
 
 	// toneMappingPSO
-	toneMappingPSO = basicPSO;
-	toneMappingPSO.inputLayout = samplingIL;
-	toneMappingPSO.vertexShader = samplingVS;
+	toneMappingPSO = samplingPSO;
 	toneMappingPSO.pixelShader = toneMappingPS;
 }
 

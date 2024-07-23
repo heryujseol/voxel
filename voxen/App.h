@@ -43,7 +43,11 @@ private:
 	void RenderSSAO();
 	void ShadingBasic();
 
+	void ConvertToMSAA();
+
+	void RenderSkybox();
 	void RenderCloud();
+
 
 	void RenderFogFilter();
 	void RenderWaterFilter();

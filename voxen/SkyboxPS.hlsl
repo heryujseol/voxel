@@ -117,7 +117,7 @@ float4 main(vsOutput input) : SV_TARGET
     // background sky
     float sunDirWeight = sunAltitude > showSectionAltitude ? henyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
     color += getSkyColor(posDir, sunDirWeight);
-
+    
     return float4(color, 1.0);
 }
 
