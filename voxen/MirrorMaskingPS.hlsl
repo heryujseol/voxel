@@ -1,34 +1,35 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
-TextureCube envMapTexture : register(t0);
+Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t0);
 
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
-    sample float3 posModel : POSITION2;
-    uint face : FACE;
+    float3 posWorld : POSITION;
+    float3 normal : NORMAL;
+    sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };
 
-struct psOutput
+float main(vsOutput input) : SV_Target0
 {
-    float4 color : SV_Target0;
-    float depth : SV_Target1;
-};
-
-psOutput main(vsOutput input)
-{
-    float3 normal = getNormal(input.face);
-    if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
+    if (input.normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
     
-    float3 toEye = normalize(eyePos - input.posWorld);
-    float3 color = envMapTexture.Sample(linearClampSS, reflect(-toEye, normal)).rgb;
-  
-    psOutput output;
-    output.color = float4(color, 1.0);
-    output.depth = input.posProj.z;
+    float pixelDepth = input.posProj.z;
     
-    return output;
+    float2 texcoord = float2(input.posProj.x / mirrorWidth, input.posProj.y / mirrorHeight);
+    float2 appScreenCoord = float2(texcoord.x * appWidth, texcoord.y * appHeight);
+    
+    float4 viewPos = positionTex.Load(appScreenCoord, 0);
+    if (viewPos.w == -1.0)
+        viewPos.z = 1000.0f;
+    
+    float4 projPos = mul(float4(viewPos.xyz, 1.0), proj);
+    projPos.xyz /= projPos.w;
+    
+    if (projPos.z <= pixelDepth) // 저장되어 있는 값이 더 작은 depth라면 무시함
+        discard;
+    
+    return pixelDepth;
 }

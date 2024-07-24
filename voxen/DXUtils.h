@@ -234,7 +234,7 @@ namespace DXUtils {
 
 
 	static bool CreatePixelShader(const std::wstring& filename, ComPtr<ID3D11PixelShader>& ps,
-		D3D_SHADER_MACRO* macro = nullptr)
+		D3D_SHADER_MACRO* macro = nullptr, const std::string entryPoint = "main")
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -245,7 +245,8 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
 		HRESULT ret = D3DCompileFromFile(filename.c_str(), macro, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			"main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+			entryPoint.c_str(), "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		std::cout << compileFlags << std::endl;
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());

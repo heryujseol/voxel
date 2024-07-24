@@ -66,11 +66,6 @@ struct CloudConstantData {
 	float cloudScale;
 };
 
-struct EnvMapConstantData {
-	Matrix view[6];
-	Matrix proj;
-};
-
 struct BlurConstantData {
 	float dx;
 	float dy;
@@ -97,4 +92,19 @@ struct FogFilterConstantData {
 struct WaterFilterConstantData {
 	Vector3 filterColor;
 	float filterStrength;
+};
+
+struct SsaoConstantData {
+	Vector4 sampleKernel[64];
+};
+
+struct SsaoNoiseConstantData {
+	Vector4 rotationNoise[16];
+};
+
+struct AppConstantData {
+	float appWidth;
+	float appHeight;
+	float mirrorWidth;
+	float mirrorHeight;
 };

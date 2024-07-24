@@ -1,18 +1,17 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
-Texture2DMS<float4, 4> msaaRenderTex : register(t1);
+Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t1);
 Texture2D mirrorWorldTex : register(t2);
-Texture2DMS<float, 4> msaaDepthTex : register(t3);
+Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t3);
 
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
-    sample float3 posModel : POSITION2;
-    uint face : FACE;
+    float3 posWorld : POSITION;
+    float3 normal : NORMAL;
+    sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
-    uint sampleIndex : SV_SampleIndex;
 };
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
@@ -24,73 +23,55 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
-float3 texcoordToView(float2 texcoord, float2 screenCoord, uint sampleIndex)
+float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
-    float4 posProj;
-
-    // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
-    posProj.xy = texcoord * 2.0 - 1.0;
-    posProj.y *= -1;
-    posProj.z = msaaDepthTex.Load(screenCoord, sampleIndex).r;
-    posProj.w = 1.0;
-
-    // ProjectSpace -> ViewSpace
-    float4 posView = mul(posProj, invProj);
-    posView.xyz /= posView.w; // homogeneous coordinates
-    
-    return posView.xyz;
-}
-
-float4 main(vsOutput input) : SV_TARGET
-{
-    float3 normal = getNormal(input.face);
+    float3 normal = input.normal;
     if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
-        
-    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
-    uint index = (input.type - 1) * 6 + input.face;
     
     // absorption color
-    float4 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index));
+    float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 0)).rgb;
+    float3 ambientLighting = getAmbientLighting(1.0, textureColor);
     
-    float width, height, sampleCount;
-    msaaDepthTex.GetDimensions(width, height, sampleCount);
-    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
+    float3 viewPos = mul(float4(input.posWorld, 1.0), view).rgb;
+    float3 viewNormal = mul(float4(input.normal, 0.0), view).rgb;
+    float3 directLighting = getDirectLighting(viewNormal, viewPos, textureColor, 0.0, 0.4);
+    
+    float3 waterColor = ambientLighting + directLighting;
+    
+    float2 screenTexcoord = float2(input.posProj.x / appWidth, input.posProj.y / appHeight);
         
     // origin render color
-    float3 originColor = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+    float3 originColor = msaaRenderTex.Load(input.posProj.xy, sampleIndex).rgb;
    
     if (isUnderWater)
     {
-        return float4(lerp(originColor, textureColor.rgb, 0.5), 1.0);
+        return float4(lerp(originColor, waterColor, 0.5), 1.0);
     }
     else
     {
         // absorption factor
-        float objectDistance = length(texcoordToView(screenTexcoord, input.posProj.xy, input.sampleIndex));
+        float3 originViewPos = positionTex.Load(input.posProj.xy, sampleIndex).xyz;
+        float objectDistance = length(originViewPos);
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
         float absorptionCoeff = 0.1;
         float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
     
-        float3 projColor = lerp(originColor, textureColor.rgb, absorptionFactor);
+        float3 projColor = lerp(originColor, waterColor, absorptionFactor);
     
-    // reflect color
-        float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
+        // reflect color
+        float3 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord).rgb;
         
-    // fresnel factor
+        // fresnel factor
         float3 toEye = normalize(eyePos - input.posWorld);
         float3 reflectCoeff = float3(0.2, 0.2, 0.2);
         float3 fresnelFactor = schlickFresnel(normal, toEye, reflectCoeff);
         
-    // blending 3 colors
+        // blending 3 colors
         projColor *= (1.0 - fresnelFactor);
-        float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
+        float3 blendColor = lerp(projColor, mirrorColor, fresnelFactor);
         
-    // alpha blend
-        float fresnelAvg = dot(fresnelFactor, float3(1, 1, 1)) / 3.0;
-        float alpha = lerp(1.0, mirrorColor.a, fresnelAvg);
-        
-        return float4(blendColor, alpha);
+        return float4(blendColor, 1.0);
     }
 }

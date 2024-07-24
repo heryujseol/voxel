@@ -4,10 +4,10 @@
 
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.1f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
-	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f),
-	  m_forward(0.0f, 0.0f, 1.0f), m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f),
-	  m_viewNdcX(0.0f), m_viewNdcY(0.0f), m_speed(20.0f), m_isUnderWater(false),
-	  m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
+	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
+	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
+	  m_speed(20.0f), m_isUnderWater(false), m_isOnConstantDirtyFlag(false),
+	  m_isOnChunkDirtyFlag(false)
 {
 }
 
@@ -38,18 +38,6 @@ bool Camera::Initialize(Vector3 pos)
 	m_constantData.view = m_constantData.view.Transpose();
 	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, m_constantData)) {
 		std::cout << "failed create camera mirror constant buffer" << std::endl;
-		return false;
-	}
-
-	for (int i = 0; i < 6; ++i) {
-		m_envMapConstantData.view[i] = XMMatrixLookToLH(Vector3(0.0f), lookTo[i], up[i]);
-		m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
-	}
-	m_envMapConstantData.proj =
-		XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
-	m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
-	if (!DXUtils::CreateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData)) {
-		std::cout << "failed create env map constant buffer" << std::endl;
 		return false;
 	}
 

@@ -1,8 +1,4 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-}
+#include "CommonVS.hlsli"
 
 cbuffer ChunkConstantBuffer : register(b1)
 {
@@ -12,13 +8,13 @@ cbuffer ChunkConstantBuffer : register(b1)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
-    sample float3 posModel : POSITION2;
-    uint face : FACE;
+    float3 posWorld : POSITION;
+    float3 normal : NORMAL;
+    sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };
 
-vsOutput main(uint data : DATA, uint vertexID: SV_VertexID)
+vsOutput main(uint data : DATA)
 {
     vsOutput output;
     
@@ -30,16 +26,17 @@ vsOutput main(uint data : DATA, uint vertexID: SV_VertexID)
     
     float3 position = float3(float(x), float(y), float(z));
     
-    output.posModel = position;
-    
     output.posWorld = mul(float4(position, 1.0), world).xyz;
     
     output.posProj = float4(output.posWorld, 1.0);
     output.posProj = mul(output.posProj, view); 
     output.posProj = mul(output.posProj, proj);
     
-    output.face = face;
-    output.type = type;
+    output.normal = getNormal(face);
+    
+    output.texcoord = getVoxelTexcoord(position, face);
+    
+    output.type = (type - 1) * 6 + face;
     
     return output;
 }

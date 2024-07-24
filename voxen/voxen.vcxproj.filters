@@ -111,7 +111,10 @@
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include="..\.gitignore" />
-    <None Include="Common.hlsli">
+    <None Include="CommonPS.hlsli">
+      <Filter>쉐이더 파일</Filter>
+    </None>
+    <None Include="CommonVS.hlsli">
       <Filter>쉐이더 파일</Filter>
     </None>
   </ItemGroup>
@@ -146,15 +149,6 @@
     <FxCompile Include="InstanceVS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="InstancePS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="EnvMapGS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="EnvMapVS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
     <FxCompile Include="MirrorMaskingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
@@ -171,6 +165,18 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="WaterFilterPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="SsaoPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="EdgeMaskingPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="ShadingBasicPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="ToneMappingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

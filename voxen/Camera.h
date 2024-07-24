@@ -23,7 +23,6 @@ public:
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
-	ComPtr<ID3D11Buffer> m_envMapConstantBuffer;
 
 	inline Vector3 GetPosition() { return m_eyePos; }
 	inline Vector3 GetChunkPosition() { return m_chunkPos; }
@@ -49,12 +48,6 @@ private:
 
 	void SetIsUnderWater();
 
-	uint32_t m_dateTime;
-
-	const uint32_t DATE_CYCLE_AMOUNT = 24000;
-	const uint32_t DATE_REAL_TIME = 30; // 60
-	const float DATE_TIME_SPEED = (float)DATE_CYCLE_AMOUNT / DATE_REAL_TIME;
-
 	float m_projFovAngleY;
 	float m_nearZ;
 	float m_farZ;
@@ -75,7 +68,6 @@ private:
 	bool m_isUnderWater;
 
 	CameraConstantData m_constantData;
-	EnvMapConstantData m_envMapConstantData;
 
 	Vector3 lookTo[6] = {
 		Vector3(1.0f, 0.0f, 0.0f),

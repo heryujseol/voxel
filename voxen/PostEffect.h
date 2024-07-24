@@ -18,10 +18,14 @@ public:
 	bool Initialize();
 	void Update(float dt, Camera& camera);
 	void Render();
+	void Blur(int count, ComPtr<ID3D11ShaderResourceView>& src, ComPtr<ID3D11RenderTargetView>& dst,
+		ComPtr<ID3D11ShaderResourceView> blurSRV[2], ComPtr<ID3D11RenderTargetView> blurRTV[2],
+		ComPtr<ID3D11PixelShader> blurPS[2]);
 
-	ComPtr<ID3D11Buffer> m_blurConstantBuffer;
 	ComPtr<ID3D11Buffer> m_fogFilterConstantBuffer;
 	ComPtr<ID3D11Buffer> m_waterFilterConstantBuffer;
+	ComPtr<ID3D11Buffer> m_ssaoConstantBuffer;
+	ComPtr<ID3D11Buffer> m_ssaoNoiseConstantBuffer;
 
 private:
 	std::vector<SamplingVertex> m_vertices;
@@ -31,9 +35,10 @@ private:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 
-	BlurConstantData m_blurConstantData;
 	FogFilterConstantData m_fogFilterConstantData;
 	WaterFilterConstantData m_waterFilterConstantData;
+	SsaoConstantData m_ssaoConstantData;
+	SsaoNoiseConstantData m_ssaoNoiseConstantData;
 
 	float m_waterAdaptationTime;
 	float m_waterMaxDuration;

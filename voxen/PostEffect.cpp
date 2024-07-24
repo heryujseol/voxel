@@ -3,12 +3,16 @@
 #include "DXUtils.h"
 #include "MeshGenerator.h"
 #include "App.h"
+#include "Utils.h"
 
 #include <algorithm>
+#include <random>
 
 PostEffect::PostEffect()
-	: m_stride(sizeof(SamplingVertex)), m_offset(0), m_vertexBuffer(nullptr),
-	  m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f), m_waterMaxDuration(2.5f){};
+	: m_fogFilterConstantBuffer(nullptr), m_waterFilterConstantBuffer(nullptr),
+	  m_ssaoConstantBuffer(nullptr), m_stride(sizeof(SamplingVertex)), m_offset(0),
+	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f),
+	  m_waterMaxDuration(2.5f){};
 
 PostEffect::~PostEffect(){};
 
@@ -26,13 +30,6 @@ bool PostEffect::Initialize()
 		return false;
 	}
 
-	m_blurConstantData.dx = 1.0f / (float)App::MIRROR_WIDTH;
-	m_blurConstantData.dy = 1.0f / (float)App::MIRROR_HEIGHT;
-	if (!DXUtils::CreateConstantBuffer(m_blurConstantBuffer, m_blurConstantData)) {
-		std::cout << "failed create blur constant buffer" << std::endl;
-		return false;
-	}
-
 	m_fogFilterConstantData.fogDistMin = 0.0f;
 	m_fogFilterConstantData.fogDistMax = 0.0f;
 	m_fogFilterConstantData.fogStrength = 1.0f;
@@ -46,6 +43,44 @@ bool PostEffect::Initialize()
 	m_waterFilterConstantData.filterStrength = 0.0f;
 	if (!DXUtils::CreateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData)) {
 		std::cout << "failed create water filter constant buffer" << std::endl;
+		return false;
+	}
+
+	std::uniform_real_distribution<float> randomFloats(0.0001f, 1.0f);
+	std::default_random_engine generator;
+	for (int i = 0; i < 64; ++i) {
+		Vector4 sampleKernel;
+
+		sampleKernel.x = randomFloats(generator) * 2.0f - 1.0f;
+		sampleKernel.y = randomFloats(generator) * 2.0f - 1.0f;
+		sampleKernel.z = randomFloats(generator);
+		sampleKernel.w = 0.0f;
+
+		sampleKernel.Normalize();
+		sampleKernel *= randomFloats(generator);
+
+		float scale = (float)i / 64;
+		sampleKernel *= Utils::Lerp(0.1f, 1.0f, scale * scale);
+
+		m_ssaoConstantData.sampleKernel[i] = sampleKernel;
+	}
+	if (!DXUtils::CreateConstantBuffer(m_ssaoConstantBuffer, m_ssaoConstantData)) {
+		std::cout << "failed create ssao constant buffer" << std::endl;
+		return false;
+	}
+
+	for (int i = 0; i < 16; ++i) {
+		Vector4 rotationNoise;
+
+		rotationNoise.x = randomFloats(generator) * 2.0f - 1.0f;
+		rotationNoise.y = randomFloats(generator) * 2.0f - 1.0f;
+		rotationNoise.z = 0.0f;
+		rotationNoise.w = 0.0f;
+
+		m_ssaoNoiseConstantData.rotationNoise[i] = rotationNoise;
+	}
+	if (!DXUtils::CreateConstantBuffer(m_ssaoNoiseConstantBuffer, m_ssaoNoiseConstantData)) {
+		std::cout << "failed create ssao noise constant buffer" << std::endl;
 		return false;
 	}
 
@@ -68,7 +103,6 @@ void PostEffect::Update(float dt, Camera& camera)
 		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
 		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);
 		m_fogFilterConstantData.fogStrength = 5.0f - percetage;
-		
 	}
 	else {
 		m_waterAdaptationTime = 0.0f;
@@ -88,4 +122,31 @@ void PostEffect::Render()
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
+}
+
+void PostEffect::Blur(int count, ComPtr<ID3D11ShaderResourceView>& src,
+	ComPtr<ID3D11RenderTargetView>& dst, ComPtr<ID3D11ShaderResourceView> blurSRV[2],
+	ComPtr<ID3D11RenderTargetView> blurRTV[2], ComPtr<ID3D11PixelShader> blurPS[2])
+{
+	for (int i = 0; i < count; ++i) {
+		Graphics::context->OMSetRenderTargets(1, blurRTV[0].GetAddressOf(), nullptr);
+
+		if (i == 0)
+			Graphics::context->PSSetShaderResources(0, 1, src.GetAddressOf());
+		else
+			Graphics::context->PSSetShaderResources(0, 1, blurSRV[1].GetAddressOf());
+
+		Graphics::context->PSSetShader(blurPS[0].Get(), nullptr, 0);
+		Render();
+
+		if (i == count - 1)
+			Graphics::context->OMSetRenderTargets(1, dst.GetAddressOf(), nullptr);
+		else
+			Graphics::context->OMSetRenderTargets(1, blurRTV[1].GetAddressOf(), nullptr);
+
+		Graphics::context->PSSetShaderResources(0, 1, blurSRV[0].GetAddressOf());
+
+		Graphics::context->PSSetShader(blurPS[1].Get(), nullptr, 0);
+		Render();
+	}
 }

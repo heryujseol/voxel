@@ -1,6 +1,6 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
-Texture2DMS<float4, 4> msaaRenderTex : register(t0);
+Texture2D renderTex : register(t0);
 
 cbuffer WaterFilterConstantBuffer : register(b2)
 {
@@ -12,12 +12,11 @@ struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
-    uint sampleIndex : SV_SampleIndex;
 };
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float3 renderColor = msaaRenderTex.Load(input.posProj.xy, input.sampleIndex).rgb;
+    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
 
     float3 blendColor = lerp(renderColor, filterColor, filterStrength);
     

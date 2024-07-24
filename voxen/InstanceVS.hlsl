@@ -16,6 +16,7 @@ struct vsInput
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
+    float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
@@ -25,16 +26,15 @@ vsOutput main(vsInput input)
 {
     vsOutput output;
     
+    output.posWorld = mul(float4(input.posModel, 1.0), input.instanceWorld).xyz;
     
-    output.posProj = mul(float4(input.posModel, 1.0), input.instanceWorld);
-    
-    output.posProj = mul(output.posProj, view);
+    output.posProj = mul(float4(output.posWorld, 1.0), view);
     output.posProj = mul(output.posProj, proj);
     
-    // instance 자체의 world 고려 X
-    // normal의 invTranspose 고려 X
-    output.normal = input.normal;
+    output.normal = input.normal; // invTranspose 고려하지 않음 -> ununiform scaling X
+    
     output.texcoord = input.texcoord;
+    
     output.type = input.type;
     
     return output;

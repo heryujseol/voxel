@@ -138,9 +138,10 @@ void Skybox::Render()
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::sunSRV.Get(),
-		Graphics::moonSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+	std::vector<ID3D11ShaderResourceView*> ppSRVs;
+	ppSRVs.push_back(Graphics::sunSRV.Get());
+	ppSRVs.push_back(Graphics::moonSRV.Get());
+	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }

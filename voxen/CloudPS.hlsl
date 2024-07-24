@@ -1,4 +1,4 @@
-#include "Common.hlsli"
+#include "CommonPS.hlsli"
 
 struct vsOutput
 {
@@ -69,7 +69,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     // distance alpha
     float alphaWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
-    float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.8]
+    float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.75]
     
-    return float4(color, alpha);
+    return float4(toSRGB(color), alpha);
 }

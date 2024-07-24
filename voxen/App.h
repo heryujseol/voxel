@@ -28,7 +28,6 @@ public:
 	static const UINT SHADOW_HEIGHT = 1024;
 	static const UINT MIRROR_WIDTH = WIDTH / 2;
 	static const UINT MIRROR_HEIGHT = HEIGHT / 2;
-	static const UINT ENV_MAP_SIZE = WIDTH / 8;
 
 private:
 	bool InitWindow();
@@ -39,17 +38,27 @@ private:
 	void Update(float dt);
 	void Render();
 
-	void RenderEnvMap();
-	void RenderBasic();
-	void RenderWaterPlane();
-	void RenderMirrorWorld();
-	void BlurMirror(int blurLoopCount);
+	void FillGBuffer();
+	void MaskMSAAEdge();
+	void RenderSSAO();
+	void ShadingBasic();
+
+	void ConvertToMSAA();
+
 	void RenderSkybox();
 	void RenderCloud();
+
 	void RenderFogFilter();
 	void RenderWaterFilter();
 
+	void RenderMirrorWorld();
+	void RenderWaterPlane();
+
+	void Bloom();
+
 	HWND m_hwnd;
+	ComPtr<ID3D11Buffer> m_constantBuffer;
+	AppConstantData m_constantData;
 
 	Camera m_camera;
 	Skybox m_skybox;

@@ -24,6 +24,8 @@ public:
 	uint32_t GetTime() { return m_constantData.dateTime; };
 
 private:
+	SkyboxConstantData m_constantData;
+
 	uint32_t m_dateTime;
 	float m_speed;
 
@@ -50,7 +52,6 @@ private:
 
 	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
-	SkyboxConstantData m_constantData;
 
 	UINT m_stride;
 	UINT m_offset;
