@@ -38,7 +38,7 @@ public:
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
-
+	
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);

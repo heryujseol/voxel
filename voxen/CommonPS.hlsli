@@ -46,6 +46,12 @@ cbuffer AppConstantBuffer : register(b8)
 #define PI 3.14159265
 #define SAMPLE_COUNT 4
 
+float3 toSRGB(float3 color)
+{
+    color = pow(color, 2.2);
+    return color;
+}
+
 float henyeyGreensteinPhase(float3 L, float3 V, float aniso)
 {
 	// L: toLight
@@ -169,15 +175,9 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     // todo
     float3 shadowFactor = getShadowFactor();
-    float3 radiance = normalHorizonColor * shadowFactor; // radiance 값 수정
+    float3 radiance = toSRGB(normalHorizonColor) * shadowFactor; // radiance 값 수정
 
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
-}
-
-float3 toSRGB(float3 color)
-{
-    color = pow(color, 2.2);
-    return color;
 }
 
 #endif

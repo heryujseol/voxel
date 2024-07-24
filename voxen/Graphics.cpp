@@ -52,7 +52,9 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> edgeMaskingPS;
 	ComPtr<ID3D11PixelShader> shadingBasicPS;
 	ComPtr<ID3D11PixelShader> shadingBasicEdgePS;
-	ComPtr<ID3D11PixelShader> toneMappingPS;
+	ComPtr<ID3D11PixelShader> bloomDownPS;
+	ComPtr<ID3D11PixelShader> bloomUpPS;
+	ComPtr<ID3D11PixelShader> combineBloomPS;
 
 
 	// Rasterizer State
@@ -129,9 +131,9 @@ namespace Graphics {
 	ComPtr<ID3D11RenderTargetView> mirrorBlurRTV[2];
 	ComPtr<ID3D11ShaderResourceView> mirrorBlurSRV[2];
 
-	ComPtr<ID3D11Texture2D> bloomBuffer[4];
-	ComPtr<ID3D11RenderTargetView> bloomRTV[4];
-	ComPtr<ID3D11ShaderResourceView> bloomSRV[4];
+	ComPtr<ID3D11Texture2D> bloomBuffer[5];
+	ComPtr<ID3D11RenderTargetView> bloomRTV[5];
+	ComPtr<ID3D11ShaderResourceView> bloomSRV[5];
 
 
 	// Depth Stencil Buffer
@@ -166,6 +168,7 @@ namespace Graphics {
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
 	D3D11_VIEWPORT mirrorWorldViewPort;
+	D3D11_VIEWPORT bloomViewport;
 
 
 	// device, context, swapChain
@@ -215,7 +218,9 @@ namespace Graphics {
 	GraphicsPSO edgeMaskingPSO;
 	GraphicsPSO shadingBasicPSO;
 	GraphicsPSO shadingBasicEdgePSO;
-	GraphicsPSO toneMappingPSO;
+	GraphicsPSO bloomDownPSO;
+	GraphicsPSO bloomUpPSO;
+	GraphicsPSO combineBloomPSO;
 }
 
 
@@ -526,7 +531,7 @@ bool Graphics::InitRenderTargetBuffers()
 	UINT bloomHeight = App::HEIGHT;
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	for (int i = 0; i < 3; ++i) {
+	for (int i = 0; i < 5; ++i) {
 		if (!DXUtils::CreateTextureBuffer(
 				bloomBuffer[i], bloomWidth, bloomHeight, false, format, bindFlag)) {
 			std::cout << "failed create bloom buffer" << std::endl;
@@ -901,9 +906,21 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// toneMappingPS
-	if (!DXUtils::CreatePixelShader(L"ToneMappingPS.hlsl", toneMappingPS)) {
-		std::cout << "failed create tone mapping ps" << std::endl;
+	// combineBloomPS
+	if (!DXUtils::CreatePixelShader(L"CombineBloomPS.hlsl", combineBloomPS)) {
+		std::cout << "failed create combine bloom ps" << std::endl;
+		return false;
+	}
+
+	// bloomDownPS
+	if (!DXUtils::CreatePixelShader(L"BloomDownPS.hlsl", bloomDownPS)) {
+		std::cout << "failed create bloom down ps" << std::endl;
+		return false;
+	}
+
+	// bloomUpPS
+	if (!DXUtils::CreatePixelShader(L"BloomUpPS.hlsl", bloomUpPS)) {
+		std::cout << "failed create bloom up ps" << std::endl;
 		return false;
 	}
 
@@ -1267,9 +1284,17 @@ void Graphics::InitGraphicsPSO()
 	shadingBasicEdgePSO.pixelShader = shadingBasicEdgePS;
 	shadingBasicEdgePSO.stencilRef = 1;
 
-	// toneMappingPSO
-	toneMappingPSO = samplingPSO;
-	toneMappingPSO.pixelShader = toneMappingPS;
+	// bloomDownPSO
+	bloomDownPSO = samplingPSO;
+	bloomDownPSO.pixelShader = bloomDownPS;
+
+	// bloomUpPSO
+	bloomUpPSO = samplingPSO;
+	bloomUpPSO.pixelShader = bloomUpPS;
+
+	// combineBloomPSO
+	combineBloomPSO = samplingPSO;
+	combineBloomPSO.pixelShader = combineBloomPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
