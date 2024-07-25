@@ -15,12 +15,6 @@ struct CloudVertex {
 	uint8_t face;
 };
 
-struct LightMeshVertex {
-	Vector3 position;
-	Vector2 texcoord;
-	uint8_t type;
-};
-
 struct SamplingVertex {
 	Vector3 position;
 	Vector2 texcoord;
@@ -55,13 +49,13 @@ struct ChunkConstantData {
 
 struct SkyboxConstantData {
 	Vector3 normalHorizonColor;
-	float dummy1;
+	float skyScale;
 	Vector3 normalZenithColor;
-	float dummy2;
+	float dummy1;
 	Vector3 sunHorizonColor;
-	float dummy3;
+	float dummy2;
 	Vector3 sunZenithColor;
-	float dummy4;
+	float dummy3;
 };
 
 struct LightConstantData {

@@ -26,11 +26,4 @@ private:
 	float m_scale;
 	Vector3 m_radianceColor;
 	float m_radianceWeight;
-
-	std::vector<LightMeshVertex> m_vertices;
-	std::vector<uint32_t> m_indices;
-	UINT m_stride;
-	UINT m_offset;
-	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11Buffer> m_indexBuffer;
 };

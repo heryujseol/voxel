@@ -28,6 +28,7 @@ bool Skybox::Initialize(float scale)
 		return false;
 	}
 
+	m_constantData.skyScale = scale;
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create constant buffer in skybox" << std::endl;
 		return false;

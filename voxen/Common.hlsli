@@ -24,13 +24,13 @@ cbuffer CameraConstantBuffer : register(b7)
 cbuffer SkyboxConstantBuffer : register(b8)
 {
     float3 normalHorizonColor;
-    float dummy1;
+    float skyScale;
     float3 normalZenithColor;
-    float dummy2;
+    float skyboxDummyData1;
     float3 sunHorizonColor;
-    float dummy3;
+    float skyboxDummyData2;
     float3 sunZenithColor;
-    float dummy4;
+    float skyboxDummyData3;
 };
 
 cbuffer LightConstantBuffer : register(b9)
