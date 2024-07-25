@@ -48,6 +48,15 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 {
 	UpdatePosition(keyPressed, dt);
 	UpdateViewDirection(mouseX, mouseY);
+	/////////////////////////////
+	if (keyPressed['R']) {
+		m_constantData.dummy.x = 0.0f;
+		m_isOnConstantDirtyFlag = true;
+	}
+	else {
+		m_constantData.dummy.x = 1.0f;
+		m_isOnConstantDirtyFlag = true;
+	}/////////////////////////////
 
 	if (m_isOnConstantDirtyFlag) {
 		m_constantData.view = GetViewMatrix().Transpose();

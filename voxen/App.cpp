@@ -195,14 +195,13 @@ void App::Render()
 		if (m_camera.IsUnderWater()) {
 			RenderWaterFilter();
 		}
+		else {
+			Graphics::context->CopyResource(
+				Graphics::bloomBuffer[0].Get(), Graphics::basicBuffer.Get());
+		}
 		
-		Bloom();
+		m_postEffect.Bloom();
 	}
-	
-	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
-	Graphics::SetPipelineStates(Graphics::toneMappingPSO);
-	m_postEffect.Render();
 }
 
 bool App::InitWindow()
@@ -453,14 +452,9 @@ void App::RenderFogFilter()
 
 void App::RenderWaterFilter()
 {
-	ComPtr<ID3D11Texture2D> tmpBuffer = Graphics::bloomBuffer[0].Get();
-	ComPtr<ID3D11ShaderResourceView> tmpSRV = Graphics::bloomSRV[0].Get();
+	Graphics::context->OMSetRenderTargets(1, Graphics::bloomRTV[0].GetAddressOf(), nullptr);
 
-	Graphics::context->CopyResource(tmpBuffer.Get(), Graphics::basicBuffer.Get());
-
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
-
-	Graphics::context->PSSetShaderResources(0, 1, tmpSRV.GetAddressOf());
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 
 	Graphics::context->PSSetConstantBuffers(
 		2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
@@ -546,9 +540,4 @@ void App::RenderWaterPlane()
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
 	ChunkManager::GetInstance()->RenderTransparency();
-}
-
-void App::Bloom()
-{
-
 }

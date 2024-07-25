@@ -31,7 +31,7 @@ float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     
     // absorption color
     float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 0)).rgb;
-    float3 ambientLighting = getAmbientLighting(1.0, textureColor);
+    float3 ambientLighting = getAmbientLighting(0.5, textureColor);
     
     float3 viewPos = mul(float4(input.posWorld, 1.0), view).rgb;
     float3 viewNormal = mul(float4(input.normal, 0.0), view).rgb;

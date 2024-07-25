@@ -25,7 +25,7 @@ float3 getFogColor(float3 sunDir, float3 eyeDir)
     if (isUnderWater)
         fogColor = float3(0.12, 0.26, 0.65);
     
-    return toSRGB(fogColor);
+    return fogColor;
 }
 
 float getFogFactor(float3 pos)
@@ -41,7 +41,7 @@ float getFogFactor(float3 pos)
 
 float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
-    float3 fogColor = getFogColor(sunDir, eyeDir);
+    float3 fogColor = toSRGB(getFogColor(sunDir, eyeDir));
     float3 renderColor = renderTex.Load(input.posProj.xy, sampleIndex).rgb;
     
     float depth = depthTex.Load(input.posProj.xy, sampleIndex).r;

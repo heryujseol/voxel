@@ -54,8 +54,6 @@ private:
 	void RenderMirrorWorld();
 	void RenderWaterPlane();
 
-	void Bloom();
-
 	HWND m_hwnd;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	AppConstantData m_constantData;

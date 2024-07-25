@@ -55,7 +55,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> edgeMaskingPS;
 	extern ComPtr<ID3D11PixelShader> shadingBasicPS;
 	extern ComPtr<ID3D11PixelShader> shadingBasicEdgePS;
-	extern ComPtr<ID3D11PixelShader> toneMappingPS;
+	extern ComPtr<ID3D11PixelShader> bloomDownPS;
+	extern ComPtr<ID3D11PixelShader> bloomUpPS;
+	extern ComPtr<ID3D11PixelShader> combineBloomPS;
 
 
 	// Rasterizer State
@@ -133,9 +135,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> mirrorBlurRTV[2];
 	extern ComPtr<ID3D11ShaderResourceView> mirrorBlurSRV[2];
 
-	extern ComPtr<ID3D11Texture2D> bloomBuffer[4];
-	extern ComPtr<ID3D11RenderTargetView> bloomRTV[4];
-	extern ComPtr<ID3D11ShaderResourceView> bloomSRV[4];
+	extern ComPtr<ID3D11Texture2D> bloomBuffer[5];
+	extern ComPtr<ID3D11RenderTargetView> bloomRTV[5];
+	extern ComPtr<ID3D11ShaderResourceView> bloomSRV[5];
 
 
 	// Depth Stencil Buffer
@@ -170,6 +172,7 @@ namespace Graphics {
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
+	extern D3D11_VIEWPORT bloomViewport;
 
 
 	// device, context, swapChain
@@ -219,5 +222,7 @@ namespace Graphics {
 	extern GraphicsPSO edgeMaskingPSO;
 	extern GraphicsPSO shadingBasicPSO;
 	extern GraphicsPSO shadingBasicEdgePSO;
-	extern GraphicsPSO toneMappingPSO;
+	extern GraphicsPSO bloomDownPSO;
+	extern GraphicsPSO bloomUpPSO;
+	extern GraphicsPSO combineBloomPSO;
 }

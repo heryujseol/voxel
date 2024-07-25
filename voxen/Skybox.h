@@ -19,12 +19,12 @@ public:
 	void Update(float dt);
 	void Render();
 
+	SkyboxConstantData m_constantData;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	Vector3 GetSun() { return m_constantData.sunDir; };
 	uint32_t GetTime() { return m_constantData.dateTime; };
 
 private:
-	SkyboxConstantData m_constantData;
 
 	uint32_t m_dateTime;
 	float m_speed;
