@@ -89,8 +89,8 @@ void Cloud::Render()
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
-	Graphics::context->PSSetConstantBuffers(2, 1, m_constantBuffer.GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }

@@ -1,9 +1,9 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2D renderTex : register(t0);
 Texture2D bloomTex : register(t1);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
@@ -19,7 +19,7 @@ float3 linearToneMapping(float3 color, float exposure)
     return color;
 }
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(psInput input) : SV_TARGET
 {
     float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
     float3 bloomColor = bloomTex.Sample(linearClampSS, input.texcoord).rgb;

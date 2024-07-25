@@ -1,6 +1,6 @@
-#include "CommonVS.hlsli"
+#include "Common.hlsli"
 
-cbuffer ChunkConstantBuffer : register(b1)
+cbuffer ChunkConstantBuffer : register(b0)
 {
     matrix world;
 }

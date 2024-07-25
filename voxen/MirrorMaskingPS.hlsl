@@ -1,8 +1,8 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t0);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
@@ -11,7 +11,7 @@ struct vsOutput
     uint type : TYPE;
 };
 
-float main(vsOutput input) : SV_Target0
+float main(psInput input) : SV_Target0
 {
     if (input.normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;

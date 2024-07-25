@@ -1,9 +1,9 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> renderTex : register(t0);
 Texture2DMS<float, SAMPLE_COUNT> depthTex : register(t1);
 
-cbuffer FogConstantBuffer : register(b2)
+cbuffer FogConstantBuffer : register(b0)
 {
     float fogDistMin;
     float fogDistMax;
@@ -11,19 +11,19 @@ cbuffer FogConstantBuffer : register(b2)
     float dummy;
 };
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 
-float3 getFogColor(float3 sunDir, float3 eyeDir)
+float3 getFogColor(float3 lightDir, float3 eyeDir)
 {
-    float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
+    float dirWeight = henyeyGreensteinPhase(lightDir, eyeDir, 0.625);
     
-    float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
+    float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, dirWeight);
     if (isUnderWater)
-        fogColor = float3(0.12, 0.26, 0.65);
+        fogColor = sRGB2Linear(float3(0.12, 0.26, 0.65));
     
     return fogColor;
 }
@@ -39,9 +39,9 @@ float getFogFactor(float3 pos)
     return fogFactor;
 } 
 
-float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
+float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
-    float3 fogColor = toSRGB(getFogColor(sunDir, eyeDir));
+    float3 fogColor = getFogColor(lightDir, eyeDir);
     float3 renderColor = renderTex.Load(input.posProj.xy, sampleIndex).rgb;
     
     float depth = depthTex.Load(input.posProj.xy, sampleIndex).r;

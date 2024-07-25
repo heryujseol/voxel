@@ -87,9 +87,9 @@ bool PostEffect::Initialize()
 	return true;
 }
 
-void PostEffect::Update(float dt, Camera& camera)
+void PostEffect::Update(float dt, bool isUnderWater)
 {
-	if (camera.IsUnderWater()) {
+	if (isUnderWater) {
 		m_waterAdaptationTime += dt;
 		m_waterAdaptationTime = min(m_waterMaxDuration, m_waterAdaptationTime);
 
@@ -98,6 +98,8 @@ void PostEffect::Update(float dt, Camera& camera)
 		m_waterFilterConstantData.filterColor.x = 0.075f + 0.075f * percetage;
 		m_waterFilterConstantData.filterColor.y = 0.125f + 0.125f * percetage;
 		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * percetage;
+		m_waterFilterConstantData.filterColor =
+			Utils::SRGB2Linear(m_waterFilterConstantData.filterColor);
 		m_waterFilterConstantData.filterStrength = 0.7f - (0.3f * percetage);
 
 		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);

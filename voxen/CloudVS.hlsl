@@ -1,10 +1,6 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-}
+#include "Common.hlsli"
 
-cbuffer CloudConstantBuffer : register(b1)
+cbuffer CloudConstantBuffer : register(b0)
 {
     matrix world;
     float3 volumeColor;

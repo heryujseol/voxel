@@ -10,30 +10,27 @@
 using namespace Microsoft::WRL;
 
 class Light {
-public:
-	static const int CASCADE_NUM = 4;
 
+public:
 	Light();
 	~Light();
 
 	bool Initialize();
-	void Update(float dt, Camera& camera);
+	void Update(UINT dateTime);
 
-	ComPtr<ID3D11Buffer> m_constantBuffer;
-	D3D11_VIEWPORT m_viewPorts[4];
+	ComPtr<ID3D11Buffer> m_lightConstantBuffer;
+	LightConstantData m_lightConstantData;
 
 private:
-
-	uint32_t m_dateTime;
-	Vector3 m_up;
 	Vector3 m_dir;
-	Vector4 m_lightPos;
+	float m_scale;
+	Vector3 m_radianceColor;
+	float m_radianceWeight;
 
-	const uint32_t DATE_CYCLE_AMOUNT = 24000;
-	const uint32_t DATE_REAL_TIME = 30; // 60
-	const float DATE_TIME_SPEED = (float)DATE_CYCLE_AMOUNT / DATE_REAL_TIME;
-
-	
-	LightConstantData m_constantData;
-	
+	std::vector<LightMeshVertex> m_vertices;
+	std::vector<uint32_t> m_indices;
+	UINT m_stride;
+	UINT m_offset;
+	ComPtr<ID3D11Buffer> m_vertexBuffer;
+	ComPtr<ID3D11Buffer> m_indexBuffer;
 };

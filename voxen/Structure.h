@@ -15,6 +15,12 @@ struct CloudVertex {
 	uint8_t face;
 };
 
+struct LightMeshVertex {
+	Vector3 position;
+	Vector2 texcoord;
+	uint8_t type;
+};
+
 struct SamplingVertex {
 	Vector3 position;
 	Vector2 texcoord;
@@ -34,11 +40,11 @@ struct InstanceInfoVertex {
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;
+	Matrix invProj;
 	Vector3 eyePos;
 	float maxRenderDistance;
 	Vector3 eyeDir;
 	float lodRenderDistance;
-	Matrix invProj;
 	int isUnderWater;
 	Vector3 dummy;
 };
@@ -48,16 +54,21 @@ struct ChunkConstantData {
 };
 
 struct SkyboxConstantData {
-	Vector3 sunDir;
-	float skyScale;
 	Vector3 normalHorizonColor;
-	uint32_t dateTime;
+	float dummy1;
 	Vector3 normalZenithColor;
-	float sunStrength;
-	Vector3 sunHorizonColor; 
-	float moonStrength;
+	float dummy2;
+	Vector3 sunHorizonColor;
+	float dummy3;
 	Vector3 sunZenithColor;
-	float dummy;
+	float dummy4;
+};
+
+struct LightConstantData {
+	Vector3 lightDir;
+	float lightScale;
+	Vector3 radianceColor;
+	float radianceWeight;
 };
 
 struct CloudConstantData {
@@ -72,7 +83,7 @@ struct BlurConstantData {
 	Vector2 dummy;
 };
 
-struct LightConstantData {
+struct ShadowConstantData {
 	Matrix view[4];
 	Matrix proj[4];
 	Matrix invProj[4];

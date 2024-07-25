@@ -438,4 +438,14 @@ namespace MeshGenerator {
 
 		SetSquareIndices(indices, 0);
 	}
+
+	static void CreateLightMeshGenerator(std::vector<LightMeshVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		// sun
+		
+
+		// moon
+
+		// 
+	}
 }

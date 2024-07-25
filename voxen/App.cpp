@@ -19,7 +19,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_hwnd(), m_camera(), m_skybox(), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
+	: m_hwnd(), m_constantBuffer(nullptr), m_constantData(), m_camera(), m_skybox(), m_cloud(),
+	  m_light(), m_postEffect(), m_dateTime(0), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
 	  m_keyPressed{
 		  false,
 	  },
@@ -105,10 +106,7 @@ void App::Run()
 			ImGui::Begin("Scene Control");
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
-			Vector3 sun = m_skybox.GetSun();
-			ImGui::Text("SunDir : %.2f %.2f", sun.x, sun.y);
-			uint32_t time = m_skybox.GetTime();
-			ImGui::Text("time : %d", time);
+
 			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
 
@@ -127,22 +125,27 @@ void App::Run()
 
 void App::Update(float dt)
 {
+	static float acc = 0.0f;
+
 	if (!m_keyToggle['T']) {
 		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	}
 
-	m_postEffect.Update(dt, m_camera);
+	m_postEffect.Update(dt, m_camera.IsUnderWater());
 	ChunkManager::GetInstance()->Update(dt, m_camera);
 
 	if (m_keyToggle['F']) {
-		m_skybox.Update(dt);
+		acc += DAY_CYCLE_TIME_SPEED * dt;
+		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
+
+		m_skybox.Update(m_dateTime);
+		m_light.Update(m_dateTime);
 		m_cloud.Update(dt, m_camera.GetPosition());
-		m_light.Update(dt, m_camera);
 	}
 	else {
-		m_skybox.Update(0.0f);
+		m_skybox.Update(m_dateTime);
+		m_light.Update(m_dateTime);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
-		m_light.Update(0.0f, m_camera);
 	}
 }
 
@@ -151,12 +154,17 @@ void App::Render()
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
-	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
-	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
-		m_skybox.m_constantBuffer.Get() };
-	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
-	Graphics::context->PSSetConstantBuffers(8, 1, m_constantBuffer.GetAddressOf());
+	std::vector<ID3D11Buffer*> ppConstantBuffers;
+	ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
+	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
+	ppConstantBuffers.push_back(m_light.m_lightConstantBuffer.Get());
+	ppConstantBuffers.push_back(m_constantBuffer.Get());
 
+	Graphics::context->VSSetConstantBuffers(
+		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
+	Graphics::context->PSSetConstantBuffers(
+		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
+	
 	// 1. Deferred Render Pass
 	{
 		FillGBuffer();
@@ -175,7 +183,7 @@ void App::Render()
 		if (m_camera.IsUnderWater()) {
 			RenderFogFilter();
 			RenderSkybox();
-			RenderCloud();		 
+			RenderCloud();
 			RenderWaterPlane();
 		}
 		else {
@@ -199,7 +207,7 @@ void App::Render()
 			Graphics::context->CopyResource(
 				Graphics::bloomBuffer[0].Get(), Graphics::basicBuffer.Get());
 		}
-		
+
 		m_postEffect.Bloom();
 	}
 }
@@ -282,7 +290,7 @@ bool App::InitScene()
 	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))
 		return false;
 
-	if (!m_skybox.Initialize(550.0f, 0.2f))
+	if (!m_skybox.Initialize(550.0f))
 		return false;
 
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
@@ -362,7 +370,7 @@ void App::RenderSSAO()
 		std::vector<ID3D11Buffer*> ppConstants;
 		ppConstants.push_back(m_postEffect.m_ssaoConstantBuffer.Get());
 		ppConstants.push_back(m_postEffect.m_ssaoNoiseConstantBuffer.Get());
-		Graphics::context->PSSetConstantBuffers(2, (UINT)ppConstants.size(), ppConstants.data());
+		Graphics::context->PSSetConstantBuffers(0, (UINT)ppConstants.size(), ppConstants.data());
 
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
 		ppSRVs.push_back(Graphics::normalEdgeSRV.Get());
@@ -416,7 +424,8 @@ void App::ConvertToMSAA()
 
 void App::RenderSkybox()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
@@ -444,7 +453,7 @@ void App::RenderFogFilter()
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::context->PSSetConstantBuffers(
-		2, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
+		0, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
 	m_postEffect.Render();
@@ -457,7 +466,7 @@ void App::RenderWaterFilter()
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 
 	Graphics::context->PSSetConstantBuffers(
-		2, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
+		0, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
 	m_postEffect.Render();
@@ -495,7 +504,7 @@ void App::RenderMirrorWorld()
 	{
 		// mirror constant buffer: mirror plane view matrix
 		Graphics::context->VSSetConstantBuffers(
-			0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
+			7, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
 		Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
 		m_cloud.Render();
 	}
@@ -518,12 +527,12 @@ void App::RenderMirrorWorld()
 	}
 
 	// 원래의 글로벌로 두기
-	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(7, 1, m_camera.m_constantBuffer.GetAddressOf());
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }
 
-void App::RenderWaterPlane() 
+void App::RenderWaterPlane()
 {
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());

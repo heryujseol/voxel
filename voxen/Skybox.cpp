@@ -1,3 +1,4 @@
+#include "App.h"
 #include "Skybox.h"
 #include "Graphics.h"
 #include "DXUtils.h"
@@ -6,17 +7,14 @@
 #include <algorithm>
 
 Skybox::Skybox()
-	: m_dateTime(0), m_speed(0.0f), m_stride(sizeof(SkyboxVertex)), m_offset(0),
-	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
+	: m_stride(sizeof(SkyboxVertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
 {
 }
 
 Skybox::~Skybox() {}
 
-bool Skybox::Initialize(float scale, float speed)
+bool Skybox::Initialize(float scale)
 {
-	m_speed = speed;
-
 	MeshGenerator::CreateSkyboxMesh(m_vertices, m_indices, scale);
 	std::reverse(m_indices.begin(), m_indices.end()); // for front CW at inner
 
@@ -30,8 +28,6 @@ bool Skybox::Initialize(float scale, float speed)
 		return false;
 	}
 
-	m_constantData.skyScale = scale;
-	m_constantData.sunDir = Vector3(1.0f, 0.0f, 0.0f);
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create constant buffer in skybox" << std::endl;
 		return false;
@@ -40,94 +36,77 @@ bool Skybox::Initialize(float scale, float speed)
 	return true;
 }
 
-void Skybox::Update(float dt)
+void Skybox::Update(uint32_t dateTime)
 {
-	static float acc = 0.0f;
-
-	// dateTime
-	acc += DATE_TIME_SPEED * dt;
-	m_dateTime = (uint32_t)acc;
-	m_dateTime %= DATE_CYCLE_AMOUNT;
-
-	// sunDir
-	float angle = (float)m_dateTime / DATE_CYCLE_AMOUNT * 2.0f * Utils::PI;
-	Vector3 sunDir = Vector3::Transform(Vector3(1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
-	sunDir.Normalize();
-
 	// set color & strength
 	Vector3 normalHorizonColor = Vector3(0.0f);
 	Vector3 normalZenithColor = Vector3(0.0f);
 	Vector3 sunHorizonColor = Vector3(0.0f);
 	Vector3 sunZenithColor = Vector3(0.0f);
-	float sunStrength = 0.0f;
 
-	if (1000 <= m_dateTime && m_dateTime < 11000) { // day
+	if (App::DAY_START <= dateTime && dateTime < App::DAY_END) { // day
 		normalHorizonColor = NORMAL_DAY_HORIZON;
 		normalZenithColor = NORMAL_DAY_ZENITH;
 		sunHorizonColor = SUN_DAY_HORIZON;
 		sunZenithColor = SUN_DAY_ZENITH;
-
-		sunStrength = 1.0f;
 	}
-	else if (13700 <= m_dateTime && m_dateTime < 22300) { // night
+	else if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) { // night
 		normalHorizonColor = NORMAL_NIGHT_HORIZON;
 		normalZenithColor = NORMAL_NIGHT_ZENITH;
 		sunHorizonColor = NORMAL_NIGHT_HORIZON;
 		sunZenithColor = NORMAL_NIGHT_ZENITH;
-
-		sunStrength = 0.0f;
 	}
 	else { // mix
-		if (m_dateTime < 1000)
-			m_dateTime += DATE_CYCLE_AMOUNT;
+		if (dateTime < App::DAY_START)
+			dateTime += App::DAY_CYCLE_AMOUNT;
 
 		// normal color
-		if (11000 <= m_dateTime && m_dateTime < 13700) {
-			float w = (float)(m_dateTime - 11000) / 2700.0f;
+		if (App::DAY_END <= dateTime && dateTime < App::NIGHT_START) {
+			float w = (float)(dateTime - App::DAY_END) / (App::NIGHT_START - App::DAY_END);
+
 			normalHorizonColor = Utils::Lerp(NORMAL_DAY_HORIZON, NORMAL_NIGHT_HORIZON, w);
 			normalZenithColor = Utils::Lerp(NORMAL_DAY_ZENITH, NORMAL_NIGHT_ZENITH, w);
-
-			sunStrength = Utils::Smootherstep(0.0f, 1.0f, 1.0f - w);
 		} // 11000 ~ 13700 | 22300 ~ 25000
-		else if (22300 <= m_dateTime && m_dateTime <= 25000) {
-			float w = (float)(m_dateTime - 22300) / 2700.0f;
+		else if (App::NIGHT_END <= dateTime && dateTime <= App::DAY_START + App::DAY_CYCLE_AMOUNT) {
+			float w = (float)(dateTime - App::NIGHT_END) /
+					  (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::NIGHT_END);
+
 			normalHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, NORMAL_DAY_HORIZON, w);
 			normalZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, NORMAL_DAY_ZENITH, w);
-
-			sunStrength = Utils::Smootherstep(0.0f, 1.0f, w);
 		}
 
 		// sun color
-		if (11000 <= m_dateTime && m_dateTime < 12500) { // day ~ sunset
-			float w = (float)(m_dateTime - 11000) / 1500.0f;
+		if (App::DAY_END <= dateTime && dateTime < App::MAX_SUNSET) { // day ~ sunset
+			float w = (float)(dateTime - App::DAY_END) / (App::MAX_SUNSET - App::DAY_END);
+
 			sunHorizonColor = Utils::Lerp(SUN_DAY_HORIZON, SUN_SUNSET_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_DAY_ZENITH, SUN_SUNSET_ZENITH, w);
 		}
-		else if (12500 <= m_dateTime && m_dateTime < 13700) { // sunset ~ night
-			float w = (float)(m_dateTime - 12500) / 1200.0f;
+		else if (App::MAX_SUNSET <= dateTime && dateTime < App::NIGHT_START) { // sunset ~ night
+			float w = (float)(dateTime - App::MAX_SUNSET) / (App::NIGHT_START - App::MAX_SUNSET);
+
 			sunHorizonColor = Utils::Lerp(SUN_SUNSET_HORIZON, NORMAL_NIGHT_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_SUNSET_ZENITH, NORMAL_NIGHT_ZENITH, w);
 		}
-		else if (22300 <= m_dateTime && m_dateTime < 23500) { // night ~ sunrise
-			float w = (float)(m_dateTime - 22300) / 1200.0f;
+		else if (App::NIGHT_END <= dateTime && dateTime < App::MAX_SUNRISE) { // night ~ sunrise
+			float w = (float)(dateTime - App::NIGHT_END) / (App::MAX_SUNRISE - App::NIGHT_END);
+
 			sunHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, SUN_SUNRISE_HORIZON, w);
 			sunZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, SUN_SUNRISE_ZENITH, w);
 		}
 		else { // sunrise ~ day
-			float w = (float)(m_dateTime - 23500) / 1500.0f;
+			float w = (float)(dateTime - App::MAX_SUNRISE) /
+					  (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
+
 			sunHorizonColor = Utils::Lerp(SUN_SUNRISE_HORIZON, SUN_DAY_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_SUNRISE_ZENITH, SUN_DAY_ZENITH, w);
 		}
 	}
 
-	m_constantData.dateTime = m_dateTime % DATE_CYCLE_AMOUNT;
-	m_constantData.sunDir = sunDir;
-	m_constantData.normalHorizonColor = normalHorizonColor;
-	m_constantData.normalZenithColor = normalZenithColor;
-	m_constantData.sunHorizonColor = sunHorizonColor;
-	m_constantData.sunZenithColor = sunZenithColor;
-	m_constantData.sunStrength = sunStrength;
-	m_constantData.moonStrength = 1.0f - sunStrength;
+	m_constantData.normalHorizonColor = Utils::SRGB2Linear(normalHorizonColor);
+	m_constantData.normalZenithColor = Utils::SRGB2Linear(normalZenithColor);
+	m_constantData.sunHorizonColor = Utils::SRGB2Linear(sunHorizonColor);
+	m_constantData.sunZenithColor = Utils::SRGB2Linear(sunZenithColor);
 
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }

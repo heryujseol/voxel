@@ -1,8 +1,8 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2D renderTex : register(t0);
 
-struct vsOutput
+struct psInput
 {
     float4 position : SV_POSITION;
     float2 texcoord : TEXCOORD;
@@ -10,7 +10,7 @@ struct vsOutput
 
 static const float gaussianKernel[5] = { 0.0545, 0.2442, 0.4026, 0.2442, 0.0545 };
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(psInput input) : SV_TARGET
 {
     float4 color = float4(0.0, 0.0, 0.0, 0.0);
     float2 offset = float2(0.0, 0.0);

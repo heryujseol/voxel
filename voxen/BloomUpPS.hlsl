@@ -1,14 +1,14 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2D renderTex : register(t0);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(psInput input) : SV_TARGET
 {
     float width, height, lod;
     renderTex.GetDimensions(0, width, height, lod);

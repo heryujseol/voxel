@@ -1,11 +1,11 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t1);
 Texture2D mirrorWorldTex : register(t2);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t3);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
@@ -23,7 +23,7 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
-float4 main(vsOutput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
+float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
     float3 normal = input.normal;
     if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)

@@ -1,15 +1,15 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> normalEdgeTex : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(vsOutput input) : SV_Target
+float4 main(psInput input) : SV_Target
 {
     float sumEdge = 0;
     float sumW = 0;

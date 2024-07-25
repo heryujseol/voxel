@@ -1,17 +1,17 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> normalEdgeTex : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 Texture2DMS<float4, SAMPLE_COUNT> albedoTex : register(t2);
 Texture2D ssaoTex : register(t3);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 
-float4 main(vsOutput input) : SV_TARGET
+float4 main(psInput input) : SV_TARGET
 {
     float3 normal = normalEdgeTex.Load(input.posProj.xy, 0).xyz;
     float4 position = positionTex.Load(input.posProj.xy, 0);
@@ -36,7 +36,7 @@ float4 main(vsOutput input) : SV_TARGET
     return float4(clampLighting, 1.0);
 }
 
-float4 mainMSAA(vsOutput input) : SV_TARGET
+float4 mainMSAA(psInput input) : SV_TARGET
 {   
     float3 sumClampLighting = float3(0.0, 0.0, 0.0);
     

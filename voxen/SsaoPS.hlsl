@@ -1,20 +1,20 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> normalEdgeTex : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t1);
 Texture2DMS<uint, SAMPLE_COUNT> coverageTex : register(t2);
 
-cbuffer SsaoConstantBuffer : register(b2)
+cbuffer SsaoConstantBuffer : register(b0)
 {
     float4 sampleKernel[64];
 }
 
-cbuffer SsaoNoiseConstantBuffer : register(b3)
+cbuffer SsaoNoiseConstantBuffer : register(b1)
 {
     float4 rotationNoise[16];
 }
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
@@ -72,7 +72,7 @@ float getOcclusionFactor(float2 pos, float3 viewPos, float3 normal)
     return occlusionFactor / 64.0;
 }
 
-float main(vsOutput input) : SV_TARGET
+float main(psInput input) : SV_TARGET
 {   
     float3 normal = normalEdgeTex.Load(input.posProj.xy, 0).xyz;
     if (length(normal) == 0)
@@ -88,7 +88,7 @@ float main(vsOutput input) : SV_TARGET
     return 1.0 - occlusionFactor;
 }
 
-float mainMSAA(vsOutput input) : SV_TARGET
+float mainMSAA(psInput input) : SV_TARGET
 {
     uint4 coverage;
     coverage.x = coverageTex.Load(input.posProj.xy, 0);

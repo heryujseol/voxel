@@ -1,10 +1,10 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 Texture2D mirrorDepthTex : register(t2);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
@@ -21,7 +21,7 @@ struct psOutput
     uint coverage : SV_Target3;
 };
 
-psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
+psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
     //float temperature = 0.5;
     //float downfall = 1.0;
@@ -65,7 +65,7 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     return output;
 }
 
-float4 mainMirror(vsOutput input) : SV_TARGET
+float4 mainMirror(psInput input) : SV_TARGET
 {
 #ifdef USE_ALPHA_CLIP 
     if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
