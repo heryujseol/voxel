@@ -361,7 +361,7 @@ bool Graphics::InitRenderTargetBuffers()
 	}
 
 	// position
-	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
 			positionBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {

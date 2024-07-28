@@ -48,9 +48,9 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
     
     psOutput output;
     
-    float edge = coverage != 0xf; // 0b1111 -> 1111은 모서리가 아닌 픽셀임
+    bool edge = (coverage != 0xf); // 0b1111 -> 1111은 모서리가 아닌 픽셀임
     
-    output.normalEdge = float4(normalize(input.normal), edge);
+    output.normalEdge = float4(normalize(input.normal), float(edge));
     
     output.position = float4(input.posWorld, 1.0);
     

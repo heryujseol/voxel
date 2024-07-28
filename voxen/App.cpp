@@ -349,7 +349,7 @@ void App::MaskMSAAEdge()
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::deferredDSV.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::albedoSRV.Get());
+	ppSRVs.push_back(Graphics::normalEdgeSRV.Get());
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 

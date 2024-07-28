@@ -164,8 +164,6 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     
     float faceAmbient = getFaceAmbient(normal);
     
-    if (cameraDummyData.x == 0)
-        ao = 1.0;
     return ao * albedo * ambientColor * faceAmbient;
 }
 

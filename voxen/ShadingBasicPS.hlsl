@@ -58,7 +58,6 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
         
         float3 lighting = ambientLighting + directLighting;
-        
         float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
         sumClampLighting += clampLighting;
     }
