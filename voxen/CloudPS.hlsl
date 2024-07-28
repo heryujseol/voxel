@@ -1,12 +1,5 @@
 #include "Common.hlsli"
 
-struct psInput
-{
-    float4 posProj : SV_Position;
-    float3 posWorld : POSITION;
-    uint face : FACE;
-};
-
 cbuffer CloudConstantBuffer : register(b0)
 {
     matrix world;
@@ -14,69 +7,35 @@ cbuffer CloudConstantBuffer : register(b0)
     float cloudScale;
 }
 
-float3 getFaceColor(uint face)
+struct psInput
 {
-    float3 faceColor = float3(0.0, 0.0, 0.0);
-    
-    if (face == 0 || face == 1)
-    {
-        faceColor = float3(0.95, 0.95, 0.95);
-    }
-    else if (face == 4 || face == 5)
-    {
-        faceColor = float3(0.9, 0.9, 0.9);
-    }
-    else if (face == 3)
-    {
-        faceColor  = float3(1.0, 1.0, 1.0);
-    }
-    else
-    {
-        faceColor = float3(0.75, 0.75, 0.75);
-    }
-    
-    return sRGB2Linear(faceColor);
-}
+    float4 posProj : SV_POSITION;
+    float3 posWorld : POSITION;
+    uint face : FACE;
+};
 
 float4 main(psInput input) : SV_TARGET
-{
-    float distance = length(input.posWorld.xz - eyePos.xz);
-    
-    float sunDirWeight = henyeyGreensteinPhase(lightDir, eyeDir, 0.625);
-    float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
-    
+{   
     // 거리가 멀면 horizon color 선택 
+    float distance = length(input.posWorld.xz - eyePos.xz);
     float horizonWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
-    float3 color = volumeColor * getFaceColor(input.face);
-    color = lerp(color, horizonColor, horizonWeight);
+    float3 albedo = volumeColor;
     
-    float sunAltitude = sin(lightDir.y);
-    float dayAltitude = PI / 12.0;
-    float nightAltitude = -PI * 0.5 * (1.7 / 6.0);
-    float maxHorizonAltitude = -PI / 24.0;
+    // 바라보는 방향에 대한 anisotropy 
+    float sunAniso = henyeyGreensteinPhase(lightDir, eyeDir, 0.65);
+    float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
+    albedo = lerp(albedo, eyeHorizonColor, horizonWeight);
     
-    float3 nightColor = sRGB2Linear(float3(0.04, 0.05, 0.09));
+    // ambient lighting
+    float3 normal = getNormal(input.face);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo, normal);
     
-    if (dayAltitude < sunAltitude)
-    {
-        color *= float3(1.0, 1.0, 1.0);
-    }
-    else if (maxHorizonAltitude < sunAltitude && sunAltitude <= dayAltitude)
-    {
-        color *= lerp(horizonColor, float3(1, 1, 1), smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude));
-    }
-    else if (nightAltitude < sunAltitude && sunAltitude <= maxHorizonAltitude)
-    {
-        color *= lerp(nightColor, horizonColor, smoothstep(nightAltitude, maxHorizonAltitude, sunAltitude));
-    }
-    else // nightAltitude
-    {
-        color *= nightColor;
-    }
+    // direct lighting
+    float3 directLighting = getDirectLighting(normal, input.posWorld, albedo, 0.0, 0.96);
     
     // distance alpha
     float alphaWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
     float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.75]
     
-    return float4(color, alpha);
+    return float4(ambientLighting + directLighting, alpha);
 }

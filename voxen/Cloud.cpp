@@ -77,9 +77,9 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 		return;
 
 	Vector3 worldPosition = m_mapCenterPosition + Vector3(0.0f, m_height, 0.0f);
-	m_constantData.world = Matrix::CreateScale(CLOUD_SCALE_SIZE, 4.0f, CLOUD_SCALE_SIZE) *
-						   Matrix::CreateTranslation(worldPosition);
-	m_constantData.world = m_constantData.world.Transpose();
+	Matrix worldMatrix = Matrix::CreateScale(CLOUD_SCALE_SIZE, 4.0f, CLOUD_SCALE_SIZE) *
+						  Matrix::CreateTranslation(worldPosition);
+	m_constantData.world = worldMatrix.Transpose();
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
 
@@ -153,9 +153,9 @@ bool Cloud::BuildCloud()
 			return false;
 		}
 
+		m_constantData.world = Matrix();
 		m_constantData.cloudScale = CLOUD_SCALE_SIZE * CLOUD_MAP_SIZE * 0.5;
 		m_constantData.volumeColor = Vector3(1.0f, 1.0f, 1.0f);
-		m_constantData.world = Matrix();
 		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 			std::cout << "failed create constant buffer in cloud" << std::endl;
 			return false;

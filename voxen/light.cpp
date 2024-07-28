@@ -27,7 +27,7 @@ bool Light::Initialize()
 
 void Light::Update(UINT dateTime)
 {
-	float MAX_RADIANCE_WEIGHT = 3.0;
+	const float MAX_RADIANCE_WEIGHT = 2.0;
 
 	// m_dir
 	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
@@ -57,8 +57,9 @@ void Light::Update(UINT dateTime)
 	}
 
 	m_lightConstantData.lightDir = m_dir;
-	m_lightConstantData.lightScale = m_scale;
-	m_lightConstantData.radianceColor = m_radianceColor;
 	m_lightConstantData.radianceWeight = m_radianceWeight;
+	m_lightConstantData.radianceColor = m_radianceColor;
+	m_lightConstantData.maxRadianceWeight = MAX_RADIANCE_WEIGHT;
+	
 	DXUtils::UpdateConstantBuffer(m_lightConstantBuffer, m_lightConstantData);
 }

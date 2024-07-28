@@ -18,9 +18,9 @@ namespace Utils {
 	static const float invPI = 1.0f / PI;
 
 	static Vector3 SRGB2Linear(Vector3 color) { 
-		float r = std::pow(color.x, 2.2f);
-		float g = std::pow(color.y, 2.2f);
-		float b = std::pow(color.z, 2.2f);
+		float r = std::pow(std::clamp(color.x, 0.0f, 1.0f), 2.2f);
+		float g = std::pow(std::clamp(color.y, 0.0f, 1.0f), 2.2f);
+		float b = std::pow(std::clamp(color.z, 0.0f, 1.0f), 2.2f);
 
 		return Vector3(r, g, b);
 	}

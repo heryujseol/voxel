@@ -50,14 +50,11 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
     
     float edge = coverage != 0xf; // 0b1111 -> 1111은 모서리가 아닌 픽셀임
     
-    float3 viewNormal = mul(float4(input.normal, 0.0), view).xyz; // must be [n * ITworld * ITview]
-    output.normalEdge = float4(normalize(viewNormal), edge);
+    output.normalEdge = float4(normalize(input.normal), edge);
     
-    float3 viewPosition = mul(float4(input.posWorld, 1.0), view).xyz;
-    output.position = float4(viewPosition, 1.0);
+    output.position = float4(input.posWorld, 1.0);
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
-    
     output.albedo = float4(albedo);
     
     output.coverage = coverage;
@@ -80,5 +77,7 @@ float4 mainMirror(psInput input) : SV_TARGET
         discard;
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
-    return albedo;
+    float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
+    
+    return float4(ambient, albedo.a);
 }

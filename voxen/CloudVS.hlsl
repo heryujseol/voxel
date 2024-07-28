@@ -4,7 +4,7 @@ cbuffer CloudConstantBuffer : register(b0)
 {
     matrix world;
     float3 volumeColor;
-    float density;
+    float cloudScale;
 }
 
 struct vsInput

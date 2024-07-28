@@ -19,7 +19,7 @@ struct psInput
 
 float3 getFogColor(float3 lightDir, float3 eyeDir)
 {
-    float dirWeight = henyeyGreensteinPhase(lightDir, eyeDir, 0.625);
+    float dirWeight = henyeyGreensteinPhase(lightDir, eyeDir, 0.65);
     
     float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, dirWeight);
     if (isUnderWater)

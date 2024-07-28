@@ -189,7 +189,7 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			RenderFogFilter(); // **Fog Depth 상이 안맺힌 곳 처리가 필요
+			RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();
 		}

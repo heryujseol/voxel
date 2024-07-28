@@ -85,7 +85,7 @@ float4 main(psInput input) : SV_TARGET
         moonTexcoord += indexUV; // moonTexcoord : [0,0]~[4,2] 
         moonTexcoord = float2(moonTexcoord.x / col, moonTexcoord.y / row); // [4,2]->[1,1]
         
-        float moonRadianceWeight = 1.0 - radianceWeight;
+        float moonRadianceWeight = (maxRadianceWeight - radianceWeight) / maxRadianceWeight;
 #ifdef USE_MIRROR
         color += moonTexture.SampleLevel(linearClampSS, moonTexcoord, 0.0).rgb * moonRadianceWeight;
 #else
@@ -94,7 +94,9 @@ float4 main(psInput input) : SV_TARGET
     }
     
     // background sky
-    float sunDirWeight = sunAltitude > showSectionAltitude ? henyeyGreensteinPhase(lightDir, eyeDir, 0.625) : 0.0;
+    float sunDirWeight = 0.0;
+    if (sunAltitude > showSectionAltitude)
+        sunDirWeight = clamp(henyeyGreensteinPhase(lightDir, eyeDir, 0.65), 0.0, 1.0);
     float posAltitude = sin(posDir.y);
    
     float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);

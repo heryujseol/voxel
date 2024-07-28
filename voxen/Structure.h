@@ -60,9 +60,9 @@ struct SkyboxConstantData {
 
 struct LightConstantData {
 	Vector3 lightDir;
-	float lightScale;
-	Vector3 radianceColor;
 	float radianceWeight;
+	Vector3 radianceColor;
+	float maxRadianceWeight;
 };
 
 struct CloudConstantData {

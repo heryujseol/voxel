@@ -27,7 +27,7 @@ float4 main(psInput input) : SV_TARGET
     float metallic = 0.0;
     float roughness = 0.8;
     
-    float3 ambientLighting = getAmbientLighting(ao, albedo);
+    float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
     float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
     
     float3 lighting = ambientLighting + directLighting;
@@ -54,7 +54,7 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float metallic = 0.0;
         float roughness = 0.8;
         
-        float3 ambientLighting = getAmbientLighting(ao, albedo);
+        float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
         float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
         
         float3 lighting = ambientLighting + directLighting;

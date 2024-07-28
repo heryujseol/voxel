@@ -31,11 +31,9 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     
     // absorption color
     float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 0)).rgb;
-    float3 ambientLighting = getAmbientLighting(0.5, textureColor);
+    float3 ambientLighting = getAmbientLighting(1.0, textureColor, input.normal);
     
-    float3 viewPos = mul(float4(input.posWorld, 1.0), view).rgb;
-    float3 viewNormal = mul(float4(input.normal, 0.0), view).rgb;
-    float3 directLighting = getDirectLighting(viewNormal, viewPos, textureColor, 0.0, 0.4);
+    float3 directLighting = getDirectLighting(input.normal, input.posWorld, textureColor, 0.0, 0.05);
     
     float3 waterColor = ambientLighting + directLighting;
     
@@ -51,8 +49,8 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     else
     {
         // absorption factor
-        float3 originViewPos = positionTex.Load(input.posProj.xy, sampleIndex).xyz;
-        float objectDistance = length(originViewPos);
+        float3 originPosition = positionTex.Load(input.posProj.xy, sampleIndex).xyz;
+        float objectDistance = length(eyePos - originPosition);
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
         float absorptionCoeff = 0.1;

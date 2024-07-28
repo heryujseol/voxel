@@ -24,9 +24,10 @@ float4 main(psInput input) : SV_TARGET
     float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
     float3 bloomColor = bloomTex.Sample(linearClampSS, input.texcoord).rgb;
     
-    float3 combineColor = lerp(renderColor, bloomColor, isUnderWater ? 0.5 : 0.1); // strength Á¶Àý    
+    float scattering = min(henyeyGreensteinPhase(lightDir, eyeDir, 0.95), 1.0) * 0.3;
+    float bloomStrength = scattering + (isUnderWater ? 0.4 : 0.1);
     
-    float3 retColor = linearToneMapping(combineColor, 1.0);
-
-    return float4(retColor, 1.0);
+    float3 combineColor = lerp(renderColor, bloomColor, bloomStrength);
+    
+    return float4(linearToneMapping(combineColor, 1.0), 1.0);
 }
