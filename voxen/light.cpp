@@ -27,7 +27,7 @@ bool Light::Initialize()
 
 void Light::Update(UINT dateTime)
 {
-	const float MAX_RADIANCE_WEIGHT = 2.0;
+	const float MAX_RADIANCE_WEIGHT = 1.5;
 
 	// m_dir
 	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;

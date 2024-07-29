@@ -100,8 +100,9 @@ void PostEffect::Update(float dt, bool isUnderWater, float radiance)
 		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * percetage;
 		m_waterFilterConstantData.filterColor =
 			Utils::SRGB2Linear(m_waterFilterConstantData.filterColor);
-		m_waterFilterConstantData.filterStrength = 0.7f - (0.3f * percetage);
-		m_waterFilterConstantData.filterStrength *= std::clamp(radiance, 0.1f, 1.0f);
+
+		m_waterFilterConstantData.filterStrength =
+			(0.9f - (0.5f * percetage)) * std::clamp(radiance, 0.25f, 1.0f);
 
 		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
 		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);

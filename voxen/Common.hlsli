@@ -203,8 +203,9 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     // todo
     float3 shadowFactor = getShadowFactor();
-    float3 radiance = radianceColor * radianceWeight * shadowFactor; // radiance 값 수정
-
+    //float3 radiance = radianceColor * radianceWeight * shadowFactor; // radiance 값 수정
+    float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
+    
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }
 
