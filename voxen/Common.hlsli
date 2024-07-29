@@ -57,16 +57,6 @@ float3 sRGB2Linear(float3 color)
     return pow(clamp(color, 0.0, 1.0), 2.2);
 }
 
-float henyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-	// L: toLight
-	// V: eyeDir
-	// https://www.shadertoy.com/view/7s3SRH
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
-}
-
 float3 texcoordToViewPos(float2 texcoord, float projDepth)
 {
     float4 posProj;
@@ -149,7 +139,7 @@ float getFaceAmbient(float3 normal)
 float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
 {
     // skycolor ambient (envMap을 가정함)
-    float sunAniso = henyeyGreensteinPhase(lightDir, eyeDir, 0.65);
+    float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
     float3 ambientColor = float3(1.0, 1.0, 1.0);

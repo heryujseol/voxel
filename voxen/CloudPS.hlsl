@@ -22,7 +22,7 @@ float4 main(psInput input) : SV_TARGET
     float3 albedo = volumeColor;
     
     // 바라보는 방향에 대한 anisotropy 
-    float sunAniso = henyeyGreensteinPhase(lightDir, eyeDir, 0.65);
+    float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     albedo = lerp(albedo, eyeHorizonColor, horizonWeight);
     

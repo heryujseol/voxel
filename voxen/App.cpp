@@ -131,7 +131,7 @@ void App::Update(float dt)
 		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	}
 
-	m_postEffect.Update(dt, m_camera.IsUnderWater());
+	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
 	ChunkManager::GetInstance()->Update(dt, m_camera);
 
 	if (m_keyToggle['F']) {
@@ -202,10 +202,6 @@ void App::Render()
 
 		if (m_camera.IsUnderWater()) {
 			RenderWaterFilter();
-		}
-		else {
-			Graphics::context->CopyResource(
-				Graphics::bloomBuffer[0].Get(), Graphics::basicBuffer.Get());
 		}
 
 		m_postEffect.Bloom();
@@ -461,9 +457,11 @@ void App::RenderFogFilter()
 
 void App::RenderWaterFilter()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::bloomRTV[0].GetAddressOf(), nullptr);
+	Graphics::context->CopyResource(Graphics::bloomBuffer[0].Get(), Graphics::basicBuffer.Get());
 
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::bloomSRV[0].GetAddressOf());
 
 	Graphics::context->PSSetConstantBuffers(
 		0, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());

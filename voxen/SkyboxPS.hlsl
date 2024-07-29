@@ -96,7 +96,7 @@ float4 main(psInput input) : SV_TARGET
     // background sky
     float sunDirWeight = 0.0;
     if (sunAltitude > showSectionAltitude)
-        sunDirWeight = clamp(henyeyGreensteinPhase(lightDir, eyeDir, 0.65), 0.0, 1.0);
+        sunDirWeight = max(dot(lightDir, eyeDir), 0.0);
     float posAltitude = sin(posDir.y);
    
     float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);

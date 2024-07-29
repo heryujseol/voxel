@@ -16,7 +16,7 @@ public:
 	~PostEffect();
 
 	bool Initialize();
-	void Update(float dt, bool isUnderWater);
+	void Update(float dt, bool isUnderWater, float radiance);
 	void Render();
 	void Blur(int count, ComPtr<ID3D11ShaderResourceView>& src, ComPtr<ID3D11RenderTargetView>& dst,
 		ComPtr<ID3D11ShaderResourceView> blurSRV[2], ComPtr<ID3D11RenderTargetView> blurRTV[2],
