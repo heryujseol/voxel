@@ -78,11 +78,13 @@ struct BlurConstantData {
 };
 
 struct ShadowConstantData {
-	Matrix view[4];
-	Matrix proj[4];
-	Matrix invProj[4];
-	float topLX[4];
-	float viewWith[4];
+	Matrix view[3];
+	Matrix proj[3];
+	Matrix invProj[3];
+	float topLX[3];
+	float dummy1;
+	float viewWith[3];
+	float dummy2;
 };
 
 struct FogFilterConstantData {

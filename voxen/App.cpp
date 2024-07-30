@@ -127,24 +127,26 @@ void App::Update(float dt)
 {
 	static float acc = 0.0f;
 
-	if (!m_keyToggle['T']) {
+	/*if (!m_keyToggle['T']) {
 		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
-	}
+	}*/
+
+	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
-	ChunkManager::GetInstance()->Update(dt, m_camera);
+	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
 
 	if (m_keyToggle['F']) {
 		acc += DAY_CYCLE_TIME_SPEED * dt;
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
 
 		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime);
+		m_light.Update(m_dateTime, m_camera.GetPosition());
 		m_cloud.Update(dt, m_camera.GetPosition());
 	}
 	else {
 		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime);
+		m_light.Update(m_dateTime, m_camera.GetPosition());
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 	}
 }
@@ -159,12 +161,18 @@ void App::Render()
 	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_light.m_lightConstantBuffer.Get());
 	ppConstantBuffers.push_back(m_constantBuffer.Get());
+	ppConstantBuffers.push_back(m_light.m_shadowConstantBuffer.Get());
 
 	Graphics::context->VSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	
+
+	{
+		RenderShadowMap();
+	}
+
 	// 1. Deferred Render Pass
 	{
 		FillGBuffer();
@@ -399,6 +407,7 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
+	ppSRVs.push_back(Graphics::shadowSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
@@ -547,4 +556,20 @@ void App::RenderWaterPlane()
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
 	ChunkManager::GetInstance()->RenderTransparency();
+}
+
+void App::RenderShadowMap()
+{
+	Graphics::context->RSSetViewports(3, m_light.m_shadowViewPorts);
+
+	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
+	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
+	//Graphics::context->PSSetConstantBuffers(11, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
+
+	ChunkManager::GetInstance()->RenderShadowMap();
+
+
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }

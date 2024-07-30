@@ -11,6 +11,8 @@ SamplerState shadowPointSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 SamplerState pointClampSS : register(s5);
 
+Texture2D shadowTex : register(t4);
+
 cbuffer CameraConstantBuffer : register(b7)
 {
     Matrix view;
@@ -51,6 +53,28 @@ cbuffer AppConstantBuffer : register(b10)
     float mirrorWidth;
     float mirrorHeight;
 }
+
+cbuffer ShadowConstantBuffer : register(b11)
+{
+    Matrix shadowView[3];
+    Matrix shadowProj[3];
+    Matrix shadowInvProj[3];
+    float4 topLX;
+    float4 viewPortW;
+}
+
+
+static const float2 poissonDisk[16] =
+{
+    float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
+            float2(-0.094184101, -0.92938870), float2(0.34495938, 0.29387760),
+            float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
+            float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
+            float2(0.44323325, -0.97511554), float2(0.53742981, -0.47373420),
+            float2(-0.26496911, -0.41893023), float2(0.79197514, 0.19090188),
+            float2(-0.24188840, 0.99706507), float2(-0.81409955, 0.91437590),
+            float2(0.19984126, 0.78641367), float2(0.14383161, -0.14100790)
+};
 
 float3 sRGB2Linear(float3 color)
 {
@@ -178,9 +202,187 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return gl * gv;
 }
 
-float3 getShadowFactor()
+float N2V(float ndcDepth, matrix invProj)
 {
-    return float3(1.0, 1.0, 1.0);
+    float4 pointView = mul(float4(0, 0, ndcDepth, 1), invProj);
+    return pointView.z / pointView.w;
+}
+
+float PCF_Filter(float2 uv, float zReceiverNdc, float filterRadiusUV, Texture2D shadowMap)
+{
+    float sum = 0.0f;
+    for (int i = 0; i < 16; ++i)
+    {
+        float2 offset = poissonDisk[i] * filterRadiusUV;
+        sum += shadowMap.SampleCmpLevelZero(
+            shadowCompareSS, uv + offset, zReceiverNdc);
+    }
+    return sum / 16;
+}
+
+void FindBlocker(out float avgBlockerDepthView, out float numBlockers, float2 uv,
+                 float zReceiverView, Texture2D shadowMap, matrix invProj, float lightRadiusWorld, float frustumWidth)
+{
+    float lightRadiusUV = lightRadiusWorld / frustumWidth;
+    
+    float searchRadius = lightRadiusUV * (zReceiverView - 0.01) / zReceiverView;
+
+    float blockerSum = 0;
+    numBlockers = 0;
+    for (int i = 0; i < 16; ++i)
+    {
+        float shadowMapDepth =
+            shadowMap.SampleLevel(shadowPointSS, float2(uv + poissonDisk[i] * searchRadius), 0).r;
+
+        shadowMapDepth = N2V(shadowMapDepth, invProj);
+        
+        if (shadowMapDepth < zReceiverView)
+        {
+            blockerSum += shadowMapDepth;
+            numBlockers++;
+        }
+    }
+    avgBlockerDepthView = blockerSum / numBlockers;
+}
+
+float PCSS(float2 uv, float zReceiverNdc, Texture2D shadowMap, matrix invProj, float lightRadiusWorld, float frustumWidth)
+{
+    float lightRadiusUV = lightRadiusWorld / frustumWidth;
+    
+    float zReceiverView = N2V(zReceiverNdc, invProj);
+    
+    // STEP 1: blocker search
+    float avgBlockerDepthView = 0;
+    float numBlockers = 0;
+
+    FindBlocker(avgBlockerDepthView, numBlockers, uv, zReceiverView, shadowMap, invProj, lightRadiusWorld, frustumWidth);
+
+    if (numBlockers < 1)
+    {
+        // There are no occluders so early out(this saves filtering)
+        return 1.0f;
+    }
+    else
+    {
+        // STEP 2: penumbra size
+        float penumbraRatio = (zReceiverView - avgBlockerDepthView) / avgBlockerDepthView;
+        float filterRadiusUV = penumbraRatio * lightRadiusUV * 0.01 / zReceiverView;
+
+        // STEP 3: filtering
+        return PCF_Filter(uv, zReceiverNdc, filterRadiusUV, shadowMap);
+    }
+}
+
+float getShadowFactor(float3 posWorld)
+{
+    float shadowFactor = 1.0;
+    
+    float width, height, numMips;
+    shadowTex.GetDimensions(0, width, height, numMips);
+    
+    float g_topLX[3] =
+    {
+        topLX.x, topLX.y, topLX.z
+    };
+
+    float g_viewPortW[3] =
+    {
+        viewPortW.x, viewPortW.y, viewPortW.z
+    };
+    
+    float frustumWidth[3] =
+    {
+        102.4, 307.2, 614.4
+    };
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        float4 shadowPos = mul(mul(float4(posWorld, 1.0), shadowView[i]), shadowProj[i]);
+        shadowPos.xyz /= shadowPos.w;
+        
+        //NDC - > 텍스쳐 좌표계
+        shadowPos.x = shadowPos.x * 0.5 + 0.5;
+        shadowPos.y = shadowPos.y * -0.5 + 0.5;
+        
+        //텍스쳐 내에서 몇번째 텍스쳐인지 구분해내야함 텍스쳐
+        //좌표계 안이 아니라면 패스
+        if (shadowPos.x < 0.0 || shadowPos.x > 1.0 || shadowPos.y < 0.0 || shadowPos.y > 1.0)
+        {
+            continue;
+        }
+        
+        //텍스쳐 내의 상대적 좌표로 변환
+        shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
+        shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
+        
+        float dx = 5.0 / width;
+        shadowFactor = PCSS(float2(shadowPos.xy), shadowPos.z - 0.01, shadowTex, shadowInvProj[i], 0.01 /*radius*/, frustumWidth[i]);
+    }
+    return shadowFactor;
+}
+
+float getShadowFactor2(float3 posWorld)
+{
+    float width, height, numMips;
+    shadowTex.GetDimensions(0, width, height, numMips);
+    
+    float g_topLX[3] =
+    {
+        topLX.x, topLX.y, topLX.z
+    };
+
+    float g_viewPortW[3] =
+    {
+        viewPortW.x, viewPortW.y, viewPortW.z
+    };
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        float4 shadowPos = mul(mul(float4(posWorld, 1.0), shadowView[i]), shadowProj[i]);
+        shadowPos.xyz /= shadowPos.w;
+        
+        //NDC - > 텍스쳐 좌표계
+        shadowPos.x = shadowPos.x * 0.5 + 0.5;
+        shadowPos.y = shadowPos.y * -0.5 + 0.5;
+        
+        //텍스쳐 내에서 몇번째 텍스쳐인지 구분해내야함 텍스쳐
+        //좌표계 안이 아니라면 패스
+        if (shadowPos.x < 0.0 || shadowPos.x > 1.0 || shadowPos.y < 0.0 || shadowPos.y > 1.0)
+        {
+            continue;
+        }
+        
+        //Depth in NDC space
+        float depth = shadowPos.z - 0.001;
+        if (depth < 0.0 || depth > 1.0)
+        {
+            continue;
+        }
+        
+        float dx = 5.0 / width;
+        float dy = 5.0 / height;
+
+        float percentLit = 0.0;
+        const float2 offsets[9] =
+        {
+            //경계선일때 조건 달아주기
+            float2(-dx, -dy), float2(0.0, -dy), float2(dx, -dy),
+            float2(-dx, 0.0), float2(0.0, 0.0), float2(dx, 0.0),
+            float2(-dx, dy), float2(0.0, dy), float2(dx, dy)
+        };
+        
+        //텍스쳐 내의 상대적 좌표로 변환
+        shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
+        shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
+        
+        [unroll]
+        for (int j = 0; j < 9; ++j)
+        {
+            percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, float2(shadowPos.xy + offsets[j]), depth).r;
+        }
+        return percentLit / 9.0;
+    }
+    return 1.0;
 }
 
 float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float metallic, float roughness)
@@ -203,7 +405,7 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float3 diffuseBRDF = kd * albedo;
     
     // todo
-    float3 shadowFactor = getShadowFactor();
+    float shadowFactor = getShadowFactor2(position);
     
     float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
     
