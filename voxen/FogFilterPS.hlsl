@@ -23,7 +23,7 @@ float3 getFogColor(float3 lightDir, float3 eyeDir)
     
     float3 fogColor = lerp(normalHorizonColor, sunHorizonColor, dirWeight);
     if (isUnderWater)
-        fogColor = sunZenithColor;
+        fogColor = normalZenithColor;
     
     return fogColor;
 }

@@ -147,11 +147,12 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)
-    {
+    {        
         float w = smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude);
         ambientColor = lerp(eyeHorizonColor, ambientColor, w);
     }
     
+    // face ambient
     float faceAmbient = getFaceAmbient(normal);
     
     return ao * albedo * ambientColor * faceAmbient;
@@ -203,7 +204,7 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     // todo
     float3 shadowFactor = getShadowFactor();
-    //float3 radiance = radianceColor * radianceWeight * shadowFactor; // radiance 값 수정
+    
     float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
     
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
