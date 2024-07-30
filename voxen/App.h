@@ -14,6 +14,7 @@ using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 class App {
+
 public:
 	App();
 	~App();
@@ -28,6 +29,16 @@ public:
 	static const UINT SHADOW_HEIGHT = 1024;
 	static const UINT MIRROR_WIDTH = WIDTH / 2;
 	static const UINT MIRROR_HEIGHT = HEIGHT / 2;
+
+	static const UINT DAY_CYCLE_AMOUNT = 24000;
+	static const UINT DAY_CYCLE_REAL_TIME = 30;
+	static const UINT DAY_CYCLE_TIME_SPEED = DAY_CYCLE_AMOUNT / DAY_CYCLE_REAL_TIME;
+	static const UINT DAY_START = 1000;
+	static const UINT DAY_END = 11000;
+	static const UINT MAX_SUNSET = 12500;
+	static const UINT NIGHT_START = 13700;
+	static const UINT NIGHT_END = 22300;
+	static const UINT MAX_SUNRISE = 23500;
 
 private:
 	bool InitWindow();
@@ -64,8 +75,9 @@ private:
 	Light m_light;
 	PostEffect m_postEffect;
 
-	bool m_keyPressed[256];
-	bool m_keyToggle[256];
+	UINT m_dateTime;
 	float m_mouseNdcX;
 	float m_mouseNdcY;
+	bool m_keyPressed[256];
+	bool m_keyToggle[256];
 };

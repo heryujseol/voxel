@@ -1,8 +1,4 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-}
+#include "Common.hlsli"
 
 struct vsInput
 {
@@ -32,7 +28,10 @@ vsOutput main(vsInput input)
     output.posProj = mul(output.posProj, proj);
     
     output.normal = input.normal; // invTranspose 고려하지 않음 -> ununiform scaling X
-    
+    float3 toEye = normalize(eyePos - output.posWorld);
+    if (dot(output.normal, toEye) < 0.0)
+        output.normal *= -1;
+        
     output.texcoord = input.texcoord;
     
     output.type = input.type;

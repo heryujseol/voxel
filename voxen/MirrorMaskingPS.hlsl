@@ -1,8 +1,8 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t0);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
@@ -11,7 +11,7 @@ struct vsOutput
     uint type : TYPE;
 };
 
-float main(vsOutput input) : SV_Target0
+float main(psInput input) : SV_Target0
 {
     if (input.normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
         discard;
@@ -21,11 +21,12 @@ float main(vsOutput input) : SV_Target0
     float2 texcoord = float2(input.posProj.x / mirrorWidth, input.posProj.y / mirrorHeight);
     float2 appScreenCoord = float2(texcoord.x * appWidth, texcoord.y * appHeight);
     
-    float4 viewPos = positionTex.Load(appScreenCoord, 0);
-    if (viewPos.w == -1.0)
-        viewPos.z = 1000.0f;
+    float4 position = positionTex.Load(appScreenCoord, 0);
+    if (position.w == -1.0)
+        position.z = 1000.0f;
     
-    float4 projPos = mul(float4(viewPos.xyz, 1.0), proj);
+    float4 viewPos = mul(position, view);
+    float4 projPos = mul(viewPos, proj);
     projPos.xyz /= projPos.w;
     
     if (projPos.z <= pixelDepth) // 저장되어 있는 값이 더 작은 depth라면 무시함

@@ -1,8 +1,4 @@
-cbuffer CameraConstantBuffer : register(b0)
-{
-    matrix view;
-    matrix proj;
-}
+#include "Common.hlsli"
 
 struct vsInput
 {

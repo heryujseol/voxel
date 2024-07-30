@@ -1,10 +1,10 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 Texture2D mirrorDepthTex : register(t2);
 
-struct vsOutput
+struct psInput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
@@ -21,7 +21,7 @@ struct psOutput
     uint coverage : SV_Target3;
 };
 
-psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
+psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
     //float temperature = 0.5;
     //float downfall = 1.0;
@@ -48,16 +48,13 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     
     psOutput output;
     
-    float edge = coverage != 0xf; // 0b1111 -> 1111은 모서리가 아닌 픽셀임
+    bool edge = (coverage != 0xf); // 0b1111 -> 1111은 모서리가 아닌 픽셀임
     
-    float3 viewNormal = mul(float4(input.normal, 0.0), view).xyz; // must be [n * ITworld * ITview]
-    output.normalEdge = float4(normalize(viewNormal), edge);
+    output.normalEdge = float4(normalize(input.normal), float(edge));
     
-    float3 viewPosition = mul(float4(input.posWorld, 1.0), view).xyz;
-    output.position = float4(viewPosition, 1.0);
+    output.position = float4(input.posWorld, 1.0);
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
-    
     output.albedo = float4(albedo);
     
     output.coverage = coverage;
@@ -65,7 +62,7 @@ psOutput main(vsOutput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV
     return output;
 }
 
-float4 mainMirror(vsOutput input) : SV_TARGET
+float4 mainMirror(psInput input) : SV_TARGET
 {
 #ifdef USE_ALPHA_CLIP 
     if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
@@ -80,5 +77,7 @@ float4 mainMirror(vsOutput input) : SV_TARGET
         discard;
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
-    return albedo;
+    float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
+    
+    return float4(ambient, albedo.a);
 }

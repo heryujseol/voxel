@@ -87,7 +87,7 @@ void ChunkManager::RenderOpaqueChunk(Chunk* chunk)
 	Graphics::context->IASetIndexBuffer(m_opaqueIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_opaqueVertexBuffers[id].GetAddressOf(), &stride, &offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffers[id].GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)chunk->GetOpaqueIndices().size(), 0, 0);
 }
@@ -104,7 +104,7 @@ void ChunkManager::RenderSemiAlphaChunk(Chunk* chunk)
 	Graphics::context->IASetIndexBuffer(m_semiAlphaIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_semiAlphaVertexBuffers[id].GetAddressOf(), &stride, &offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffers[id].GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)chunk->GetSemiAlphaIndices().size(), 0, 0);
 }
@@ -121,7 +121,7 @@ void ChunkManager::RenderLowLodChunk(Chunk* chunk)
 	Graphics::context->IASetIndexBuffer(m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffers[id].GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)chunk->GetLowLodIndices().size(), 0, 0);
 }
@@ -139,7 +139,7 @@ void ChunkManager::RenderTransparencyChunk(Chunk* chunk)
 		m_transparencyIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_transparencyVertexBuffers[id].GetAddressOf(), &stride, &offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffers[id].GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)chunk->GetTransparencyIndices().size(), 0, 0);
 }

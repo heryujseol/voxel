@@ -1,5 +1,8 @@
 #ifndef COMMON_HLSLI
-    #define COMMON_HLSLI
+#define COMMON_HLSLI
+
+#define PI 3.14159265
+#define SAMPLE_COUNT 4
 
 SamplerState pointWrapSS : register(s0);
 SamplerState linearWrapSS : register(s1);
@@ -8,34 +11,40 @@ SamplerState shadowPointSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 SamplerState pointClampSS : register(s5);
 
-cbuffer CameraConstantBuffer : register(b0)
+cbuffer CameraConstantBuffer : register(b7)
 {
     Matrix view;
     Matrix proj;
+    Matrix invProj;
     float3 eyePos;
     float maxRenderDistance;
     float3 eyeDir;
     float lodRenderDistance;
-    Matrix invProj;
     bool isUnderWater;
     float3 cameraDummyData;
 };
 
-cbuffer SkyboxConstantBuffer : register(b1)
+cbuffer SkyboxConstantBuffer : register(b8)
 {
-    float3 sunDir;
-    float skyScale;
     float3 normalHorizonColor;
-    uint dateTime;
+    float skyScale;
     float3 normalZenithColor;
-    float sunStrength;
+    float skyboxDummyData1;
     float3 sunHorizonColor;
-    float moonStrength;
+    float skyboxDummyData2;
     float3 sunZenithColor;
-    float skyboxDummyData;
+    float skyboxDummyData3;
 };
 
-cbuffer AppConstantBuffer : register(b8)
+cbuffer LightConstantBuffer : register(b9)
+{
+    float3 lightDir;
+    float radianceWeight;
+    float3 radianceColor;
+    float maxRadianceWeight;
+}
+
+cbuffer AppConstantBuffer : register(b10)
 {
     float appWidth;
     float appHeight;
@@ -43,23 +52,9 @@ cbuffer AppConstantBuffer : register(b8)
     float mirrorHeight;
 }
 
-#define PI 3.14159265
-#define SAMPLE_COUNT 4
-
-float3 toSRGB(float3 color)
+float3 sRGB2Linear(float3 color)
 {
-    color = pow(color, 2.2);
-    return color;
-}
-
-float henyeyGreensteinPhase(float3 L, float3 V, float aniso)
-{
-	// L: toLight
-	// V: eyeDir
-	// https://www.shadertoy.com/view/7s3SRH
-    float cosT = dot(L, V);
-    float g = aniso;
-    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
+    return pow(clamp(color, 0.0, 1.0), 2.2);
 }
 
 float3 texcoordToViewPos(float2 texcoord, float projDepth)
@@ -121,6 +116,48 @@ uint4 coverageAnalysis(uint4 coverage)
     return sampleWeight;
 }
 
+float getFaceAmbient(float3 normal)
+{
+    float faceAmbient = 1.0; // top or else
+    
+    if (normal.y == 0.0 && normal.z == 0.0) // left or right
+    {
+        faceAmbient = 0.90;
+    }
+    else if (normal.x == 0.0 && normal.y == 0.0) // front or back
+    {
+        faceAmbient = 0.83;
+    }
+    else if (normal.x == 0.0 && normal.z == 0.0 && normal.y < 0.0) // bottom
+    {
+        faceAmbient = 0.75;
+    }
+    
+    return faceAmbient;
+}
+
+float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
+{
+    // skycolor ambient (envMap을 가정함)
+    float sunAniso = max(dot(lightDir, eyeDir), 0.0);
+    float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
+    
+    float3 ambientColor = float3(1.0, 1.0, 1.0);
+    float sunAltitude = sin(lightDir.y);
+    float dayAltitude = PI / 12.0;
+    float maxHorizonAltitude = -PI / 24.0;
+    if (sunAltitude <= dayAltitude)
+    {        
+        float w = smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude);
+        ambientColor = lerp(eyeHorizonColor, ambientColor, w);
+    }
+    
+    // face ambient
+    float faceAmbient = getFaceAmbient(normal);
+    
+    return ao * albedo * ambientColor * faceAmbient;
+}
+
 float3 SchlickFresnel(float3 F0, float NdotH)
 {
     return F0 + (1 - F0) * pow(2, (-5.55473 * (NdotH) - 6.98316) * NdotH);
@@ -141,13 +178,6 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return gl * gv;
 }
 
-float3 getAmbientLighting(float ao, float3 albedo)
-{
-    // todo
-    // 라이팅에 무관하게 "시간"에 의존적
-    return ao * albedo * 0.3f;
-}
-
 float3 getShadowFactor()
 {
     return float3(1.0, 1.0, 1.0);
@@ -155,11 +185,10 @@ float3 getShadowFactor()
 
 float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float metallic, float roughness)
 {
-    float3 pixelToEye = normalize(-position);
-    float3 lightVec = normalize(mul(float4(sunDir, 0.0), view).xyz);
-    float3 halfway = normalize(pixelToEye + lightVec);
+    float3 pixelToEye = normalize(eyePos - position);
+    float3 halfway = normalize(pixelToEye + lightDir);
     
-    float NdotI = max(0.0, dot(normal, lightVec));
+    float NdotI = max(0.0, dot(normal, lightDir));
     float NdotH = max(0.0, dot(normal, halfway));
     float NdotO = max(0.0, dot(normal, pixelToEye));
     
@@ -175,9 +204,70 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     // todo
     float3 shadowFactor = getShadowFactor();
-    float3 radiance = toSRGB(normalHorizonColor) * shadowFactor; // radiance 값 수정
-
+    
+    float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
+    
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
+}
+
+float3 getNormal(uint face)
+{
+    if (face == 0)
+    {
+        return float3(-1.0, 0.0, 0.0);
+    }
+    else if (face == 1)
+    {
+        return float3(1.0, 0.0, 0.0);
+    }
+    else if (face == 2)
+    {
+        return float3(0.0, -1.0, 0.0);
+    }
+    else if (face == 3)
+    {
+        return float3(0.0, 1.0, 0.0);
+    }
+    else if (face == 4)
+    {
+        return float3(0.0, 0.0, -1.0);
+    }
+    else
+    {
+        return float3(0.0, 0.0, 1.0);
+    }
+}
+
+float2 getVoxelTexcoord(float3 pos, uint face)
+{
+    float2 texcoord = float2(0.0, 0.0);
+    
+    if (face == 0) // left
+    {
+        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
+    }
+    else if (face == 1) // right
+    {
+        texcoord = float2(pos.z, -pos.y + 32.0);
+    }
+    else if (face == 2) // bottom
+    {
+        texcoord = float2(pos.x, pos.z);
+    }
+    else if (face == 3) // top
+    {
+        texcoord = float2(pos.x, -pos.z + 32.0);
+    }
+    else if (face == 4) // front
+    {
+        texcoord = float2(pos.x, -pos.y + 32.0);
+    }
+    else // back
+    {
+        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
+    }
+
+    return texcoord;
 }
 
 #endif

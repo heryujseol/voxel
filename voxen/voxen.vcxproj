@@ -178,8 +178,7 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include=".clang-format" />
-    <None Include="CommonPS.hlsli" />
-    <None Include="CommonVS.hlsli" />
+    <None Include="Common.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicPS.hlsl">

@@ -87,9 +87,9 @@ bool PostEffect::Initialize()
 	return true;
 }
 
-void PostEffect::Update(float dt, Camera& camera)
+void PostEffect::Update(float dt, bool isUnderWater, float radiance)
 {
-	if (camera.IsUnderWater()) {
+	if (isUnderWater) {
 		m_waterAdaptationTime += dt;
 		m_waterAdaptationTime = min(m_waterMaxDuration, m_waterAdaptationTime);
 
@@ -98,7 +98,11 @@ void PostEffect::Update(float dt, Camera& camera)
 		m_waterFilterConstantData.filterColor.x = 0.075f + 0.075f * percetage;
 		m_waterFilterConstantData.filterColor.y = 0.125f + 0.125f * percetage;
 		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * percetage;
-		m_waterFilterConstantData.filterStrength = 0.7f - (0.3f * percetage);
+		m_waterFilterConstantData.filterColor =
+			Utils::SRGB2Linear(m_waterFilterConstantData.filterColor);
+
+		m_waterFilterConstantData.filterStrength =
+			(0.9f - (0.5f * percetage)) * std::clamp(radiance, 0.25f, 1.0f);
 
 		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
 		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);
@@ -166,7 +170,10 @@ void PostEffect::Bloom()
 			Graphics::context->OMSetRenderTargets(
 				1, Graphics::bloomRTV[i + 1].GetAddressOf(), nullptr);
 
-			Graphics::context->PSSetShaderResources(0, 1, Graphics::bloomSRV[i].GetAddressOf());
+			if (i == 0)
+				Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
+			else
+				Graphics::context->PSSetShaderResources(0, 1, Graphics::bloomSRV[i].GetAddressOf());
 
 			Render();
 		}

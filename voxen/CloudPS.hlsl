@@ -1,75 +1,41 @@
-#include "CommonPS.hlsli"
+#include "Common.hlsli"
 
-struct vsOutput
-{
-    float4 posProj : SV_Position;
-    float3 posWorld : POSITION;
-    uint face : FACE;
-};
-
-cbuffer CloudConstantBuffer : register(b2)
+cbuffer CloudConstantBuffer : register(b0)
 {
     matrix world;
     float3 volumeColor;
     float cloudScale;
 }
 
-float3 getFaceColor(uint face)
+struct psInput
 {
-    if (face == 0 || face == 1)
-    {
-        return float3(0.95, 0.95, 0.95);
-    }
-    else if (face == 4 || face == 5)
-    {
-        return float3(0.9, 0.9, 0.9);
-    }
-    else if (face == 3)
-    {
-        return float3(1.0, 1.0, 1.0);
-    }
-    else
-    {
-        return float3(0.75, 0.75, 0.75);
-    }
-}
+    float4 posProj : SV_POSITION;
+    float3 posWorld : POSITION;
+    uint face : FACE;
+};
 
-float4 main(vsOutput input) : SV_TARGET
-{
-    float distance = length(input.posWorld.xz - eyePos.xz);
-    
-    float sunDirWeight = henyeyGreensteinPhase(sunDir, eyeDir, 0.625);
-    float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
-    
+float4 main(psInput input) : SV_TARGET
+{   
     // 거리가 멀면 horizon color 선택 
+    float distance = length(input.posWorld.xz - eyePos.xz);
     float horizonWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
-    float3 color = volumeColor * getFaceColor(input.face);
-    color = lerp(color, horizonColor, horizonWeight);
+    float3 albedo = volumeColor;
     
-    float sunAltitude = sin(sunDir.y);
-    float dayAltitude = PI / 12.0;
-    float nightAltitude = -PI * 0.5 * (1.7 / 6.0);
-    float maxHorizonAltitude = -PI / 24.0;
-    if (dayAltitude < sunAltitude)
-    {
-        color *= float3(1.0, 1.0, 1.0);
-    }
-    else if (maxHorizonAltitude < sunAltitude && sunAltitude <= dayAltitude)
-    {
-        color *= lerp(horizonColor, float3(1, 1, 1), smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude));
-    }
-    else if (nightAltitude < sunAltitude && sunAltitude <= maxHorizonAltitude)
-    {
-        color *= lerp(float3(0.04, 0.05, 0.09), horizonColor, smoothstep(nightAltitude, maxHorizonAltitude, sunAltitude));
-    }
-    else // nightAltitude
-    {
-        color *= float3(0.04, 0.05, 0.09);
-    }
+    // 바라보는 방향에 대한 anisotropy 
+    float sunAniso = max(dot(lightDir, eyeDir), 0.0);
+    float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
+    albedo = lerp(albedo, eyeHorizonColor, horizonWeight);
+    
+    // ambient lighting
+    float3 normal = getNormal(input.face);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo, normal);
+    
+    // direct lighting
+    float3 directLighting = getDirectLighting(normal, input.posWorld, albedo, 0.0, 0.96);
     
     // distance alpha
     float alphaWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));
     float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.75]
     
-    return float4(toSRGB(color), alpha);
+    return float4(ambientLighting + directLighting, alpha);
 }
