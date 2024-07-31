@@ -117,11 +117,12 @@ void Light::Update(UINT dateTime, Vector3 cameraPos)
 		}
 
 		float cascade[CASCADE_NUM] = { 0.1f, 0.3f, 0.6f };
-		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 1536.0f };
-		float viewWith = 1024.0f;
+		float topLX[CASCADE_NUM] = { 0.0f, 1080.0f, 1620.0f };
+		float viewportWith = 1080.0f;
 
 		for (int i = 0; i < CASCADE_NUM; i++) {
 			m_sunPos = Vector3(200.0f + (i * 100.0f), 0.0f, 0.0f);
+			m_sunPos = Vector3(400.0f, 0.0f, 0.0f);
 			m_sunPos = Vector3::Transform(m_sunPos, Matrix::CreateRotationZ(angle));
 			m_sunPos = cameraPos + m_sunPos;
 
@@ -135,13 +136,29 @@ void Light::Update(UINT dateTime, Vector3 cameraPos)
 			float viewHeight = viewWidth;
 
 			m_proj[i] =
-				XMMatrixOrthographicLH(viewWidth, viewHeight, 0.01f, 2000.0f + (i * 1000.0f));
+				XMMatrixOrthographicLH(viewWidth, viewHeight, 0.01f, 2000.0f + (i * 500.0f));
+			//Vector4 shadowOrigin = Vector4(0.0f, 0.0f, 0.0f, 1.0);
+			//shadowOrigin = Vector4::Transform(shadowOrigin, m_view[i] * m_proj[i]);
+			//shadowOrigin = shadowOrigin * (viewportWith / 2.0f);
+
+			//Vector4 roundOrigin = Vector4(round(shadowOrigin.x), round(shadowOrigin.y),
+			//	round(shadowOrigin.z), round(shadowOrigin.w));
+
+			//Vector4 roundOffset = roundOrigin - shadowOrigin;
+			//roundOffset = roundOffset * (2.0f / viewportWith);
+			//roundOffset.z = 0.0f;
+			//roundOffset.w = 0.0;
+
+			//m_proj[i](3, 0) += roundOffset.x;
+			//m_proj[i](3, 1) += roundOffset.y;
+			//m_proj[i](3, 2) += roundOffset.z;
+			//m_proj[i](3, 3) += roundOffset.w;
 
 			m_shadowConstantData.proj[i] = m_proj[i].Transpose();
 			m_shadowConstantData.invProj[i] = m_proj[i].Invert().Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
-			m_shadowConstantData.viewWith[i] = viewWith;
-			viewWith /= 2;
+			m_shadowConstantData.viewWith[i] = viewportWith;
+			viewportWith /= 2;
 
 			// 뷰포트 크기 점점 작게
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,

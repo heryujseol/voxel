@@ -168,52 +168,57 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	
-
 	{
-		RenderShadowMap();
-	}
+        RenderShadowMap();
+    }
 
-	// 1. Deferred Render Pass
-	{
-		FillGBuffer();
-		MaskMSAAEdge();
-		RenderSSAO();
-		ShadingBasic();
-	}
+    // 1. Deferred Render Pass
+    {
+        FillGBuffer();
+        //MaskMSAAEdge();
+        //RenderSSAO();
+        ShadingBasic();
+    }
 
-	// 2. No-MSAA to MSAA Texture
-	{
-		ConvertToMSAA();
-	}
+    // 2. No-MSAA to MSAA Texture
+    {
+        ConvertToMSAA();
+    }
 
-	// 3. Forward Render Pass MSAA
-	{
-		if (m_camera.IsUnderWater()) {
-			RenderFogFilter();
-			RenderSkybox();
-			RenderCloud();
-			RenderWaterPlane();
-		}
-		else {
-			RenderMirrorWorld();
-			RenderWaterPlane();
-			RenderFogFilter();
-			RenderSkybox();
-			RenderCloud();
-		}
-	}
+    // 3. Forward Render Pass MSAA
+    {
+        if (m_camera.IsUnderWater()) {
+            RenderFogFilter();
+            RenderSkybox();
+            RenderCloud();
+            RenderWaterPlane();
+        }
+        else {
+            //RenderMirrorWorld();
+            //RenderWaterPlane();
+            //RenderFogFilter();
+            RenderSkybox();
+            RenderCloud();
+        }
+    }
 
-	// 4. Post Effect
-	{
-		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
-			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+    // 4. Post Effect
+    {
+        Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
+            Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
-		if (m_camera.IsUnderWater()) {
-			RenderWaterFilter();
-		}
+        Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+        ID3D11ShaderResourceView* ppSRVs[2] = { Graphics::basicSRV.Get(),
+            Graphics::basicSRV.Get() };
+        Graphics::context->PSSetShaderResources(0, 2, ppSRVs);
+        Graphics::SetPipelineStates(Graphics::combineBloomPSO);
+        m_postEffect.Render();
+        //if (m_camera.IsUnderWater()) {
+        //    RenderWaterFilter();
+        //}
 
-		m_postEffect.Bloom();
-	}
+        //m_postEffect.Bloom();
+    }
 }
 
 bool App::InitWindow()
@@ -410,6 +415,8 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::shadowSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
+	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
+
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
 	m_postEffect.Render();
 
@@ -566,10 +573,8 @@ void App::RenderShadowMap()
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
-	//Graphics::context->PSSetConstantBuffers(11, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
 	ChunkManager::GetInstance()->RenderShadowMap();
-
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }
