@@ -52,7 +52,7 @@ float4 main(psInput input) : SV_TARGET
     posDir.y *= -1;
 #endif
     
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
     // sun

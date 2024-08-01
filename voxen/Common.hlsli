@@ -143,7 +143,7 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
     float3 ambientColor = float3(1.0, 1.0, 1.0);
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)
@@ -154,6 +154,9 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     
     // face ambient
     float faceAmbient = getFaceAmbient(normal);
+    
+    if (cameraDummyData.x == 0.0)
+        ao = 1.0f;
     
     return ao * albedo * ambientColor * faceAmbient;
 }

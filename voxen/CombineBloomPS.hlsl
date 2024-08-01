@@ -31,8 +31,8 @@ float3 linearToneMapping(float3 color, float exposure)
 
 float4 main(psInput input) : SV_TARGET
 {
-    float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
-    float3 bloomColor = bloomTex.Sample(linearClampSS, input.texcoord).rgb;
+    float3 renderColor = renderTex.Sample(pointClampSS, input.texcoord).rgb;
+    float3 bloomColor = bloomTex.Sample(pointClampSS, input.texcoord).rgb;
     
     float scattering = min(henyeyGreensteinPhase(lightDir, eyeDir, 0.9), 1.0) * 0.25;
     

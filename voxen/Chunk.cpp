@@ -1,6 +1,7 @@
 #include "Chunk.h"
 #include "DXUtils.h"
 #include "MeshGenerator.h"
+#include "Terrain.h"
 
 #include <future>
 #include <algorithm>
@@ -62,29 +63,22 @@ void Chunk::InitChunkData()
 {
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
-			int nx = (int)m_offsetPosition.x + x - 1;
-			int nz = (int)m_offsetPosition.z + z - 1;
+			int worldX = (int)m_offsetPosition.x + x - 1;
+			int worldZ = (int)m_offsetPosition.z + z - 1;
 
-			int height = Terrain::GetHeight(nx, nz);
-			float t = Terrain::GetPerlinNoise2((float)nx / 182.0f, (float)nz / 182.0f);
-
+			float h = Terrain::GetHeight(worldX, worldZ);
+			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
-				m_blocks[x][y][z].SetType(0);
+				m_blocks[x][y][z].SetType(BLOCK_TYPE::AIR);
 
-				int ny = (int)m_offsetPosition.y + y - 1;
-				if (-64 <= ny && (ny <= height || height <= 62)) {
-					uint8_t type = Terrain::GetType(nx, ny, nz, height, t);
-
-					m_blocks[x][y][z].SetType(type);
+				int worldY = (int)m_offsetPosition.y + y - 1;
+				if (worldY <= h) {
+					m_blocks[x][y][z].SetType(3);
 				}
-
-				/////////////////////////////
-				// for testing
-				if (height + 3 <= ny && ny <= height + 6 && 14 <= x && x <= 20 && 14 <= z &&
-					z <= 20) {
-					m_blocks[x][y][z].SetType(10);
+				if (h < worldY && worldY <= 61) {
+					m_blocks[x][y][z].SetType(1);
 				}
-				/////////////////////////////
+				
 			}
 		}
 	}
@@ -95,7 +89,7 @@ void Chunk::InitInstanceInfoData()
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
-
+				/*
 				// instance testing
 				int choose[4] = { 128, 129, 130, 144 };
 				static int loop = 0;
@@ -113,6 +107,7 @@ void Chunk::InitInstanceInfoData()
 
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
+				*/
 			}
 		}
 	}

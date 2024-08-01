@@ -1,6 +1,7 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 #include "App.h"
+#include "Terrain.h"
 
 #include <iostream>
 
@@ -164,6 +165,15 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
+	
+	///////////////////////////////////////
+	ComPtr<ID3D11Texture2D> noiseBuffer;
+	ComPtr<ID3D11Texture2D> tmpBuffer;
+	ComPtr<ID3D11ShaderResourceView> noiseSRV;
+	std::vector<float> data;
+	GraphicsPSO noisePSO;
+	ComPtr<ID3D11PixelShader> noisePS;
+	////////////////////////////////////////
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -661,6 +671,64 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
+
+	///////////////////////////////////////////////////////////////
+	// noise Texture
+
+	D3D11_TEXTURE2D_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = 1920;
+	desc.Height = 1080;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R32_FLOAT;
+	desc.SampleDesc.Count = 1;
+	desc.Usage = D3D11_USAGE_DYNAMIC;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	ret = Graphics::device->CreateTexture2D(&desc, nullptr, noiseBuffer.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create noise buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(noiseBuffer.Get(), nullptr, noiseSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create noise srv" << std::endl;
+		return false;
+	};
+	data.resize(1920 * 1080, 0);
+
+	static float minValue = 1.0f;
+	static float maxValue = -1.0f;
+
+	for (int y = 0; y < 1080; ++y) {
+		for (int x = 0; x < 1080; ++x) {
+			float noise = Terrain::GetNoisePeaksValley((float)x, (float)y);
+
+			minValue = min(minValue, noise);
+			maxValue = max(maxValue, noise);
+
+			data[x + y * 1920] = noise;
+		}
+	}
+	std::cout << minValue << ", " << maxValue << std::endl;
+
+	D3D11_MAPPED_SUBRESOURCE ms;
+	ret = Graphics::context->Map(Graphics::noiseBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+	if (FAILED(ret)) {
+		std::cout << "map failed" << std::endl;
+	}
+	float* pData = (float*)ms.pData;
+	for (int h = 0; h < 1080; ++h) {
+		memcpy(&pData[h * (ms.RowPitch / sizeof(float))], &Graphics::data[h * 1920],
+			1920 * sizeof(float));
+	}
+	Graphics::context->Unmap(Graphics::noiseBuffer.Get(), NULL);
+
+	
+	///////////////////////////////////////////////////////////////
+
 	return true;
 }
 
@@ -921,6 +989,12 @@ bool Graphics::InitPixelShaders()
 	// bloomUpPS
 	if (!DXUtils::CreatePixelShader(L"BloomUpPS.hlsl", bloomUpPS)) {
 		std::cout << "failed create bloom up ps" << std::endl;
+		return false;
+	}
+
+	// noisePS
+	if (!DXUtils::CreatePixelShader(L"NoisePS.hlsl", noisePS)) {
+		std::cout << "failed create noise ps" << std::endl;
 		return false;
 	}
 
@@ -1295,6 +1369,10 @@ void Graphics::InitGraphicsPSO()
 	// combineBloomPSO
 	combineBloomPSO = samplingPSO;
 	combineBloomPSO.pixelShader = combineBloomPS;
+
+	// noisePSO
+	noisePSO = samplingPSO;
+	noisePSO.pixelShader = noisePS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
