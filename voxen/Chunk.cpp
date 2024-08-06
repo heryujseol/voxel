@@ -71,13 +71,16 @@ void Chunk::InitChunkData()
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				m_blocks[x][y][z].SetType(BLOCK_TYPE::AIR);
 
+				
 				int worldY = (int)m_offsetPosition.y + y - 1;
+				if (worldY <= 61) {
+					//m_blocks[x][y][z].SetType(1);
+				}
+
 				if (worldY <= h) {
-					m_blocks[x][y][z].SetType(3);
+					m_blocks[x][y][z].SetType(2);
 				}
-				if (h < worldY && worldY <= 61) {
-					m_blocks[x][y][z].SetType(1);
-				}
+				
 				
 			}
 		}

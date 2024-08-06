@@ -51,7 +51,7 @@ namespace Terrain {
 	 * x, y : 좌표
 	 * - 현재 x, y가 중요한게 아니라, 해당 함수를 호출할 때 x, y의 증감 폭이 중요한 것
 	 * - 증감이 작아야 함, 크면 점진적인 변화율을 체크할 수 없음
-	 * freq : 진동수
+	 * freq : 진동수, 주파수
 	 * - x, y의 범위를 재조정하게 됨
 	 * - freq만큼 구간을 잘게 나누게 될 것
 	 * - 반복 횟수가 올라가면 구간을 더욱 잘게 나눔 (2배씩)
@@ -79,97 +79,92 @@ namespace Terrain {
 
 	static float SplineContinentalness(float value)
 	{
-		if (value <= -0.95f) {
-			float w = (value + 1.0f) / 0.05f;
-			return Utils::Smootherstep(1.0f, 0.05f, w);
+		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
+		
+		if (value <= -0.45f) { // 0.14
+			float w = (value - -1.0f) / (-0.45f - -1.0f);
+			return Utils::Smootherstep(0.0f, 0.14f, w);
 		}
-		else if (value <= -0.51f) {
-			return 0.05f;
+		else if (value <= -0.16f) { // 0.29
+			float w = (value - -0.45f) / (-0.16f - -0.45f);
+			return Utils::Smootherstep(0.14f, 0.29f, w);
 		}
-		else if (value <= -0.43f) {
-			float w = (value + 0.51f) / 0.08f;
-			return Utils::Smootherstep(0.05f, 0.4f, w);
+		else if (value <= -0.08f) { // 0.43
+			float w = (value - -0.16f) / (-0.08f - -0.16f);
+			return Utils::Smootherstep(0.29f, 0.43f, w);
 		}
-		else if (value <= -0.19f) {
-			return 0.4f;
+		else if (value <= 0.09f) { // 0.57
+			float w = (value - -0.08f) / (0.09f - -0.08f);
+			return Utils::Smootherstep(0.43f, 0.57f, w);
 		}
-		else if (value <= -0.17f) {
-			float w = (value + 0.19f) / 0.02f;
-			return Utils::Smootherstep(0.4f, 0.875f, w);
+		else if (value <= 0.42f) { // 0.71
+			float w = (value - 0.09f) / (0.42f - 0.09f);
+			return Utils::Smootherstep(0.57f, 0.71f, w);
 		}
-		else if (value <= -0.11f) {
-			float w = (value + 0.17f) / 0.06f;
-			return Utils::Smootherstep(0.875f, 0.9f, w);
-		}
-		else if (value < 0.23f) {
-			float w = (value + 0.11f) / 0.34f;
-			return Utils::Smootherstep(0.9f, 0.96f, w);
-		}
-		else {
-			float w = (value - 0.23f) / 0.77f;
-			return Utils::Smootherstep(0.96f, 0.99f, w);
+		else { // 1.0
+			float w = (value - 0.42f) / (1.0f - 0.42f);
+			return Utils::Smootherstep(0.71f, 1.0f, w);
 		}
 	}
 
-	static float GetNoiseContinentalness(float x, float z) 
+	static float GetContinentalness(float x, float z) 
 	{ 
-		float scale = 720.0f;
+		float scale = 1080.0f;
+		float bias = 353.0f;
 		
 		float freq = 4.0f;
-		float cNoise = PerlinFbm(x / scale, z / scale, freq, 7);
+		float cNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, 6);
 		
 		float cValue = SplineContinentalness(cNoise);
-		//std::cout << cNoise << ", " << cValue << std::endl;
 
 		return cValue;
 	}
 
 	static float SplineErosion(float value) 
 	{
-		if (value <= -0.8f) {
-			float w = (value + 1.0f) / 0.2f;
-			return Utils::Smootherstep(1.0f, 0.76f, w);
+		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
+
+		if (value <= -0.78f) { // 0.02
+			float w = (value - -1.0f) / (-0.78f - -1.0f);
+			return Utils::Smootherstep(0.0f, 0.02f, w);
 		}
-		else if (value <= -0.5f) {
-			float w = (value + 0.8f) / 0.3f;
-			return Utils::Smootherstep(0.76f, 0.5f, w);
+		else if (value <= -0.57f) { // 0.14
+			float w = (value - -0.78f) / (-0.57f - -0.78f);
+			return Utils::Smootherstep(0.02f, 0.14f, w);
 		}
-		else if (value <= -0.45f) {
-			float w = (value + 0.5f) / 0.05f;
-			return Utils::Smootherstep(0.5f, 0.56f, w);
+		else if (value <= -0.36f) { // 0.29
+			float w = (value - -0.57f) / (-0.36f - -0.57f);
+			return Utils::Smootherstep(0.14f, 0.29f, w);
 		}
-		else if (value <= -0.05f) {
-			float w = (value + 0.45f) / 0.4f;
-			return Utils::Smootherstep(0.56f, 0.1f, w);
+		else if (value <= 0.03f) { // 0.43
+			float w = (value - -0.36f) / (0.03f - -0.36f);
+			return Utils::Smootherstep(0.29f, 0.43f, w);
 		}
-		else if (value <= 0.6f) {
-			float w = (value + 0.05f) / 0.65f;
-			return Utils::Smootherstep(0.1f, 0.09f, w);
+		else if (value <= 0.32f) { // 0.57
+			float w = (value - 0.03f) / (0.32f - 0.03f);
+			return Utils::Smootherstep(0.43f, 0.57f, w);
 		}
-		else if (value <= 0.65f) {
-			float w = (value - 0.6f) / 0.05f;
-			return Utils::Smootherstep(0.09f, 0.3f, w);
+		else if (value <= 0.39f) { // 0.71
+			float w = (value - 0.32f) / (0.39f - 0.32f);
+			return Utils::Smootherstep(0.57f, 0.71f, w);
 		}
-		else if (value <= 0.75f) {
-			float w = (value - 0.65f) / 0.1f;
-			return Utils::Smootherstep(0.3f, 0.3f, w);
+		else if (value <= 0.78f) { // 0.86
+			float w = (value - 0.39f) / (0.78f - 0.39f);
+			return Utils::Smootherstep(0.71f, 0.86f, w);
 		}
-		else if (value <= 0.8f) {
-			float w = (value - 0.75f) / 0.05f;
-			return Utils::Smootherstep(0.3f, 0.09f, w);
-		}
-		else {
-			float w = (value - 0.8f) / 0.2f;
-			return Utils::Smootherstep(0.09f, 0.01f, w);
+		else { // 1.0
+			float w = (value - 0.78f) / (1.0f - 0.78f);
+			return Utils::Smootherstep(0.86f, 1.0f, w);
 		}
 	}
 
-	static float GetNoiseErosion(float x, float z) 
+	static float GetErosion(float x, float z) 
 	{
 		float scale = 1080.0f;
+		float bias = 151.0f;
 
 		float freq = 2.0f;
-		float cNoise = PerlinFbm(x / scale, z / scale, freq, 5);
+		float cNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, 5);
 
 		float cValue = SplineErosion(cNoise);
 
@@ -178,49 +173,71 @@ namespace Terrain {
 
 	static float SplinePeaksValley(float value) 
 	{ 
-		if (value <= 0.0f) {
-			float w = (value + 1.0f) / 1.0f;
-			return Utils::Smootherstep(0.01f, 0.32f, w);
+		value = abs(std::clamp(value * 1.5f, -1.0f, 1.0f));
+
+		if (value <= 0.08f) {
+			float w = value / 0.08f;
+			return Utils::Smootherstep(0.01f, 0.21f, w);
 		}
-		else if (value <= 0.4f) {
-			float w = (value - 0.0f) / 0.4f;
-			return Utils::Smootherstep(0.32f, 0.88f, w);
+		else if (value <= 0.24f) {
+			return 0.21f;
 		}
-		else if (value <= 0.6f) {
-			float w = (value - 0.4f) / 0.2f;
-			return Utils::Smootherstep(0.88f, 0.96f, w);
+		else if (value <= 0.32f) {
+			float w = (value - 0.24f) / (0.32f - 0.24f);
+			return Utils::Smootherstep(0.21f, 0.4f, w);
 		}
-		else if (value <= 0.85f) {
-			float w = (value - 0.6f) / 0.25f;
-			return Utils::Smootherstep(0.96f, 0.92f, w);
+		else if (value <= 0.73f)
+		{
+			float w = (value - 0.28f) / (0.73f - 0.28f);
+			return Utils::Smootherstep(0.4f, 1.0f, w);
+		}
+		else if (value <= 0.86f) {
+			float w = (value - 0.73f) / (0.86f - 0.73f);
+			return Utils::Smootherstep(1.0f, 0.7f, w);
 		}
 		else {
-			float w = (value - 0.85f) / 0.15f;
-			return Utils::Smootherstep(0.92f, 0.99f, w);
+			float w = (value - 0.86f) / (1.0f - 0.86f);
+			return Utils::Smootherstep(0.4f, 0.7f, 1.0f - w);
 		}
 	}
 
-	static float GetNoisePeaksValley(float x, float z)
+	static float GetPeaksValley(float x, float z)
 	{
-		float scale = 128.0f;
+		float scale = 256.0f;
+		float bias = 797.0f;
 
 		float freq = 2.0f;
-		float cNoise = PerlinFbm(x / scale, z / scale, freq, 3);
+		float cNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, 2);
 
 		float cValue = SplinePeaksValley(cNoise);
 
 		return cValue;
 	}
 
+	static float sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
+
+	/*
+	 * c * a + p * b = ret
+	 *
+	 * 0. c, p 값은 모두 [0.0f, 1.0f] 구간의 값
+	 * 1. ret의 범위는 [1.0f, 192.0f] 구간의 값
+	 * 2. c가 0.43 미만인 경우 ret는 61.0 이하
+	 * 3. pv가 0.2 미만인 경우 ret는 61.0 이하
+	 *
+	 */
 	static uint8_t GetHeight(int x, int z) 
 	{
-		float c = GetNoiseContinentalness(x, z);
-		float e = GetNoiseErosion(x, z);
-		float pv = GetNoisePeaksValley(x, z);
+		float c = GetContinentalness(x, z);
+		float e = 1.0f - GetErosion(x, z);
+		float pv = GetPeaksValley(x, z);
 		
-		float baseH = c * 64.0f;
-		float detailH = (1.0f - e) * pv * 48.0f;
+		float a = 10.0f * e;
+		float b = 20.0f * e;
 
-		return baseH + detailH;
+		float retH = 1.0f + 120.0f * sigmoid(a * (c - 0.37f)); // [-0.37, 0.63]
+		retH *= sigmoid(b  * (pv - 0.2f)); // [-0.2, 0.8f]
+		retH += 32.0f;
+
+		return (uint8_t)(retH);
 	}
 }

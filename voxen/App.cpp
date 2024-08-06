@@ -151,11 +151,34 @@ void App::Update(float dt)
 
 void App::Render()
 {
-
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
-	if (!m_keyToggle['N']) {
+	if (m_keyPressed['1']) {
+		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[0].GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::noisePSO);
+		m_postEffect.Render();
+	}
+	else if (m_keyPressed['2']) {
+		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[1].GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::noisePSO);
+		m_postEffect.Render();
+	}
+	else if (m_keyPressed['3']) {
+		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[2].GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::noisePSO);
+		m_postEffect.Render();
+	}
+	else if (m_keyPressed['4']) {
+		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[3].GetAddressOf());
+		Graphics::SetPipelineStates(Graphics::noise2PSO);
+		m_postEffect.Render();
+	}
+	else {
 		std::vector<ID3D11Buffer*> ppConstantBuffers;
 		ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
 		ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
@@ -179,7 +202,7 @@ void App::Render()
 		{
 			ConvertToMSAA();
 		}
-		
+
 		// 3. Forward Render Pass MSAA
 		{
 			if (m_camera.IsUnderWater()) {
@@ -191,12 +214,12 @@ void App::Render()
 			else {
 				RenderMirrorWorld();
 				RenderWaterPlane();
-				RenderFogFilter();
+				// RenderFogFilter();
 				RenderSkybox();
 				RenderCloud();
 			}
 		}
-		
+
 		// 4. Post Effect
 		{
 			Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
@@ -208,12 +231,6 @@ void App::Render()
 
 			m_postEffect.Bloom();
 		}
-	}
-	else {
-		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV.GetAddressOf());
-		Graphics::SetPipelineStates(Graphics::noisePSO);
-		m_postEffect.Render();
 	}
 }
 

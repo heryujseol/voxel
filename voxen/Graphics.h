@@ -168,12 +168,14 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
-	extern ComPtr<ID3D11Texture2D> noiseBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> noiseSRV;
-	extern std::vector<float> data;
+	extern ComPtr<ID3D11Texture2D> noiseBuffer[4];
+	extern ComPtr<ID3D11ShaderResourceView> noiseSRV[4];
+	extern std::vector<float> data[4];
 	extern GraphicsPSO noisePSO;
 	extern ComPtr<ID3D11PixelShader> noisePS;
-
+	extern GraphicsPSO noise2PSO;
+	extern ComPtr<ID3D11PixelShader> noise2PS;
+	
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
