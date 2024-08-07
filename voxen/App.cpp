@@ -1,6 +1,7 @@
 #include "App.h"
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "Terrain.h"
 
 #include <iostream>
 #include <imgui.h>
@@ -109,6 +110,11 @@ void App::Run()
 
 			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
+
+			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
+				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
 
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
