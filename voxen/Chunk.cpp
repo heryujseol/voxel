@@ -73,8 +73,8 @@ void Chunk::InitChunkData()
 
 				
 				int worldY = (int)m_offsetPosition.y + y - 1;
-				if (worldY <= 61) {
-					//m_blocks[x][y][z].SetType(1);
+				if (worldY <= 63) {
+					m_blocks[x][y][z].SetType(1);
 				}
 
 				if (worldY <= h) {

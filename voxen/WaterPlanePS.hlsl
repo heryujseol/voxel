@@ -26,7 +26,7 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
 float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
     float3 normal = input.normal;
-    if (normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
+    if (normal.y <= 0 || input.posWorld.y < 64.0 - 1e-4 || 64.0 + 1e-4 < input.posWorld.y)
         discard;
     
     // absorption color

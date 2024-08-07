@@ -15,7 +15,10 @@ namespace Utils {
 	static const float PI = 3.14159265f;
 	static const float invPI = 1.0f / PI;
 
-	static Vector3 SRGB2Linear(Vector3 color) { 
+	static float Sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
+
+	static Vector3 SRGB2Linear(Vector3 color)
+	{
 		float r = std::pow(std::clamp(color.x, 0.0f, 1.0f), 2.2f);
 		float g = std::pow(std::clamp(color.y, 0.0f, 1.0f), 2.2f);
 		float b = std::pow(std::clamp(color.z, 0.0f, 1.0f), 2.2f);
@@ -36,11 +39,10 @@ namespace Utils {
 		return Vector3((float)(floorX - modX), (float)(floorY - modY), (float)(floorZ - modZ));
 	}
 
-	template <typename T>
-	static T Lerp(T a, T b, float w) 
-	{ 
+	template <typename T> static T Lerp(T a, T b, float w)
+	{
 		w = std::clamp(w, 0.0f, 1.0f);
-		return (1 - w) * a + w * b; 
+		return (1 - w) * a + w * b;
 	}
 
 	static float CubicLerp(float a, float b, float w)
