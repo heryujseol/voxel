@@ -706,20 +706,22 @@ bool Graphics::InitShaderResourceBuffers()
 			for (int x = 0; x < 1920; ++x) {
 				float noise = 0.0f;
 
+				float continentalness = Terrain::GetContinentalness((float)x, (float)y);
+				float erosion = Terrain::GetErosion((float)x, (float)y);
+				float peaksValley = Terrain::GetPeaksValley((float)x, (float)y);
+
 				if (i == 0) {
-					noise = Terrain::GetContinentalness((float)x, (float)y);
+					data[i][x + y * 1920] = continentalness;
 				}
 				else if (i == 1) {
-					noise = Terrain::GetErosion((float)x, (float)y);
+					data[i][x + y * 1920] = erosion;
 				}
 				else if (i == 2) {
-					noise = Terrain::GetPeaksValley((float)x, (float)y);
+					data[i][x + y * 1920] = peaksValley;
 				}
 				else if (i == 3) {
-					noise = Terrain::GetHeight(x, y);
+					//data[i][x + y * 1920] = Terrain::GetHeight(continentalness, erosion, peaksValley);
 				}
-
-				data[i][x + y * 1920] = noise;
 			}
 		}
 
