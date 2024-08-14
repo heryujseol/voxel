@@ -141,12 +141,12 @@ void App::Update(float dt)
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
 
 		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime, m_camera.GetPosition());
+		m_light.Update(m_dateTime, m_camera);
 		m_cloud.Update(dt, m_camera.GetPosition());
 	}
 	else {
 		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime, m_camera.GetPosition());
+		m_light.Update(m_dateTime, m_camera);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 	}
 }

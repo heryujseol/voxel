@@ -191,79 +191,16 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return gl * gv;
 }
 
-float getShadowFactor2(float3 posWorld)
-{
-    float shadowFactor = 1.0;
-    
-    float g_topLX[3] =
-    {
-        topLX.x, topLX.y, topLX.z
-    };
-
-    float g_viewPortW[3] =
-    {
-        viewPortW.x, viewPortW.y, viewPortW.z
-    };
-    
-    float width, height, numMips;
-    shadowTex.GetDimensions(0, width, height, numMips);
-    
-    float4 shadowPos = mul(mul(float4(posWorld, 1.0), shadowView[0]), shadowProj[0]);
-    shadowPos.xyz /= shadowPos.w;
-
-    shadowPos.x = shadowPos.x * 0.5 + 0.5;
-    shadowPos.y = shadowPos.y * -0.5 + 0.5;
-    
-    if (shadowPos.x < 0.0 || shadowPos.x > 1.0 || shadowPos.y < 0.0 || shadowPos.y > 1.0)
-    {
-        return 0.0;
-    }
-        
-    float depth = shadowPos.z - 0.001;
-    //if (depth < 0.0 || depth > 1.0)
-    //{
-    //    continue;
-    //}
-    
-    float dx = 5.0 / width;
-    float dy = 5.0 / height;
-
-    float percentLit = 0.0;
-    const float2 offsets[9] =
-    {
-        //경계선일때 조건 달아주기
-        float2(-dx, -dy), float2(0.0, -dy), float2(dx, -dy),
-        float2(-dx, 0.0), float2(0.0, 0.0), float2(dx, 0.0),
-        float2(-dx, +dy), float2(0.0, +dy), float2(dx, +dy)
-    };
-    
-    shadowPos.x = (shadowPos.x * (g_viewPortW[0] / width)) + (g_topLX[0] / width);
-    shadowPos.y = (shadowPos.y * (g_viewPortW[0] / height));
-    
-    [unroll]
-    for (int j = 0; j < 9; ++j)
-    {
-        percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, float2(shadowPos.xy + offsets[j]), depth).r;
-    }
-    shadowFactor = percentLit / 9.0;
- 
-    return shadowFactor;
-}
-
 float getShadowFactor(float3 posWorld)
 {
     float width, height, numMips;
     shadowTex.GetDimensions(0, width, height, numMips);
     
-    float g_topLX[3] =
-    {
-        topLX.x, topLX.y, topLX.z
-    };
-
-    float g_viewPortW[3] =
-    {
-        viewPortW.x, viewPortW.y, viewPortW.z
-    };
+    float g_topLX[3] = { topLX.x, topLX.y, topLX.z };
+    float g_viewPortW[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
+    
+    float biasV[3] = { 0.001, 0.0015, 0.003 };
+    float biasH[3] = { 0.0015, 0.004, 0.005 };
     
     for (int i = 0; i < 3; ++i)
     {
@@ -278,15 +215,9 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float bias = 0.001;
-        if (i == 1)
-        {
-            bias = 0.003;
-        }
-        else if (i == 2)
-        {
-            bias = 0.007;
-        }
+        float bias = lerp(biasH[i], biasV[i], lightDir.y);
+        //bias = biasV[i];
+        //bias = 0.001;
         
         float depth = shadowPos.z - bias;
         if (depth < 0.0 || depth > 1.0)
@@ -308,18 +239,13 @@ float getShadowFactor(float3 posWorld)
         shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
         shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
         
-        float2 texcoord; 
+        float2 texcoord;
         float denom = 9.0;
         [unroll]
         for (int j = 0; j < 9; ++j)
         {
             texcoord = shadowPos.xy + offsets[j];
-            //if (texcoord.x < g_topLX[i] / width || texcoord.x >= (g_topLX[i] + g_viewPortW[i]) / width
-            //    || texcoord.y < 0.0 || texcoord.y >= g_viewPortW[i] / height)
-            //{
-            //    denom -= 1;
-            //    continue;
-            //}
+            texcoord = clamp(texcoord, 0.0, 1.0);
             percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
         }
         return percentLit / denom;

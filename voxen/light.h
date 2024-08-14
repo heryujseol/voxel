@@ -16,7 +16,7 @@ public:
 	~Light();
 
 	bool Initialize();
-	void Update(UINT dateTime, Vector3 cameraPos);
+	void Update(UINT dateTime, Camera &camera);
 
 	inline float GetRadianceWeight() const { return m_radianceWeight; }
 

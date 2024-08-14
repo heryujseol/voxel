@@ -31,7 +31,7 @@ bool Light::Initialize()
 	return true;
 }
 
-void Light::Update(UINT dateTime, Vector3 cameraPos)
+void Light::Update(UINT dateTime, Camera& camera)
 {
 	const float MAX_RADIANCE_WEIGHT = 1.5;
 	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
@@ -111,58 +111,73 @@ void Light::Update(UINT dateTime, Vector3 cameraPos)
 
 	// shadow
 	{
-		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
-		if (angle > 1.5f && angle <= 3.0f) {
-			m_up = Vector3(-m_up.x, -m_up.y, m_up.z);
-		}
-
-		float cascade[CASCADE_NUM] = { 0.1f, 0.3f, 0.6f };
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.1f, 0.3f, 0.6f };
 		float topLX[CASCADE_NUM] = { 0.0f, 1080.0f, 1620.0f };
 		float viewportWith = 1080.0f;
 
-		for (int i = 0; i < CASCADE_NUM; i++) {
-			m_sunPos = Vector3(200.0f + (i * 100.0f), 0.0f, 0.0f);
-			m_sunPos = Vector3(400.0f, 0.0f, 0.0f);
-			m_sunPos = Vector3::Transform(m_sunPos, Matrix::CreateRotationZ(angle));
-			m_sunPos = cameraPos + m_sunPos;
+		m_dir = Vector3::Transform(Vector3(-1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+		m_dir.Normalize();
+		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
+		if (angle > 1.5f && angle <= 3.0f)
+		{
+			m_up =Vector3(-m_up.x, -m_up.y, m_up.z);
+		}
 
-			m_dir = cameraPos - m_sunPos;
-			m_dir.Normalize();
+		Vector3 frustum[8]{
+			{ -1.0f, 1.0f, 0.0f },
+			{ 1.0f, 1.0f, 0.0f },
+			{ 1.0f, -1.0f, 0.0f },
+			{ -1.0f, -1.0f, 0.0f },
 
-			m_view[i] = XMMatrixLookToLH(m_sunPos, m_dir, m_up);
+			{ -1.0f, 1.0f, 1.0f },
+			{ 1.0f, 1.0f, 1.0f },
+			{ 1.0f, -1.0f, 1.0f },
+			{ -1.0f, -1.0f, 1.0f } 
+		};
+
+		Matrix toWorld = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
+
+		for (auto& v : frustum)
+			v = Vector3::Transform(v, toWorld);
+
+		for (int i = 0; i < CASCADE_NUM; ++i) {
+			Vector3 tFrustum[8];
+			for (int j = 0; j < 8; ++j)
+				tFrustum[j] = frustum[j];
+
+			for (int j = 0; j < 4; ++j) {
+				Vector3 v = tFrustum[j + 4] - tFrustum[j];
+
+				Vector3 n = v * cascade[i];
+				Vector3 f = v * cascade[i + 1];
+
+				tFrustum[j + 4] = tFrustum[j] + f;
+				tFrustum[j] = tFrustum[j] + n;
+			}
+
+			Vector3 center;
+			for (auto& v : tFrustum)
+				center += v;
+			center *= 1.0f / 8.0f;
+
+			float radius = 0.0f;
+			for (auto& v : tFrustum)
+				radius = max(radius, (v - center).Length());
+			
+			float value = max(500.0f, radius * 2.0f);
+			Vector3 sunPos = center + (m_dir * -value);
+			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
+			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, 3000.0f);
+
 			m_shadowConstantData.view[i] = m_view[i].Transpose();
-
-			float viewWidth = 1024.0f * cascade[i];
-			float viewHeight = viewWidth;
-
-			m_proj[i] =
-				XMMatrixOrthographicLH(viewWidth, viewHeight, 0.01f, 2000.0f + (i * 500.0f));
-			//Vector4 shadowOrigin = Vector4(0.0f, 0.0f, 0.0f, 1.0);
-			//shadowOrigin = Vector4::Transform(shadowOrigin, m_view[i] * m_proj[i]);
-			//shadowOrigin = shadowOrigin * (viewportWith / 2.0f);
-
-			//Vector4 roundOrigin = Vector4(round(shadowOrigin.x), round(shadowOrigin.y),
-			//	round(shadowOrigin.z), round(shadowOrigin.w));
-
-			//Vector4 roundOffset = roundOrigin - shadowOrigin;
-			//roundOffset = roundOffset * (2.0f / viewportWith);
-			//roundOffset.z = 0.0f;
-			//roundOffset.w = 0.0;
-
-			//m_proj[i](3, 0) += roundOffset.x;
-			//m_proj[i](3, 1) += roundOffset.y;
-			//m_proj[i](3, 2) += roundOffset.z;
-			//m_proj[i](3, 3) += roundOffset.w;
-
 			m_shadowConstantData.proj[i] = m_proj[i].Transpose();
 			m_shadowConstantData.invProj[i] = m_proj[i].Invert().Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
 			m_shadowConstantData.viewWith[i] = viewportWith;
 			viewportWith /= 2;
 
-			// 뷰포트 크기 점점 작게
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-				m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
+					m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
 		}
 
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);
