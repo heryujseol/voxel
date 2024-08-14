@@ -65,7 +65,7 @@ void Chunk::InitChunkData()
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int worldX = (int)m_offsetPosition.x + x - 1;
 			int worldZ = (int)m_offsetPosition.z + z - 1;
-
+			
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
@@ -75,18 +75,27 @@ void Chunk::InitChunkData()
 			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
-
-				float density = Terrain::GetDensity(worldX, worldY, worldZ);
-				float densityBias = (baseLevel - worldY) * squishFactor;
-
-				if (density + densityBias > 0.0f) {
+				
+				if (worldY == 256) {
+					m_blocks[x][y][z].SetType(0);
+					continue;
+				}
+				if (worldY == 1) {
 					m_blocks[x][y][z].SetType(4);
+					continue;
+				}
+				
+				float density = abs(Terrain::GetDensity(worldX, worldY, worldZ));
+
+				if (worldY <= baseLevel) {
+					if (0.0f <= density && density <= 0.01f)
+						m_blocks[x][y][z].SetType(0);
+					else 
+						m_blocks[x][y][z].SetType(4);
+					
 				}
 				else {
-					if (worldY <= 63)
-						m_blocks[x][y][z].SetType(1);
-					else
-						m_blocks[x][y][z].SetType(0);
+					m_blocks[x][y][z].SetType(0);
 				}
 			}
 		}

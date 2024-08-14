@@ -88,15 +88,15 @@ namespace Terrain {
 		float n5 = Hash(x1, y0, z1).Dot(p - Vector3((float)x1, (float)y0, (float)z1));
 		float n6 = Hash(x1, y1, z0).Dot(p - Vector3((float)x1, (float)y1, (float)z0));
 		float n7 = Hash(x1, y1, z1).Dot(p - Vector3((float)x1, (float)y1, (float)z1));
-
+	
 		float i0 = Utils::CubicLerp(n0, n1, p.z - z0);
 		float i1 = Utils::CubicLerp(n2, n3, p.z - z0);
-		float i2 = Utils::CubicLerp(i0, i1, p.y - (float)y0);
+		float i2 = Utils::CubicLerp(i0, i1, p.y - y0);
 		float i3 = Utils::CubicLerp(n4, n5, p.z - z0);
 		float i4 = Utils::CubicLerp(n6, n7, p.z - z0);
-		float i5 = Utils::CubicLerp(i3, i4, p.y - (float)y0);
-
-		return Utils::CubicLerp(i2, i5, p.x - (float)x0);
+		float i5 = Utils::CubicLerp(i3, i4, p.y - y0);
+		
+		return Utils::CubicLerp(i2, i5, p.x - x0);
 	}
 
 	/*
@@ -129,7 +129,7 @@ namespace Terrain {
 		return noise;
 	}
 
-	static float PerlinFbm(float x, float y, float z, float freq, float octave)
+	static float PerlinFbm(float x, float y, float z, float freq, int octave)
 	{
 		float amp = 1.0f;
 		float noise = 0.0f;
@@ -151,27 +151,27 @@ namespace Terrain {
 		
 		if (value <= -0.51f) {
 			float w = (value - -1.0f) / (-0.51f - -1.0f);
-			return Utils::Smootherstep(0.0f, 0.14f, w);
+			return Utils::CubicLerp(0.0f, 0.14f, w);
 		}
-		else if (value <= -0.21f) {
-			float w = (value - -0.51f) / (-0.21f - -0.51f);
-			return Utils::Smootherstep(0.14f, 0.31f, w);
+		else if (value <= -0.25f) {
+			float w = (value - -0.51f) / (-0.25f - -0.51f);
+			return Utils::CubicLerp(0.14f, 0.31f, w);
 		}
 		else if (value <= -0.10f) {
-			float w = (value - -0.21f) / (-0.10f - -0.21f);
-			return Utils::Smootherstep(0.31f, 0.43f, w);
+			float w = (value - -0.25f) / (-0.10f - -0.25f);
+			return Utils::CubicLerp(0.31f, 0.43f, w);
 		}
 		else if (value <= 0.09f) {
 			float w = (value - -0.10f) / (0.09f - -0.10f);
-			return Utils::Smootherstep(0.43f, 0.57f, w);
+			return Utils::CubicLerp(0.43f, 0.57f, w);
 		}
 		else if (value <= 0.42f) {
 			float w = (value - 0.09f) / (0.42f - 0.09f);
-			return Utils::Smootherstep(0.57f, 0.86f, w);
+			return Utils::CubicLerp(0.57f, 0.92f, w);
 		}
 		else {
 			float w = (value - 0.42f) / (1.0f - 0.42f);
-			return Utils::Smootherstep(0.86f, 1.0f, w);
+			return Utils::CubicLerp(0.92f, 1.0f, w);
 		}
 	}
 
@@ -179,7 +179,7 @@ namespace Terrain {
 	{ 
 		float scale = 1024.0f;
 		
-		float freq = 3.0f;
+		float freq = 2.0f;
 		int octave = 6;
 
 		float cNoise = PerlinFbm(x / scale, z / scale, freq, octave);
@@ -192,29 +192,37 @@ namespace Terrain {
 	{
 		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
 
-		if (value <= -0.54f) {
-			float w = (value - -1.0f) / (-0.54f - -1.0f);
-			return Utils::Smootherstep(0.01f, 0.14f, w);
+		if (value <= -0.78f) { // 0.02
+			float w = (value - -1.0f) / (-0.78f - -1.0f);
+			return Utils::CubicLerp(0.0f, 0.02f, w);
 		}
-		else if (value <= 0.03f) {
-			float w = (value - -0.54f) / (0.03f - -0.54f);
-			return Utils::Smootherstep(0.14f, 0.43f, w);
+		else if (value <= -0.57f) { // 0.14
+			float w = (value - -0.78f) / (-0.57f - -0.78f);
+			return Utils::CubicLerp(0.02f, 0.14f, w);
 		}
-		else if (value <= 0.32f) {
+		else if (value <= -0.36f) { // 0.29
+			float w = (value - -0.57f) / (-0.36f - -0.57f);
+			return Utils::CubicLerp(0.14f, 0.29f, w);
+		}
+		else if (value <= 0.03f) { // 0.43
+			float w = (value - -0.36f) / (0.03f - -0.36f);
+			return Utils::CubicLerp(0.29f, 0.43f, w);
+		}
+		else if (value <= 0.32f) { // 0.57
 			float w = (value - 0.03f) / (0.32f - 0.03f);
-			return Utils::Smootherstep(0.43f, 0.57f, w);
+			return Utils::CubicLerp(0.43f, 0.57f, w);
 		}
-		else if (value <= 0.39f) {
+		else if (value <= 0.39f) { // 0.71
 			float w = (value - 0.32f) / (0.39f - 0.32f);
-			return Utils::Smootherstep(0.57f, 0.71f, w);
+			return Utils::CubicLerp(0.57f, 0.71f, w);
 		}
-		else if (value <= 0.78f) {
+		else if (value <= 0.78f) { // 0.86
 			float w = (value - 0.39f) / (0.78f - 0.39f);
-			return Utils::Smootherstep(0.71f, 0.86f, w);
+			return Utils::CubicLerp(0.71f, 0.86f, w);
 		}
-		else {
+		else { // 1.0
 			float w = (value - 0.78f) / (1.0f - 0.78f);
-			return Utils::Smootherstep(0.86f, 1.0f, w);
+			return Utils::CubicLerp(0.86f, 1.0f, w);
 		}
 	}
 
@@ -223,57 +231,61 @@ namespace Terrain {
 		float scale = 1024.0f;
 		float bias = 123.0f;
 
-		float freq = 2.0f;
-		int octave = 3;
+		float freq = 1.0f;
+		int octave = 4;
 
-		float cNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
-		float cValue = SplineErosion(cNoise);
+		float eNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
+		float eValue = SplineErosion(eNoise);
 		
-		return cValue;
+		return eValue;
 	}
 
 	static float SplinePeaksValley(float value) 
 	{ 
-		value = abs(std::clamp(value * 1.5f, -1.0f, 1.0f));
+		value = std::clamp(abs(value * 1.5f), 0.0f, 1.0f);
 
 		if (value <= 0.05f) {
 			float w = (value - 0.0f) / (0.05f - 0.0f);
-			return Utils::Smootherstep(0.01f, 0.07f, w);
+			return Utils::CubicLerp(0.01f, 0.07f, w);
 		}
 		else if (value <= 0.10f) {
 			float w = (value - 0.05f) / (0.10f - 0.05f);
-			return Utils::Smootherstep(0.07f, 0.12f, w);
+			return Utils::CubicLerp(0.07f, 0.12f, w);
 		}
 		else if (value <= 0.24f) {
-			float w = (value - 0.05f) / (0.24f - 0.05f);
-			return Utils::Smootherstep(0.12f, 0.52f, w);
+			float w = (value - 0.10f) / (0.24f - 0.10f);
+			return Utils::CubicLerp(0.12f, 0.32f, w);
+		}
+		else if (value <= 0.36f) {
+			float w = (value - 0.24f) / (0.36f - 0.24f);
+			return Utils::CubicLerp(0.32f, 0.52f, w);
 		}
 		else if (value <= 0.42f) {
-			float w = (value - 0.24f) / (0.42f - 0.24f);
-			return Utils::Smootherstep(0.52f, 0.64f, w);
+			float w = (value - 0.36f) / (0.42f - 0.36f);
+			return Utils::CubicLerp(0.52f, 0.64f, w);
 		}
 		else if (value <= 0.80f) {
 			float w = (value - 0.42f) / (0.80f - 0.42f);
-			return Utils::Smootherstep(0.64f, 1.0f, w);
+			return Utils::CubicLerp(0.64f, 1.0f, w);
 		}
 		else {
 			float w = (value - 0.80f) / (1.0f - 0.80f);
-			return Utils::Smootherstep(0.75f, 1.0f, 1.0f - w);
+			return Utils::CubicLerp(0.86f, 1.0f, 1.0f - w);
 		}
 	}
 
 	static float GetPeaksValley(float x, float z)
 	{
 		float scale = 512.0f;
-		float bias = 2.0f;
+		float bias = 4.0f;
 
-		float freq = 3.0f;
-		int octave = 5;
+		float freq = 1.5f;
+		int octave = 6;
 
-		float cNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
-		float cValue = SplinePeaksValley(cNoise);
+		float pvNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
+		float pvValue = SplinePeaksValley(pvNoise);
 
-		return cValue;
+		return pvValue;
 	}
 
 	static float GetBaseLevel(float c, float e, float pv) 
@@ -284,35 +296,24 @@ namespace Terrain {
 			c = (c - 0.3f) / 0.7f; // [0.0f, 1.0f]
 	
 		pv = (pv - 0.5f) * 2.0f;
-		                              // erosion이 높을 때만 c에 영향           // erosion이 작을 때만 pv에 영향
-		float baseLevel = 64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 2.0f);
+		                             
+		float baseLevel =
+			64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
 		
-		return baseLevel;
-	}
-
-	static float GetSquishFactor(float c, float e, float pv)
-	{
-		float w = c * e * (1.0f - pv);
-		
-		return Utils::Smootherstep(0.01f, 0.2f, w);
+		return max(baseLevel, 1.0f);
 	}
 
 	static float GetDensity(int x, int y, int z)
 	{
-		// 압축 인수
-		// - 침식과 압축인수는 비례
-		// 높이 편향 기준
-		// - 대륙성에 따른 높이 편향
-
 		float scale = 512.0f;
 		float bias = 3.0f;
 
-		float freq = 3.0f;
-		int octave = 5.0f;
+		float freq = 1.0f;
+		int octave = 6;
 
-		float cNoise =
+		float dNoise =
 			PerlinFbm(x / scale + bias, y / scale + bias, z / scale + bias, freq, octave);
 
-		return cNoise;
+		return dNoise;
 	}
 }

@@ -720,7 +720,7 @@ bool Graphics::InitShaderResourceBuffers()
 					data[i][x + y * 1920] = peaksValley;
 				}
 				else if (i == 3) {
-					//data[i][x + y * 1920] = Terrain::GetHeight(continentalness, erosion, peaksValley);
+					data[i][x + y * 1920] = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
 				}
 			}
 		}
