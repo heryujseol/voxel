@@ -199,7 +199,7 @@ float getShadowFactor(float3 posWorld)
     
     //float biasV[3] = { 0.001, 0.0015, 0.003 };
     //float biasH[3] = { 0.0015, 0.004, 0.005 };
-    float biasA[3] = { 0.002, 0.005, 0.01 };
+    float biasA[3] = { 0.002, 0.005, 0.0035 };
     
     for (int i = 0; i < 3; ++i)
     {

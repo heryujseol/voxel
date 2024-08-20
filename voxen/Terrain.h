@@ -209,8 +209,8 @@ namespace Terrain {
 		
 		uint8_t type = 0;
 
-		if (y == h) { // Áö¸é
-			if (y > 140) {
+		if (y == h) {
+			/*if (y > 140) {
 				if (t > 0.6f)
 					type = 6;
 				else
@@ -239,13 +239,14 @@ namespace Terrain {
 					type = 9;
 			}
 			else
-				type = 3;
+				type = 3;*/
+			type = 3;
 
 			if (thick > 0.6f)
 				type = 0;
 		}
 		else if (y < h) {
-			if (h - 10 >= y)
+			/*if (h - 10 >= y)
 				type = 4;
 			else {
 				if (y > 140) {
@@ -277,7 +278,8 @@ namespace Terrain {
 				}
 				else
 					type = 3;
-			}
+			}*/
+			type = 3;
 
 			if (thick > 0.6f)
 				type = 0;
