@@ -71,7 +71,6 @@ void Chunk::InitChunkData()
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
 
 			float baseLevel = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
-			float squishFactor = Terrain::GetSquishFactor(continentalness, erosion, peaksValley);
 			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
@@ -84,15 +83,14 @@ void Chunk::InitChunkData()
 					m_blocks[x][y][z].SetType(4);
 					continue;
 				}
-				
-				float density = abs(Terrain::GetDensity(worldX, worldY, worldZ));
 
-				if (worldY <= baseLevel) {
-					if (0.0f <= density && density <= 0.01f)
-						m_blocks[x][y][z].SetType(0);
-					else 
-						m_blocks[x][y][z].SetType(4);
-					
+				float density = Terrain::GetDensity(worldX, worldY, worldZ);
+				
+				if (worldY <= baseLevel) { 
+					m_blocks[x][y][z].SetType(4);
+					if (-0.05f <= density && density <= 0.05f) {
+					//	m_blocks[x][y][z].SetType(0);
+					}
 				}
 				else {
 					m_blocks[x][y][z].SetType(0);

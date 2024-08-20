@@ -305,11 +305,11 @@ namespace Terrain {
 
 	static float GetDensity(int x, int y, int z)
 	{
-		float scale = 512.0f;
+		float scale = 128.0f;
 		float bias = 3.0f;
 
 		float freq = 1.0f;
-		int octave = 6;
+		int octave = 4;
 
 		float dNoise =
 			PerlinFbm(x / scale + bias, y / scale + bias, z / scale + bias, freq, octave);
