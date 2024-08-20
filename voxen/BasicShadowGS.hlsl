@@ -1,8 +1,6 @@
 cbuffer LightConstantBuffer : register(b0)
 {
-    Matrix view[3];
-    Matrix proj[3];
-    Matrix invProj[3];
+    Matrix viewProj[3];
     float4 topLX;
     float4 viewPortW;
 }
@@ -30,7 +28,7 @@ void main(triangle vsOutput input[3], inout TriangleStream<gsOutput> output)
         for (int i = 0; i < 3; ++i)
         {
             float4 position = float4(input[i].posWorld.xyz, 1.0);
-            element.pos = mul(mul(position, view[face]), proj[face]);
+            element.pos = mul(position, viewProj[face]);
             output.Append(element);
         }
         output.RestartStrip();

@@ -163,15 +163,30 @@ void Light::Update(UINT dateTime, Camera& camera)
 			float radius = 0.0f;
 			for (auto& v : tFrustum)
 				radius = max(radius, (v - center).Length());
+			radius = std::ceil(radius * 16.0f) / 16.0f;
 			
 			float value = max(500.0f, radius * 2.0f);
 			Vector3 sunPos = center + (m_dir * -value);
 			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
 			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, 3000.0f);
 
-			m_shadowConstantData.view[i] = m_view[i].Transpose();
-			m_shadowConstantData.proj[i] = m_proj[i].Transpose();
-			m_shadowConstantData.invProj[i] = m_proj[i].Invert().Transpose();
+			Vector3 shadowOrigin = Vector3(0.0f, 0.0f, 0.0f);
+			shadowOrigin = Vector3::Transform(shadowOrigin, (m_view[i] * m_proj[i]));
+			shadowOrigin.x *= App::SHADOW_WIDTH * 0.5f + App::SHADOW_WIDTH * 0.5f;
+			shadowOrigin.y *= App::SHADOW_HEIGHT * 0.5f + App::SHADOW_HEIGHT * 0.5f;
+
+			Vector3 roundedOrigin = /*Vector3(floorf(shadowOrigin.x), floorf(shadowOrigin.y), shadowOrigin.z);*/
+				Vector3(round(shadowOrigin.x), round(shadowOrigin.y), shadowOrigin.z);
+			Vector3 roundOffset =
+				Vector3((roundedOrigin.x - shadowOrigin.x) * (2.0f / App::SHADOW_WIDTH),
+					(roundedOrigin.y - shadowOrigin.y) * (2.0f / App::SHADOW_HEIGHT),
+					0.0f);
+
+			Matrix viewProj = m_view[i] * m_proj[i];
+			viewProj._41 += roundOffset.x;
+			viewProj._42 += roundOffset.y;
+
+			m_shadowConstantData.viewProj[i] = viewProj.Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
 			m_shadowConstantData.viewWith[i] = viewportWith;
 			viewportWith /= 2;

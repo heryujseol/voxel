@@ -56,9 +56,7 @@ cbuffer AppConstantBuffer : register(b10)
 
 cbuffer ShadowConstantBuffer : register(b11)
 {
-    Matrix shadowView[3];
-    Matrix shadowProj[3];
-    Matrix shadowInvProj[3];
+    Matrix shadowViewProj[3];
     float4 topLX;
     float4 viewPortW;
 }
@@ -199,12 +197,13 @@ float getShadowFactor(float3 posWorld)
     float g_topLX[3] = { topLX.x, topLX.y, topLX.z };
     float g_viewPortW[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
     
-    float biasV[3] = { 0.001, 0.0015, 0.003 };
-    float biasH[3] = { 0.0015, 0.004, 0.005 };
+    //float biasV[3] = { 0.001, 0.0015, 0.003 };
+    //float biasH[3] = { 0.0015, 0.004, 0.005 };
+    float biasA[3] = { 0.002, 0.005, 0.01 };
     
     for (int i = 0; i < 3; ++i)
     {
-        float4 shadowPos = mul(mul(float4(posWorld, 1.0), shadowView[i]), shadowProj[i]);
+        float4 shadowPos = mul(float4(posWorld, 1.0), shadowViewProj[i]);
         shadowPos.xyz /= shadowPos.w;
         
         shadowPos.x = shadowPos.x * 0.5 + 0.5;
@@ -215,9 +214,7 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float bias = lerp(biasH[i], biasV[i], lightDir.y);
-        //bias = biasV[i];
-        //bias = 0.001;
+        float bias = biasA[i]; //lerp(biasH[i], biasV[i], lightDir.y);
         
         float depth = shadowPos.z - bias;
         if (depth < 0.0 || depth > 1.0)
@@ -225,8 +222,8 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float dx = 5.0 / width;
-        float dy = 5.0 / height;
+        float dx = 1.0 / width;
+        float dy = 1.0 / height;
 
         float percentLit = 0.0;
         const float2 offsets[9] =
