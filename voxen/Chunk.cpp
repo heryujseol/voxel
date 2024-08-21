@@ -105,15 +105,15 @@ void Chunk::InitChunkData()
 					continue;
 				}
 
-				float d1 = Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 128.0f);
-				float d2 = Terrain::GetDensity2(worldX, worldY, worldZ, 123.0f, 256.0f);
+				float d1 = Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 256.0f);
+				float d2 = Terrain::GetDensity2(worldX, worldY, worldZ, 123.0f, 512.0f);
 
 				uint8_t transparencyType = worldY <= 63 ? 1 : 0;
 
 				m_blocks[x][y][z].SetType(transparencyType);
 				if (worldY <= baseLevel) {
 					m_blocks[x][y][z].SetType(2);
-					if (d1 * d1 + d2 * d2 <= 0.0025f) {
+					if (d1 * d1 + d2 * d2 <= 0.004f) {
 						m_blocks[x][y][z].SetType(transparencyType);
 					}
 				}
