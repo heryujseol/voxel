@@ -303,16 +303,24 @@ namespace Terrain {
 		return max(baseLevel, 1.0f);
 	}
 
-	static float GetDensity(int x, int y, int z)
+	static float GetDensity(int x, int y, int z, float bias, float scale)
 	{
-		float scale = 128.0f;
-		float bias = 3.0f;
-
-		float freq = 1.0f;
-		int octave = 4;
+		float freq = 2.0f;
+		int octave = 3;
 
 		float dNoise =
 			PerlinFbm(x / scale + bias, y / scale + bias, z / scale + bias, freq, octave);
+
+		return dNoise;
+	}
+
+	static float GetDensity2(int x, int y, int z, float bias, float scale)
+	{
+		float freq = 2.0f;
+		int octave = 3;
+
+		float dNoise =
+			PerlinFbm(x / scale + bias, y / (scale / 2.0f) + bias, z / scale + bias, freq, octave);
 
 		return dNoise;
 	}

@@ -13,6 +13,8 @@
 using namespace Microsoft::WRL;
 using namespace DirectX::SimpleMath;
 
+struct ChunkInitMemory;
+
 class Chunk {
 
 public:
@@ -24,7 +26,7 @@ public:
 	Chunk(UINT id);
 	~Chunk();
 
-	void Initialize();
+	ChunkInitMemory* Initialize(ChunkInitMemory* memory);
 	void Update(float dt);
 	void Clear();
 
@@ -32,7 +34,7 @@ public:
 
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
 	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return IsEmptyLowLod(); }
+	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
 
 	inline Vector3 GetOffsetPosition() { return m_offsetPosition; }
 	inline void SetOffsetPosition(Vector3 offsetPosition) { m_offsetPosition = offsetPosition; }
@@ -78,11 +80,12 @@ public:
 private:
 	void InitChunkData();
 	void InitInstanceInfoData();
-	void InitWorldVerticesData();
+	void InitWorldVerticesData(ChunkInitMemory* memory);
 
-	void MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
-		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6]);
-	void GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
+	void MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6],
+		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6]);
+	void GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
+		std::vector<VoxelVertex>& vertices,
 		std::vector<uint32_t>& indices, uint8_t type);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
@@ -90,11 +93,10 @@ private:
 
 	UINT m_id;
 	bool m_isLoaded;
+	bool m_isUpdateRequired;
 	Vector3 m_offsetPosition;
 	Vector3 m_position;
 	
-	bool m_isUpdateRequired;
-
 	std::vector<VoxelVertex> m_lowLodVertices;
 	std::vector<uint32_t> m_lowLodIndices;
 
@@ -108,4 +110,44 @@ private:
 	std::vector<uint32_t> m_semiAlphaIndices;
 
 	ChunkConstantData m_constantData;
+};
+
+struct ChunkInitMemory {
+	uint64_t llColBit[Chunk::CHUNK_SIZE_P2 * 3];
+	uint64_t opColBit[Chunk::CHUNK_SIZE_P2 * 3];
+
+	uint64_t llCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
+	uint64_t opCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
+	uint64_t tpCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
+	uint64_t saCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
+
+	uint64_t llSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
+	uint64_t opSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
+	uint64_t tpSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
+	uint64_t saSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
+
+	ChunkInitMemory()
+		: llColBit{ 0 }, opColBit{ 0 }, llCullColBit{ 0 }, opCullColBit{ 0 }, tpCullColBit{ 0 },
+		  saCullColBit{ 0 }, llSliceColBit{ 0 }, opSliceColBit{ 0 }, tpSliceColBit{ 0 },
+		  saSliceColBit{ 0 }
+	{
+	}
+
+	void Clear()
+	{
+		std::fill(std::begin(llColBit), std::end(llColBit), 0);
+		std::fill(std::begin(opColBit), std::end(opColBit), 0);
+
+		std::fill(std::begin(llCullColBit), std::end(llCullColBit), 0);
+		std::fill(std::begin(opCullColBit), std::end(opCullColBit), 0);
+		std::fill(std::begin(tpCullColBit), std::end(tpCullColBit), 0);
+		std::fill(std::begin(saCullColBit), std::end(saCullColBit), 0);
+
+		for (int i = 0; i < Block::BLOCK_TYPE_COUNT; ++i) {
+			std::fill(std::begin(llSliceColBit[i]), std::end(llSliceColBit[i]), 0);
+			std::fill(std::begin(opSliceColBit[i]), std::end(opSliceColBit[i]), 0);
+			std::fill(std::begin(tpSliceColBit[i]), std::end(tpSliceColBit[i]), 0);
+			std::fill(std::begin(saSliceColBit[i]), std::end(saSliceColBit[i]), 0);
+		}
+	}
 };

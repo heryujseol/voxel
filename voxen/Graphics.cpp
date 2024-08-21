@@ -165,16 +165,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
-	
-	///////////////////////////////////////
-	ComPtr<ID3D11Texture2D> noiseBuffer[4];
-	ComPtr<ID3D11ShaderResourceView> noiseSRV[4];
-	std::vector<float> data[4];
-	GraphicsPSO noisePSO;
-	ComPtr<ID3D11PixelShader> noisePS;
-	GraphicsPSO noise2PSO;
-	ComPtr<ID3D11PixelShader> noise2PS;
-	////////////////////////////////////////
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -672,73 +662,6 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-
-	///////////////////////////////////////////////////////////////
-	// noise Texture
-
-	for (int i = 0; i < 4; ++i) {
-		D3D11_TEXTURE2D_DESC desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = 1920;
-		desc.Height = 1080;
-		desc.MipLevels = 1;
-		desc.ArraySize = 1;
-		desc.Format = DXGI_FORMAT_R32_FLOAT;
-		desc.SampleDesc.Count = 1;
-		desc.Usage = D3D11_USAGE_DYNAMIC;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-		ret = Graphics::device->CreateTexture2D(&desc, nullptr, noiseBuffer[i].GetAddressOf());
-		if (FAILED(ret)) {
-			std::cout << "failed create noise buffer" << std::endl;
-			return false;
-		}
-		ret = device->CreateShaderResourceView(
-			noiseBuffer[i].Get(), nullptr, noiseSRV[i].GetAddressOf());
-		if (FAILED(ret)) {
-			std::cout << "failed create noise srv" << std::endl;
-			return false;
-		};
-		data[i].resize(1920 * 1080, 0);
-
-		for (int y = 0; y < 1080; ++y) {
-			for (int x = 0; x < 1920; ++x) {
-				float noise = 0.0f;
-
-				float continentalness = Terrain::GetContinentalness((float)x, (float)y);
-				float erosion = Terrain::GetErosion((float)x, (float)y);
-				float peaksValley = Terrain::GetPeaksValley((float)x, (float)y);
-
-				if (i == 0) {
-					data[i][x + y * 1920] = continentalness;
-				}
-				else if (i == 1) {
-					data[i][x + y * 1920] = erosion;
-				}
-				else if (i == 2) {
-					data[i][x + y * 1920] = peaksValley;
-				}
-				else if (i == 3) {
-					data[i][x + y * 1920] = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
-				}
-			}
-		}
-
-		D3D11_MAPPED_SUBRESOURCE ms;
-		ret = context->Map(noiseBuffer[i].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-		if (FAILED(ret)) {
-			std::cout << "map failed" << std::endl;
-		}
-		float* pData = (float*)ms.pData;
-		for (int h = 0; h < 1080; ++h) {
-			memcpy(&pData[h * (ms.RowPitch / sizeof(float))], &Graphics::data[i][h * 1920],
-				1920 * sizeof(float));
-		}
-		Graphics::context->Unmap(noiseBuffer[i].Get(), NULL);
-	}
-	///////////////////////////////////////////////////////////////
-
 	return true;
 }
 
@@ -999,17 +922,6 @@ bool Graphics::InitPixelShaders()
 	// bloomUpPS
 	if (!DXUtils::CreatePixelShader(L"BloomUpPS.hlsl", bloomUpPS)) {
 		std::cout << "failed create bloom up ps" << std::endl;
-		return false;
-	}
-
-	// noisePS
-	if (!DXUtils::CreatePixelShader(L"NoisePS.hlsl", noisePS)) {
-		std::cout << "failed create noise ps" << std::endl;
-		return false;
-	}
-	// noise2PS
-	if (!DXUtils::CreatePixelShader(L"Noise2PS.hlsl", noise2PS)) {
-		std::cout << "failed create noise2 ps" << std::endl;
 		return false;
 	}
 
@@ -1384,13 +1296,6 @@ void Graphics::InitGraphicsPSO()
 	// combineBloomPSO
 	combineBloomPSO = samplingPSO;
 	combineBloomPSO.pixelShader = combineBloomPS;
-
-	// noisePSO
-	noisePSO = samplingPSO;
-	noisePSO.pixelShader = noisePS;
-
-	noise2PSO = samplingPSO;
-	noise2PSO.pixelShader = noise2PS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

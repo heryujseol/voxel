@@ -160,83 +160,57 @@ void App::Render()
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
-	if (m_keyPressed['1']) {
-		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[0].GetAddressOf());
-		Graphics::SetPipelineStates(Graphics::noisePSO);
-		m_postEffect.Render();
-	}
-	else if (m_keyPressed['2']) {
-		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[1].GetAddressOf());
-		Graphics::SetPipelineStates(Graphics::noisePSO);
-		m_postEffect.Render();
-	}
-	else if (m_keyPressed['3']) {
-		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[2].GetAddressOf());
-		Graphics::SetPipelineStates(Graphics::noisePSO);
-		m_postEffect.Render();
-	}
-	else if (m_keyPressed['4']) {
-		Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::noiseSRV[3].GetAddressOf());
-		Graphics::SetPipelineStates(Graphics::noise2PSO);
-		m_postEffect.Render();
-	}
-	else {
-		std::vector<ID3D11Buffer*> ppConstantBuffers;
-		ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
-		ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
-		ppConstantBuffers.push_back(m_light.m_lightConstantBuffer.Get());
-		ppConstantBuffers.push_back(m_constantBuffer.Get());
+	std::vector<ID3D11Buffer*> ppConstantBuffers;
+	ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
+	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
+	ppConstantBuffers.push_back(m_light.m_lightConstantBuffer.Get());
+	ppConstantBuffers.push_back(m_constantBuffer.Get());
 
-		Graphics::context->VSSetConstantBuffers(
-			7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
-		Graphics::context->PSSetConstantBuffers(
-			7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
+	Graphics::context->VSSetConstantBuffers(
+		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
+	Graphics::context->PSSetConstantBuffers(
+		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 
-		// 1. Deferred Render Pass
-		{
-			FillGBuffer();
-			MaskMSAAEdge();
-			RenderSSAO();
-			ShadingBasic();
+	// 1. Deferred Render Pass
+	{
+		FillGBuffer();
+		MaskMSAAEdge();
+		RenderSSAO();
+		ShadingBasic();
+	}
+
+	// 2. No-MSAA to MSAA Texture
+	{
+		ConvertToMSAA();
+	}
+
+	// 3. Forward Render Pass MSAA
+	{
+		if (m_camera.IsUnderWater()) {
+			RenderFogFilter();
+			RenderSkybox();
+			RenderCloud();
+			RenderWaterPlane();
+		}
+		else {
+			RenderMirrorWorld();
+			RenderWaterPlane();
+			//RenderFogFilter();
+			RenderSkybox();
+			RenderCloud();
+		}
+	}
+
+	// 4. Post Effect
+	{
+		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
+			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+		if (m_camera.IsUnderWater()) {
+			RenderWaterFilter();
 		}
 
-		// 2. No-MSAA to MSAA Texture
-		{
-			ConvertToMSAA();
-		}
-
-		// 3. Forward Render Pass MSAA
-		{
-			if (m_camera.IsUnderWater()) {
-				RenderFogFilter();
-				RenderSkybox();
-				RenderCloud();
-				RenderWaterPlane();
-			}
-			else {
-				RenderMirrorWorld();
-				RenderWaterPlane();
-				//RenderFogFilter();
-				RenderSkybox();
-				RenderCloud();
-			}
-		}
-
-		// 4. Post Effect
-		{
-			Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
-				Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-			if (m_camera.IsUnderWater()) {
-				RenderWaterFilter();
-			}
-
-			m_postEffect.Bloom();
-		}
+		m_postEffect.Bloom();
 	}
 }
 

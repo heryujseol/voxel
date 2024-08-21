@@ -29,8 +29,15 @@ void ChunkManager::operator=(const ChunkManager& rhs) {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
+	m_initThreadCount = std::clamp(std::thread::hardware_concurrency() - 2, 2u, 4u);
+	for (unsigned int i = 0; i < m_initThreadCount; ++i) {
+		m_chunkInitMemoryPool.push_back(new ChunkInitMemory());
+	}
+
 	for (int i = 0; i < CHUNK_POOL_SIZE; ++i) {
-		m_chunkPool.push_back(new Chunk(i));
+		Chunk* chunk = new Chunk(i);
+		chunk->Clear();
+		m_chunkPool.push_back(chunk);
 	}
 
 	m_lowLodVertexBuffers.resize(CHUNK_POOL_SIZE, nullptr);
@@ -251,40 +258,34 @@ void ChunkManager::UpdateLoadChunkList(Camera& camera)
 		}
 		return aDiffLengthXZ > bDiffLengthXZ;
 	});
-
-	int loadCount = 0;
-
-	while (!m_loadChunkList.empty() && loadCount < MAX_ASYNC_LOAD_COUNT) {
+	
+	while (!m_loadChunkList.empty() && m_futures.size() < m_initThreadCount) {
 		Chunk* chunk = m_loadChunkList.back();
 		m_loadChunkList.pop_back();
 
-		////////////////////////////////////
-		// check start time
-		static long long sum = 0;
-		static long long count = 0;
-		auto start_time = std::chrono::steady_clock::now();
-		////////////////////////////////////
+		ChunkInitMemory* chunkInitMemory = m_chunkInitMemoryPool.back();
+		m_chunkInitMemoryPool.pop_back();
 
+		m_futures.push_back(std::make_pair(
+			chunk, std::async(std::launch::async, &Chunk::Initialize, chunk, chunkInitMemory)));
+	}
 
-		// load chunk
-		chunk->Initialize();
-		InitChunkBuffer(chunk);
+	for (auto it = m_futures.begin(); it != m_futures.end();) {
+		if (it->second.wait_for(std::chrono::microseconds(0)) == std::future_status::ready) {
+			ChunkInitMemory* chunkInitMemory = it->second.get();
+			m_chunkInitMemoryPool.push_back(chunkInitMemory);
 
-		// set load value
-		loadCount++;
-		chunk->SetLoad(true);
+			Chunk* chunk = it->first;
+			InitChunkBuffer(chunk);
 
+			chunk->SetUpdateRequired(true);
+			chunk->SetLoad(true);
 
-		////////////////////////////////////
-		// check end time
-		auto end_time = std::chrono::steady_clock::now();
-		auto duration =
-			std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-		sum += duration.count();
-		count++;
-		std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
-				  << std::endl;
-		////////////////////////////////////
+			it = m_futures.erase(it);
+		}
+		else {
+			++it;
+		}
 	}
 }
 
@@ -303,6 +304,8 @@ void ChunkManager::UpdateUnloadChunkList()
 		ReleaseChunkToPool(chunk);
 
 		chunk->Clear();
+
+		chunk->SetUpdateRequired(false);
 		chunk->SetLoad(false);
 	}
 }
@@ -452,7 +455,6 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
 
-
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
 		DXUtils::ResizeBuffer(
@@ -508,7 +510,9 @@ Chunk* ChunkManager::GetChunkFromPool()
 	return nullptr;
 }
 
-void ChunkManager::ReleaseChunkToPool(Chunk* chunk) { m_chunkPool.push_back(chunk); }
+void ChunkManager::ReleaseChunkToPool(Chunk* chunk) { 
+	m_chunkPool.push_back(chunk); 
+}
 
 bool ChunkManager::MakeInstanceVertexBuffer()
 {

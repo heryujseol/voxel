@@ -182,11 +182,5 @@
     <FxCompile Include="BloomUpPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="NoisePS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="Noise2PS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>
