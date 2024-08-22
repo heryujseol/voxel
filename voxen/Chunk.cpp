@@ -100,7 +100,7 @@ void Chunk::InitChunkData()
 					m_blocks[x][y][z].SetType(0);
 					continue;
 				}
-				if (worldY == 1) {
+				if (worldY == 0) {
 					m_blocks[x][y][z].SetType(4);
 					continue;
 				}
