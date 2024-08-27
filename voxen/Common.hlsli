@@ -117,7 +117,7 @@ uint4 coverageAnalysis(uint4 coverage)
         coverage.w = 0;
     }
 
-    // ¿Á¡∂¡§ : coverage∞° 0¿Œ ∞Õ¿∫ ∏∂Ω∫≈∑¿Ã æ»µ» ª˘«√¿Ã∞≈≥™, ∞∞¿∫ ∏∂Ω∫≈∑¿Ã ¿÷¥¬ ∞ÊøÏ
+    // Ïû¨Ï°∞Ï†ï : coverageÍ∞Ä 0Ïù∏ Í≤ÉÏùÄ ÎßàÏä§ÌÇπÏù¥ ÏïàÎêú ÏÉòÌîåÏù¥Í±∞ÎÇò, Í∞ôÏùÄ ÎßàÏä§ÌÇπÏù¥ ÏûàÎäî Í≤ΩÏö∞
     sampleWeight.x = (coverage.x > 0) ? sampleWeight.x : 0;
     sampleWeight.y = (coverage.y > 0) ? sampleWeight.y : 0;
     sampleWeight.z = (coverage.z > 0) ? sampleWeight.z : 0;
@@ -149,12 +149,12 @@ float getFaceAmbient(float3 normal)
 float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
 {
     ao = 1.0;
-    // skycolor ambient (envMap¿ª ∞°¡§«‘)
+    // skycolor ambient (envMapÏùÑ Í∞ÄÏ†ïÌï®)
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
     float3 ambientColor = float3(1.0, 1.0, 1.0);
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)
@@ -257,7 +257,7 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float NdotH = max(0.0, dot(normal, halfway));
     float NdotO = max(0.0, dot(normal, pixelToEye));
     
-    const float3 Fdielectric = 0.04; // ∫Ò±›º”(Dielectric) ¿Á¡˙¿« F0
+    const float3 Fdielectric = 0.04; // ÎπÑÍ∏àÏÜç(Dielectric) Ïû¨ÏßàÏùò F0
     float3 F0 = lerp(Fdielectric, albedo, metallic);
     float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye))); // HoV
     float D = NdfGGX(NdotH, roughness);
@@ -267,11 +267,10 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
-    // todo
     float shadowFactor = getShadowFactor(position);
     shadowFactor = pow(shadowFactor, 10.0);
     
-    float3 radiance = radianceColor * shadowFactor; // radiance ∞™ ºˆ¡§\
+    float3 radiance = radianceColor * shadowFactor; // radiance Í∞í ÏàòÏ†ï
     
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }

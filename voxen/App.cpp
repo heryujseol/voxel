@@ -1,6 +1,7 @@
 #include "App.h"
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "Terrain.h"
 
 #include <iostream>
 #include <imgui.h>
@@ -117,6 +118,11 @@ void App::Run()
 					m_light.m_shadowConstantBuffer, m_light.m_shadowConstantData);
 			}*/
 
+			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
+				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
+
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -174,58 +180,40 @@ void App::Render()
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
-	
+
+  // 0. Shadow Map
+  {
+    RenderShadowMap();
+  }
+	// 1. Deferred Render Pass
 	{
-        RenderShadowMap();
-    }
+		FillGBuffer();
+		MaskMSAAEdge();
+		RenderSSAO();
+		ShadingBasic();
+	}
 
-    // 1. Deferred Render Pass
-    {
-        FillGBuffer();
-        //MaskMSAAEdge();
-        //RenderSSAO();
-        ShadingBasic();
-    }
+	// 2. No-MSAA to MSAA Texture
+	{
+		ConvertToMSAA();
+	}
 
-    // 2. No-MSAA to MSAA Texture
-    {
-        ConvertToMSAA();
-    }
-
-    // 3. Forward Render Pass MSAA
-    {
-        if (m_camera.IsUnderWater()) {
-            RenderFogFilter();
-            RenderSkybox();
-            RenderCloud();
-            RenderWaterPlane();
-        }
-        else {
-            //RenderMirrorWorld();
-            //RenderWaterPlane();
-            //RenderFogFilter();
-            RenderSkybox();
-            RenderCloud();
-        }
-    }
-
-    // 4. Post Effect
-    {
-        Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
-            Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-        Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
-        ID3D11ShaderResourceView* ppSRVs[2] = { Graphics::basicSRV.Get(),
-            Graphics::basicSRV.Get() };
-        Graphics::context->PSSetShaderResources(0, 2, ppSRVs);
-        Graphics::SetPipelineStates(Graphics::combineBloomPSO);
-        m_postEffect.Render();
-        //if (m_camera.IsUnderWater()) {
-        //    RenderWaterFilter();
-        //}
-
-        //m_postEffect.Bloom();
-    }
+	// 3. Forward Render Pass MSAA
+	{
+		if (m_camera.IsUnderWater()) {
+			RenderFogFilter();
+			RenderSkybox();
+			RenderCloud();
+			RenderWaterPlane();
+		}
+		else {
+			RenderMirrorWorld();
+			RenderWaterPlane();
+			//RenderFogFilter();
+			RenderSkybox();
+			RenderCloud();
+		}
+	}
 }
 
 bool App::InitWindow()
@@ -300,7 +288,7 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(0.0f, 108.0f, 0.0f)))
+	if (!m_camera.Initialize(Vector3(0.0f, 128.0f, -128.0f)))
 		return false;
 
 	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))
