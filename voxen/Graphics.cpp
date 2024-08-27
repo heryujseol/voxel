@@ -148,6 +148,10 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
+	ComPtr<ID3D11Texture2D> shadowBuffer;
+	ComPtr<ID3D11DepthStencilView> shadowDSV;
+	ComPtr<ID3D11ShaderResourceView> shadowSRV;
+
 
 	// Shadow Resource Buffer
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
@@ -618,6 +622,34 @@ bool Graphics::InitDepthStencilBuffers()
 		return false;
 	}
 
+	// shadow DSV
+	format = DXGI_FORMAT_R32_TYPELESS;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			shadowBuffer, App::SHADOW_WIDTH, App::SHADOW_HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create basic depth stencil buffer" << std::endl;
+		return false;
+	}
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	ret = Graphics::device->CreateDepthStencilView(
+		shadowBuffer.Get(), &dsvDesc, shadowDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shadow depth stencil view" << std::endl;
+		return false;
+	}
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = 1;
+	ret = Graphics::device->CreateShaderResourceView(
+		Graphics::shadowBuffer.Get(), &srvDesc, shadowSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from shadow srv" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -762,7 +794,16 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() { return true; }
+bool Graphics::InitGeometryShaders()
+{ 
+	// BasicShadowGS
+	if (!DXUtils::CreateGeometryShader(L"BasicShadowGS.hlsl", basicShadowGS)) {
+		std::cout << "failed create basic shadow gs" << std::endl;
+		return false;
+	}
+
+	return true;
+}
 
 bool Graphics::InitPixelShaders()
 {
@@ -1017,7 +1058,7 @@ bool Graphics::InitSamplerStates()
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.BorderColor[0] = 1.0f; // ??Zê°?
+	desc.BorderColor[0] = 1.0f;
 	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	device->CreateSamplerState(&desc, shadowPointSS.GetAddressOf());
 
