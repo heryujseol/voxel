@@ -200,5 +200,5 @@ void Light::Update(UINT dateTime, Camera& camera)
 		}
 
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);
-	}
+	} 
 }
