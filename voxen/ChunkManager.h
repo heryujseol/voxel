@@ -6,7 +6,6 @@
 
 #include "Chunk.h"
 #include "Camera.h"
-#include "Light.h"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -20,7 +19,6 @@ public:
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
 	static const int CHUNK_POOL_SIZE = CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P;
-	static const int MAX_ASYNC_LOAD_COUNT = 1;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
 	static const int MAX_INSTANCE_BUFFER_COUNT =
 		MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfoVertex);
@@ -28,7 +26,7 @@ public:
 	static ChunkManager* GetInstance();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(float dt, Camera& camera, Light& light);
+	void Update(float dt, Camera& camera);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -39,7 +37,6 @@ public:
 	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
 	void RenderTransparency();
-	void RenderShadowMap();
 
 	Chunk* GetChunkByPosition(int x, int y, int z);
 	
@@ -55,12 +52,11 @@ private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
-	void UpdateRenderChunkList(Camera& camera, Light& light);
+	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 	void UpdateChunkConstant(float dt);
 
-	bool FrustumCulling(
-		Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow);
+	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	void InitChunkBuffer(Chunk* chunk);
 	
@@ -77,7 +73,6 @@ private:
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
 	std::vector<Chunk*> m_renderMirrorChunkList;
-	std::vector<Chunk*> m_renderShadowChunkList;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodIndexBuffers;
@@ -98,4 +93,8 @@ private:
 	std::vector<ComPtr<ID3D11Buffer>> m_instanceInfoBuffers;
 	std::vector<std::vector<InstanceInfoVertex>> m_instanceInfoList;
 	std::vector<UINT> m_instanceIndexCount;
+	
+	unsigned int m_initThreadCount;
+	std::vector<std::pair<Chunk*, std::future<ChunkInitMemory*>>> m_futures;
+	std::vector<ChunkInitMemory*> m_chunkInitMemoryPool;
 };

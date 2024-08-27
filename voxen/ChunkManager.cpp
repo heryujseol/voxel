@@ -29,8 +29,15 @@ void ChunkManager::operator=(const ChunkManager& rhs) {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
+	m_initThreadCount = std::clamp(std::thread::hardware_concurrency() - 2, 2u, 4u);
+	for (unsigned int i = 0; i < m_initThreadCount; ++i) {
+		m_chunkInitMemoryPool.push_back(new ChunkInitMemory());
+	}
+
 	for (int i = 0; i < CHUNK_POOL_SIZE; ++i) {
-		m_chunkPool.push_back(new Chunk(i));
+		Chunk* chunk = new Chunk(i);
+		chunk->Clear();
+		m_chunkPool.push_back(chunk);
 	}
 
 	m_lowLodVertexBuffers.resize(CHUNK_POOL_SIZE, nullptr);
@@ -58,12 +65,10 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 
 	UpdateChunkList(cameraChunkPos);
 
-	
-
 	return true;
 }
 
-void ChunkManager::Update(float dt, Camera& camera, Light& light)
+void ChunkManager::Update(float dt, Camera& camera)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
@@ -72,7 +77,7 @@ void ChunkManager::Update(float dt, Camera& camera, Light& light)
 
 	UpdateLoadChunkList(camera);
 	UpdateUnloadChunkList();
-	UpdateRenderChunkList(camera, light);
+	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
 	UpdateChunkConstant(dt);
 }
@@ -205,20 +210,13 @@ void ChunkManager::RenderTransparency()
 	}
 }
 
-void ChunkManager::RenderShadowMap()
-{
-	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
-	for (auto& c : m_renderShadowChunkList)
-		RenderLowLodChunk(c);
-}
-
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
 	std::map<std::tuple<int, int, int>, bool> renderableChunkMap;
 	for (int i = 0; i < MAX_HEIGHT_CHUNK_COUNT; ++i) {
 		for (int j = 0; j < CHUNK_COUNT; ++j) {
 			for (int k = 0; k < CHUNK_COUNT; ++k) {
-				int y = Chunk::CHUNK_SIZE * (i - 2);
+				int y = Chunk::CHUNK_SIZE * i;
 				int x = (int)cameraChunkPos.x + Chunk::CHUNK_SIZE * (j - CHUNK_COUNT / 2);
 				int z = (int)cameraChunkPos.z + Chunk::CHUNK_SIZE * (k - CHUNK_COUNT / 2);
 
@@ -260,40 +258,34 @@ void ChunkManager::UpdateLoadChunkList(Camera& camera)
 		}
 		return aDiffLengthXZ > bDiffLengthXZ;
 	});
-
-	int loadCount = 0;
-
-	while (!m_loadChunkList.empty() && loadCount < MAX_ASYNC_LOAD_COUNT) {
+	
+	while (!m_loadChunkList.empty() && m_futures.size() < m_initThreadCount) {
 		Chunk* chunk = m_loadChunkList.back();
 		m_loadChunkList.pop_back();
 
-		////////////////////////////////////
-		// check start time
-		static long long sum = 0;
-		static long long count = 0;
-		auto start_time = std::chrono::steady_clock::now();
-		////////////////////////////////////
+		ChunkInitMemory* chunkInitMemory = m_chunkInitMemoryPool.back();
+		m_chunkInitMemoryPool.pop_back();
 
+		m_futures.push_back(std::make_pair(
+			chunk, std::async(std::launch::async, &Chunk::Initialize, chunk, chunkInitMemory)));
+	}
 
-		// load chunk
-		chunk->Initialize();
-		InitChunkBuffer(chunk);
+	for (auto it = m_futures.begin(); it != m_futures.end();) {
+		if (it->second.wait_for(std::chrono::microseconds(0)) == std::future_status::ready) {
+			ChunkInitMemory* chunkInitMemory = it->second.get();
+			m_chunkInitMemoryPool.push_back(chunkInitMemory);
 
-		// set load value
-		loadCount++;
-		chunk->SetLoad(true);
+			Chunk* chunk = it->first;
+			InitChunkBuffer(chunk);
 
+			chunk->SetUpdateRequired(true);
+			chunk->SetLoad(true);
 
-		////////////////////////////////////
-		// check end time
-		auto end_time = std::chrono::steady_clock::now();
-		auto duration =
-			std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-		sum += duration.count();
-		count++;
-		std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
-				  << std::endl;
-		////////////////////////////////////
+			it = m_futures.erase(it);
+		}
+		else {
+			++it;
+		}
 	}
 }
 
@@ -312,15 +304,16 @@ void ChunkManager::UpdateUnloadChunkList()
 		ReleaseChunkToPool(chunk);
 
 		chunk->Clear();
+
+		chunk->SetUpdateRequired(false);
 		chunk->SetLoad(false);
 	}
 }
 
-void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
+void ChunkManager::UpdateRenderChunkList(Camera& camera)
 {
 	m_renderChunkList.clear();
 	m_renderMirrorChunkList.clear();
-	m_renderShadowChunkList.clear();
 
 	for (auto& p : m_chunkMap) {
 		if (!p.second->IsLoaded())
@@ -330,16 +323,12 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
 			continue;
 
 		Vector3 chunkPos = p.second->GetPosition();
-		if (FrustumCulling(chunkPos, camera, light, false, false)) {
+		if (FrustumCulling(chunkPos, camera, false)) {
 			m_renderChunkList.push_back(p.second);
 		}
 
-		if (FrustumCulling(chunkPos, camera, light, false, true)) {
-			m_renderShadowChunkList.push_back(p.second);
-		}
-
 		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
-		if (FrustumCulling(mirrorChunkPos, camera, light, true, false)) {
+		if (FrustumCulling(mirrorChunkPos, camera, true)) {
 			m_renderMirrorChunkList.push_back(p.second);
 		}
 	}
@@ -401,14 +390,9 @@ void ChunkManager::UpdateChunkConstant(float dt)
 	}
 }
 
-bool ChunkManager::FrustumCulling(
-	Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow)
+bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirror)
 {
 	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-
-	if (useShadow) {
-		invMat = (light.GetViewMatrix(2) * light.GetProjectionMatrix(2)).Invert();
-	};
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
@@ -471,7 +455,6 @@ void ChunkManager::InitChunkBuffer(Chunk* chunk)
 	else
 		DXUtils::UpdateConstantBuffer(m_constantBuffers[id], tempConstantData);
 
-
 	// lowLod
 	if (!chunk->IsEmptyLowLod()) {
 		DXUtils::ResizeBuffer(
@@ -527,7 +510,9 @@ Chunk* ChunkManager::GetChunkFromPool()
 	return nullptr;
 }
 
-void ChunkManager::ReleaseChunkToPool(Chunk* chunk) { m_chunkPool.push_back(chunk); }
+void ChunkManager::ReleaseChunkToPool(Chunk* chunk) { 
+	m_chunkPool.push_back(chunk); 
+}
 
 bool ChunkManager::MakeInstanceVertexBuffer()
 {

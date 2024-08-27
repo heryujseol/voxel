@@ -26,5 +26,5 @@ float4 main(psInput input) : SV_Target
     if (sumW == -1.0 * SAMPLE_COUNT)
         discard;
     
-    return float4(0, 0, 0, 0);
+    return float4(1, 0, 0, 0);
 }
