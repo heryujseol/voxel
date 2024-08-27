@@ -25,7 +25,7 @@ public:
 
 	static const UINT WIDTH = 1920;
 	static const UINT HEIGHT = 1080;
-	static const UINT SHADOW_WIDTH = 3072;
+	static const UINT SHADOW_WIDTH = 3840;
 	static const UINT SHADOW_HEIGHT = 1536;
 	static const UINT MIRROR_WIDTH = WIDTH / 2;
 	static const UINT MIRROR_HEIGHT = HEIGHT / 2;

@@ -78,9 +78,6 @@ struct BlurConstantData {
 };
 
 struct ShadowConstantData {
-	//Matrix view[3];
-	//Matrix proj[3];
-	//Matrix invProj[3];
 	Matrix viewProj[3];
 	float topLX[3];
 	float dummy1;

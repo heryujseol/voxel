@@ -39,7 +39,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 	// light
 	{
 		// m_dir
-		m_dir = Vector3::Transform(Vector3(1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+		m_dir = Vector3::Transform(Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)),
+			Matrix::CreateFromAxisAngle(
+				Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
 		m_dir.Normalize();
 
 		// radiance
@@ -112,10 +114,12 @@ void Light::Update(UINT dateTime, Camera& camera)
 	// shadow
 	{
 		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.05f, 0.1f };
-		float topLX[CASCADE_NUM] = { 0.0f, 1536.0f, 2560.0f };
-		float viewportWith[CASCADE_NUM] = { 1536.0f, 1024.0f, 512.0f };
+		float topLX[CASCADE_NUM] = { 0.0f, 1536.0f, 2816.0f };
+		float viewportWith[CASCADE_NUM] = { 1536.0f, 1280.0f, 1024.0f };
 
-		m_dir = Vector3::Transform(Vector3(-1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+		m_dir = Vector3::Transform(Vector3(-cos(Utils::PI / 4.0f), 0.0f, -cos(Utils::PI / 4.0f)),
+			Matrix::CreateFromAxisAngle(
+				Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
 		m_dir.Normalize();
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
 		if (angle > 1.5f && angle <= 3.0f)
@@ -165,18 +169,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 				radius = max(radius, (v - center).Length());
 			radius = std::ceil(radius * 16.0f) / 16.0f;
 
-			/*Vector3 maxExtents = Vector3(radius, radius, radius);
-			Vector3 minExtents = -maxExtents;*/
-
-			/*Vector3 sunPos = center + (m_dir * minExtents.z);
-			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
-			Vector3 cascadeExtents = maxExtents - minExtents;
-			m_proj[i] = XMMatrixOrthographicOffCenterLH(
-				minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, 0.0f, cascadeExtents.z);*/
 			float value = max(500.0f, radius * 2.0f);
-			//value = radius * 2.0f;
-			
 			Vector3 sunPos = center + (m_dir * -value);
+
 			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
 			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, 2000.0f);
 
@@ -185,7 +180,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 			shadowOrigin.x *= App::SHADOW_WIDTH * 0.5f + App::SHADOW_WIDTH * 0.5f;
 			shadowOrigin.y *= App::SHADOW_HEIGHT * 0.5f + App::SHADOW_HEIGHT * 0.5f;
 
-			Vector3 roundedOrigin = /*Vector3(floorf(shadowOrigin.x), floorf(shadowOrigin.y), shadowOrigin.z);*/
+			Vector3 roundedOrigin =
 				Vector3(round(shadowOrigin.x), round(shadowOrigin.y), shadowOrigin.z);
 			Vector3 roundOffset =
 				Vector3((roundedOrigin.x - shadowOrigin.x) * (2.0f / App::SHADOW_WIDTH),

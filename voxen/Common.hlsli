@@ -196,10 +196,7 @@ float getShadowFactor(float3 posWorld)
     
     float g_topLX[3] = { topLX.x, topLX.y, topLX.z };
     float g_viewPortW[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
-    
-    //float biasV[3] = { 0.001, 0.0015, 0.003 };
-    //float biasH[3] = { 0.0015, 0.004, 0.005 };
-    float biasA[3] = { 0.002, 0.005, 0.0035 };
+    float biasA[3] = { 0.002, 0.0025, 0.00275 };
     
     for (int i = 0; i < 3; ++i)
     {
@@ -214,7 +211,8 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float bias = biasA[i]; //lerp(biasH[i], biasV[i], lightDir.y);
+        float bias = biasA[i];
+        bias += viewPortW.w;
         
         float depth = shadowPos.z - bias;
         if (depth < 0.0 || depth > 1.0)
@@ -222,8 +220,8 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float dx = 1.0 / width;
-        float dy = 1.0 / height;
+        float dx = 5.0 / width;
+        float dy = 5.0 / height;
 
         float percentLit = 0.0;
         const float2 offsets[9] =
