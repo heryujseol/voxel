@@ -99,20 +99,6 @@ namespace Terrain {
 		return Utils::CubicLerp(i2, i5, p.x - x0);
 	}
 
-	/*
-	 * x, y : 좌표
-	 * - 현재 x, y가 중요한게 아니라, 해당 함수를 호출할 때 x, y의 증감 폭이 중요한 것
-	 * - 증감이 작아야 함, 크면 점진적인 변화율을 체크할 수 없음
-	 * freq : 진동수, 주파수
-	 * - x, y의 범위를 재조정하게 됨
-	 * - freq만큼 구간을 잘게 나누게 될 것
-	 * - 반복 횟수가 올라가면 구간을 더욱 잘게 나눔 (2배씩)
-	 * octave : 옥타브
-	 * - 노이즈의 반복 횟수
-	 * - 해당 반복에 따라서 freq, amp의 영향을 미침
-	 * amp : 진폭
-	 * - 노이즈 연산에 대한 결과의 영향력이라고 생각하면 됨
-	 */
 	static float PerlinFbm(float x, float y, float freq, int octave)
 	{
 		float amp = 1.0f;

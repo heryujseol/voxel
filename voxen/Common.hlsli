@@ -11,6 +11,8 @@ SamplerState shadowPointSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 SamplerState pointClampSS : register(s5);
 
+Texture2D shadowTex : register(t11);
+
 cbuffer CameraConstantBuffer : register(b7)
 {
     Matrix view;
@@ -51,6 +53,14 @@ cbuffer AppConstantBuffer : register(b10)
     float mirrorWidth;
     float mirrorHeight;
 }
+
+cbuffer ShadowConstantBuffer : register(b11)
+{
+    Matrix shadowViewProj[3];
+    float4 topLX;
+    float4 viewPortW;
+}
+
 
 float3 sRGB2Linear(float3 color)
 {
@@ -138,6 +148,7 @@ float getFaceAmbient(float3 normal)
 
 float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
 {
+    ao = 1.0;
     // skycolor ambient (envMap을 가정함)
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
@@ -178,9 +189,63 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return gl * gv;
 }
 
-float3 getShadowFactor()
+float getShadowFactor(float3 posWorld)
 {
-    return float3(1.0, 1.0, 1.0);
+    float width, height, numMips;
+    shadowTex.GetDimensions(0, width, height, numMips);
+    
+    float g_topLX[3] = { topLX.x, topLX.y, topLX.z };
+    float g_viewPortW[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
+    float biasA[3] = { 0.002, 0.0025, 0.00275 };
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        float4 shadowPos = mul(float4(posWorld, 1.0), shadowViewProj[i]);
+        shadowPos.xyz /= shadowPos.w;
+        
+        shadowPos.x = shadowPos.x * 0.5 + 0.5;
+        shadowPos.y = shadowPos.y * -0.5 + 0.5;
+        
+        if (shadowPos.x < 0.0 || shadowPos.x > 1.0 || shadowPos.y < 0.0 || shadowPos.y > 1.0)
+        {
+            continue;
+        }
+        
+        float bias = biasA[i];
+        bias += viewPortW.w;
+        
+        float depth = shadowPos.z - bias;
+        if (depth < 0.0 || depth > 1.0)
+        {
+            continue;
+        }
+        
+        float dx = 5.0 / width;
+        float dy = 5.0 / height;
+
+        float percentLit = 0.0;
+        const float2 offsets[9] =
+        {
+            float2(-dx, -dy), float2(0.0, -dy), float2(dx, -dy),
+            float2(-dx, 0.0), float2(0.0, 0.0), float2(dx, 0.0),
+            float2(-dx, dy), float2(0.0, dy), float2(dx, dy)
+        };
+        
+        shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
+        shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
+        
+        float2 texcoord;
+        float denom = 9.0;
+        [unroll]
+        for (int j = 0; j < 9; ++j)
+        {
+            texcoord = shadowPos.xy + offsets[j];
+            texcoord = clamp(texcoord, 0.0, 1.0);
+            percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
+        }
+        return percentLit / denom;
+    }
+    return 1.0;
 }
 
 float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float metallic, float roughness)
@@ -197,12 +262,14 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye))); // HoV
     float D = NdfGGX(NdotH, roughness);
     float3 G = SchlickGGX(NdotI, NdotO, roughness);
-    float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
+    float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);  
 
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
-    float3 shadowFactor = getShadowFactor();
+    // todo
+    float shadowFactor = getShadowFactor(position);
+    shadowFactor = pow(shadowFactor, 10.0);
     
     float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
     
