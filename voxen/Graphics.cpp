@@ -1,6 +1,7 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 #include "App.h"
+#include "Terrain.h"
 
 #include <iostream>
 

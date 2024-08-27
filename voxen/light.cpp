@@ -8,8 +8,8 @@
 using namespace DirectX::SimpleMath;
 
 Light::Light()
-	: m_dir(1.0f, 0.0f, 0.0f), m_scale(0.0f), m_radianceColor(1.0f), m_radianceWeight(1.0f),
-	  m_lightConstantBuffer(nullptr)
+	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f), m_radianceColor(1.0f),
+	  m_radianceWeight(1.0f), m_lightConstantBuffer(nullptr)
 {
 }
 
@@ -31,7 +31,8 @@ void Light::Update(UINT dateTime)
 
 	// m_dir
 	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
-	m_dir = Vector3::Transform(Vector3(1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
+	m_dir = Vector3::Transform(Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)),
+		Matrix::CreateFromAxisAngle(Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
 	m_dir.Normalize();
 
 	// radiance

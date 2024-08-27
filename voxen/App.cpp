@@ -1,6 +1,7 @@
 #include "App.h"
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "Terrain.h"
 
 #include <iostream>
 #include <imgui.h>
@@ -110,6 +111,11 @@ void App::Run()
 			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
 
+			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
+				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
+				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
+
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -164,7 +170,7 @@ void App::Render()
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
-	
+
 	// 1. Deferred Render Pass
 	{
 		FillGBuffer();
@@ -189,7 +195,7 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			RenderFogFilter();
+			//RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();
 		}
@@ -280,7 +286,7 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(0.0f, 108.0f, 0.0f)))
+	if (!m_camera.Initialize(Vector3(0.0f, 128.0f, -128.0f)))
 		return false;
 
 	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))

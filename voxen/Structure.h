@@ -7,7 +7,7 @@ using namespace DirectX::SimpleMath;
 typedef uint32_t VoxelVertex;
 
 struct SkyboxVertex {
-	Vector3 position;
+	Vector3 position; 
 };
 
 struct CloudVertex {

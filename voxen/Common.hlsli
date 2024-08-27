@@ -143,7 +143,7 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
     float3 ambientColor = float3(1.0, 1.0, 1.0);
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)
@@ -202,7 +202,6 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
-    // todo
     float3 shadowFactor = getShadowFactor();
     
     float3 radiance = radianceColor * shadowFactor; // radiance °ª ¼öÁ¤\
