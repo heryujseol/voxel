@@ -27,15 +27,12 @@ bool Light::Initialize()
 
 void Light::Update(UINT dateTime)
 {
-  const float MAX_RADIANCE_WEIGHT = 1.5;
-float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
+	const float MAX_RADIANCE_WEIGHT = 1.5;
 
-// light
-{
 	// m_dir
+	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
 	m_dir = Vector3::Transform(Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)),
-		Matrix::CreateFromAxisAngle(
-			Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
+		Matrix::CreateFromAxisAngle(Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
 	m_dir.Normalize();
 
 	// radiance
@@ -102,93 +99,4 @@ float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
 	m_lightConstantData.maxRadianceWeight = MAX_RADIANCE_WEIGHT;
 
 	DXUtils::UpdateConstantBuffer(m_lightConstantBuffer, m_lightConstantData);
-}
-  
-	// shadow
-	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.05f, 0.1f };
-		float topLX[CASCADE_NUM] = { 0.0f, 1536.0f, 2816.0f };
-		float viewportWith[CASCADE_NUM] = { 1536.0f, 1280.0f, 1024.0f };
-
-		m_dir = Vector3::Transform(Vector3(-cos(Utils::PI / 4.0f), 0.0f, -cos(Utils::PI / 4.0f)),
-			Matrix::CreateFromAxisAngle(
-				Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
-		m_dir.Normalize();
-		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
-		if (angle > 1.5f && angle <= 3.0f)
-		{
-			m_up =Vector3(-m_up.x, -m_up.y, m_up.z);
-		}
-
-		Vector3 frustum[8]{
-			{ -1.0f, 1.0f, 0.0f },
-			{ 1.0f, 1.0f, 0.0f }, 
-			{ 1.0f, -1.0f, 0.0f },
-			{ -1.0f, -1.0f, 0.0f },
-
-			{ -1.0f, 1.0f, 1.0f },
-			{ 1.0f, 1.0f, 1.0f },
-			{ 1.0f, -1.0f, 1.0f },
-			{ -1.0f, -1.0f, 1.0f } 
-		};
-
-		Matrix toWorld = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-
-		for (auto& v : frustum)
-			v = Vector3::Transform(v, toWorld);
-
-		for (int i = 0; i < CASCADE_NUM; ++i) {
-			Vector3 tFrustum[8];
-			for (int j = 0; j < 8; ++j)
-				tFrustum[j] = frustum[j];
-
-			for (int j = 0; j < 4; ++j) {
-				Vector3 v = tFrustum[j + 4] - tFrustum[j];
-
-				Vector3 n = v * cascade[i];
-				Vector3 f = v * cascade[i + 1];
-
-				tFrustum[j + 4] = tFrustum[j] + f;
-				tFrustum[j] = tFrustum[j] + n;
-			}
-
-			Vector3 center;
-			for (auto& v : tFrustum)
-				center += v;
-			center *= 1.0f / 8.0f;
-
-			float radius = 0.0f;
-			for (auto& v : tFrustum)
-				radius = max(radius, (v - center).Length());
-			radius = std::ceil(radius * 16.0f) / 16.0f;
-
-			float value = max(500.0f, radius * 2.0f);
-			Vector3 sunPos = center + (m_dir * -value);
-
-			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
-			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, 2000.0f);
-
-			Vector3 shadowOrigin = Vector3(0.0f, 0.0f, 0.0f);
-			shadowOrigin = Vector3::Transform(shadowOrigin, (m_view[i] * m_proj[i]));
-			shadowOrigin.x *= App::SHADOW_WIDTH * 0.5f + App::SHADOW_WIDTH * 0.5f;
-			shadowOrigin.y *= App::SHADOW_HEIGHT * 0.5f + App::SHADOW_HEIGHT * 0.5f;
-
-			Vector3 roundedOrigin =
-				Vector3(round(shadowOrigin.x), round(shadowOrigin.y), shadowOrigin.z);
-			Vector3 roundOffset =
-				Vector3((roundedOrigin.x - shadowOrigin.x) * (2.0f / App::SHADOW_WIDTH),
-					(roundedOrigin.y - shadowOrigin.y) * (2.0f / App::SHADOW_HEIGHT),
-					0.0f);
-
-			Matrix viewProj = m_view[i] * m_proj[i];
-			viewProj._41 += roundOffset.x;
-			viewProj._42 += roundOffset.y;
-
-			m_shadowConstantData.viewProj[i] = viewProj.Transpose();
-			m_shadowConstantData.topLX[i] = topLX[i];
-			m_shadowConstantData.viewWith[i] = viewportWith[i];
-
-			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-					m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
-		}
 }
