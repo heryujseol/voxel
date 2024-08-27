@@ -108,8 +108,15 @@ void App::Run()
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
 
-			ImGui::Text("x : %.2f y : %.2f z : %.2f", m_camera.GetPosition().x,
+			ImGui::Text("x : %.4f y : %.4f z : %.4f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
+			/*int flag = 0;
+			flag += ImGui::SliderFloat(
+				"Bias", &m_light.m_shadowConstantData.dummy2, -0.0100, 0.0100, "%.4f");
+			if (flag) {
+				DXUtils::UpdateConstantBuffer(
+					m_light.m_shadowConstantBuffer, m_light.m_shadowConstantData);
+			}*/
 
 			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
 				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),

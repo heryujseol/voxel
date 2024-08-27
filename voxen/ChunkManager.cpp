@@ -65,6 +65,8 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 
 	UpdateChunkList(cameraChunkPos);
 
+	
+
 	return true;
 }
 

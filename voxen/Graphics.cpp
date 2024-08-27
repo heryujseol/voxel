@@ -63,6 +63,8 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> noneCullRS;
 	ComPtr<ID3D11RasterizerState> mirrorRS;
+	ComPtr<ID3D11RasterizerState> frontCullRS;
+
 
 	// Sampler State
 	ComPtr<ID3D11SamplerState> pointWrapSS;
@@ -971,6 +973,17 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
+	// frontCullRS
+	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
+	rastDesc.FrontCounterClockwise = false;
+	ret = Graphics::device->CreateRasterizerState(&rastDesc, frontCullRS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create frontCULL RS" << std::endl;
+		return false;
+	}
+
+
 	return true;
 }
 
@@ -1253,6 +1266,7 @@ void Graphics::InitGraphicsPSO()
 
 	// basicshadowPSO
 	basicShadowPSO = basicPSO;
+	basicShadowPSO.rasterizerState = noneCullRS;
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;

@@ -65,6 +65,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> wireRS;
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
 	extern ComPtr<ID3D11RasterizerState> mirrorRS;
+	extern ComPtr<ID3D11RasterizerState> frontCullRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
