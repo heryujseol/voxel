@@ -166,6 +166,9 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     // face ambient
     float faceAmbient = getFaceAmbient(normal);
     
+    if (cameraDummyData.x == 0)
+        return float3(0.0, 0.0, 0.0);
+    
     return ao * albedo * ambientColor * faceAmbient;
 }
 
@@ -212,7 +215,6 @@ float getShadowFactor(float3 posWorld)
         }
         
         float bias = biasA[i];
-        bias += viewPortW.w;
         
         float depth = shadowPos.z - bias;
         if (depth < 0.0 || depth > 1.0)
@@ -220,8 +222,8 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float dx = 5.0 / width;
-        float dy = 5.0 / height;
+        float dx = 1.0 / width;
+        float dy = 1.0 / height;
 
         float percentLit = 0.0;
         const float2 offsets[9] =
