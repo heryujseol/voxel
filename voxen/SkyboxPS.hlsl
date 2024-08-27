@@ -14,31 +14,22 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 t
     texcoord = float2(0.0, 0.0);
     bool ret = false;
     
-    if (length(posDir.xy) != 0.0)
+    float PDotP = dot(planetDir, posDir);
+    float3 v = normalize(posDir - PDotP * planetDir);
+    float3 p = v * tan(acos(PDotP));
+    
+    if (PDotP > 0.0 && length(p) < size)
     {
-        float3 posDirHorizontal = normalize(float3(planetDir.xy, posDir.z));
-        float3 posDirVertical = normalize(float3(posDir.xy, 0.0));
-    
-        float dotSH = max(dot(posDirHorizontal, planetDir), 0.0);
-        float dotSV = max(dot(posDirVertical, planetDir), 0.0);
-    
-        float width = max(tan(acos(dotSH)), 0.0) * skyScale;
-        float height = max(tan(acos(dotSV)), 0.0) * skyScale;
-    
-        if (width <= size && height <= size) // 0 ~ size
-        {
-            // horizontal tex_x 
-            float sign = posDirHorizontal.z > 0 ? -1 : 1;
-            float tex_x = (sign * width + size) * 0.5 / size;
+        float3 N = -planetDir;
+        float3 T = float3(cos(PI / 4.0), 0.0, -cos(PI / 4.0));
+        float3 B = cross(N, T);
+        float3x3 TBNMatrix = float3x3(T, B, N);
         
-            // vertical tex_y
-            float3 crossSV = cross(planetDir, posDirVertical);
-            sign = crossSV.z > 0 ? -1 : 1;
-            float tex_y = (sign * height + size) * 0.5 / size;
+        float3 vTBN = mul(p, transpose(TBNMatrix)); // 직교 행렬의 역행렬은 전치행렬
         
-            texcoord = float2(tex_x, tex_y);
-            ret = true;
-        }
+        texcoord.x = 0.5 + vTBN.x * (0.5 / size);
+        texcoord.y = 0.5 + vTBN.y * (0.5 / size);
+        ret = true;
     }
     
     return ret;
@@ -52,13 +43,11 @@ float4 main(psInput input) : SV_TARGET
     posDir.y *= -1;
 #endif
     
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
     // sun
-    float maxSunSize = 220.0f;
-    float minSunSize = 100.0f;
-    float sunSize = lerp(minSunSize, maxSunSize, pow(max(dot(lightDir, eyeDir), 0.0), 3.0));
+    float sunSize = lerp(0.25, 0.6, pow(max(dot(lightDir, eyeDir), 0.0), 3.0));
     float2 sunTexcoord;
     if (sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, lightDir, sunSize, sunTexcoord))
     {
@@ -70,7 +59,7 @@ float4 main(psInput input) : SV_TARGET
     }
     
     // moon
-    float moonSize = lerp(minSunSize, maxSunSize * 0.5f, pow(max(dot(-lightDir, eyeDir), 0.0), 3.0));
+    float moonSize = lerp(0.125, 0.3, pow(max(dot(-lightDir, eyeDir), 0.0), 3.0));
     float2 moonTexcoord;
     if (-sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, -lightDir, moonSize, moonTexcoord))
     {

@@ -32,7 +32,7 @@ bool Camera::Initialize(Vector3 pos)
 		return false;
 	}
 
-	Plane mirrorPlane = Plane(Vector3(0.0f, 62.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
+	Plane mirrorPlane = Plane(Vector3(0.0f, 64.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
 	m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
 	m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
 	m_constantData.view = m_constantData.view.Transpose();

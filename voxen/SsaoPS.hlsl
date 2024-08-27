@@ -40,7 +40,7 @@ float getOcclusionFactor(float2 texcoord, float3 viewPos, float3 normal)
     float3x3 TBN = float3x3(T, B, normal);
     
     float occlusionFactor = 0.0;
-    float radius = 1.5;
+    float radius = 2.0;
     float bias = 0.025;
     
     [unroll]
@@ -88,7 +88,10 @@ float main(psInput input) : SV_TARGET
     
     float occlusionFactor = getOcclusionFactor(input.texcoord, position.xyz, normal);
     
-    return 1.0 - occlusionFactor;
+    float distance = length(position.xyz);
+    float attenuation = saturate((lodRenderDistance - distance) / (lodRenderDistance - 32.0));
+    
+    return 1.0 - (occlusionFactor * attenuation);
 }
 
 float mainMSAA(psInput input) : SV_TARGET
@@ -122,7 +125,12 @@ float mainMSAA(psInput input) : SV_TARGET
             continue;
         position = mul(float4(position.xyz, 1.0), view);
         
-        sumOcclusionFactor += getOcclusionFactor(input.texcoord, position.xyz, normal) * sampleWeightArray[i];
+        float occlusionFactor = getOcclusionFactor(input.texcoord, position.xyz, normal) * sampleWeightArray[i];
+        
+        float distance = length(position.xyz);
+        float attenuation = saturate((lodRenderDistance - distance) / (lodRenderDistance - 32.0));
+        
+        sumOcclusionFactor += occlusionFactor * attenuation;
     }
     
     sumOcclusionFactor /= SAMPLE_COUNT;

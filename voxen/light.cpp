@@ -8,11 +8,10 @@
 using namespace DirectX::SimpleMath;
 
 Light::Light()
-	: m_dir(1.0f, 0.0f, 0.0f), m_scale(0.0f), m_radianceColor(1.0f), m_radianceWeight(1.0f),
-	  m_up(0.0f, 1.0f, 0.0f), m_sunPos(0.0f, 0.0f, 0.0f), m_lightConstantBuffer(nullptr),
+	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f), m_radianceColor(1.0f), m_radianceWeight(1.0f),
+	  m_up(0.0f, 1.0f, 0.0f), m_lightConstantBuffer(nullptr),
 	  m_shadowConstantBuffer(nullptr)
-{
-}
+    {}
 
 Light::~Light() {}
 
@@ -35,6 +34,10 @@ void Light::Update(UINT dateTime, Camera& camera)
 {
 	const float MAX_RADIANCE_WEIGHT = 1.5;
 	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
+  
+	m_dir = Vector3::Transform(Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)),
+		Matrix::CreateFromAxisAngle(Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
+	m_dir.Normalize();
 
 	// light
 	{

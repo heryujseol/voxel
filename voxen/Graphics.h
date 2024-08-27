@@ -171,7 +171,6 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
-
 	
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
