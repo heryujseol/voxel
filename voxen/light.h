@@ -38,7 +38,6 @@ private:
 	float m_radianceWeight;
 
 	Vector3 m_up;
-	Vector3 m_sunPos;
 
 	Matrix m_view[3];
 	Matrix m_proj[3];

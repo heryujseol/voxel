@@ -154,7 +154,7 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
     float3 ambientColor = float3(1.0, 1.0, 1.0);
-    float sunAltitude = sin(lightDir.y);
+    float sunAltitude = lightDir.y;
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)

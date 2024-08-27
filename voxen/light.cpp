@@ -8,9 +8,8 @@
 using namespace DirectX::SimpleMath;
 
 Light::Light()
-	: m_dir(1.0f, 0.0f, 0.0f), m_scale(0.0f), m_radianceColor(1.0f), m_radianceWeight(1.0f),
-	  m_up(0.0f, 1.0f, 0.0f), m_sunPos(0.0f, 0.0f, 0.0f), m_lightConstantBuffer(nullptr),
-	  m_shadowConstantBuffer(nullptr)
+	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f), m_radianceColor(1.0f),
+	  m_radianceWeight(1.0f), m_lightConstantBuffer(nullptr), m_shadowConstantBuffer(nullptr)
 {
 }
 
