@@ -9,8 +9,7 @@ using namespace DirectX::SimpleMath;
 
 Light::Light()
 	: m_dir(1.0f, 0.0f, 0.0f), m_scale(0.0f), m_radianceColor(1.0f), m_radianceWeight(1.0f),
-	  m_up(0.0f, 1.0f, 0.0f), m_sunPos(0.0f, 0.0f, 0.0f), m_lightConstantBuffer(nullptr),
-	  m_shadowConstantBuffer(nullptr)
+	  m_up(0.0f, 1.0f, 0.0f), m_lightConstantBuffer(nullptr), m_shadowConstantBuffer(nullptr)
 {
 }
 
@@ -94,8 +93,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 			}
 
 			if (App::MAX_SUNRISE <= dateTime && dateTime < App::DAY_START + App::DAY_CYCLE_AMOUNT) {
-				float radianceColorFactor = (float)(dateTime - App::MAX_SUNRISE) /
-											(App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
+				float radianceColorFactor =
+					(float)(dateTime - App::MAX_SUNRISE) /
+					(App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_SUNRISE_COLOR, RADIANCE_DAY_COLOR, radianceColorFactor);
@@ -122,22 +122,15 @@ void Light::Update(UINT dateTime, Camera& camera)
 				Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle));
 		m_dir.Normalize();
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), Matrix::CreateRotationZ(angle));
-		if (angle > 1.5f && angle <= 3.0f)
-		{
-			m_up =Vector3(-m_up.x, -m_up.y, m_up.z);
+		if (angle > 1.5f && angle <= 3.0f) {
+			m_up = Vector3(-m_up.x, -m_up.y, m_up.z);
 		}
 
-		Vector3 frustum[8]{
-			{ -1.0f, 1.0f, 0.0f },
-			{ 1.0f, 1.0f, 0.0f }, 
-			{ 1.0f, -1.0f, 0.0f },
+		Vector3 frustum[8]{ { -1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f, 0.0f }, { 1.0f, -1.0f, 0.0f },
 			{ -1.0f, -1.0f, 0.0f },
 
-			{ -1.0f, 1.0f, 1.0f },
-			{ 1.0f, 1.0f, 1.0f },
-			{ 1.0f, -1.0f, 1.0f },
-			{ -1.0f, -1.0f, 1.0f } 
-		};
+			{ -1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, -1.0f, 1.0f },
+			{ -1.0f, -1.0f, 1.0f } };
 
 		Matrix toWorld = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
 
@@ -184,8 +177,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 				Vector3(round(shadowOrigin.x), round(shadowOrigin.y), shadowOrigin.z);
 			Vector3 roundOffset =
 				Vector3((roundedOrigin.x - shadowOrigin.x) * (2.0f / App::SHADOW_WIDTH),
-					(roundedOrigin.y - shadowOrigin.y) * (2.0f / App::SHADOW_HEIGHT),
-					0.0f);
+					(roundedOrigin.y - shadowOrigin.y) * (2.0f / App::SHADOW_HEIGHT), 0.0f);
 
 			Matrix viewProj = m_view[i] * m_proj[i];
 			viewProj._41 += roundOffset.x;
@@ -196,7 +188,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 			m_shadowConstantData.viewWith[i] = viewportWith[i];
 
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-					m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
+				m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
 		}
 
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);
