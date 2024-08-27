@@ -151,10 +151,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
-	extern ComPtr<ID3D11Texture2D> shadowBuffer;
-	extern ComPtr<ID3D11DepthStencilView> shadowDSV;
-	extern ComPtr<ID3D11ShaderResourceView> shadowSRV;
-
 
 	// Shadow Resource Buffer
 	extern ComPtr<ID3D11Texture2D> atlasMapBuffer;

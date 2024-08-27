@@ -6,7 +6,6 @@
 
 #include "Chunk.h"
 #include "Camera.h"
-#include "Light.h"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -27,7 +26,7 @@ public:
 	static ChunkManager* GetInstance();
 
 	bool Initialize(Vector3 cameraChunkPos);
-	void Update(float dt, Camera& camera, Light& light);
+	void Update(float dt, Camera& camera);
 
 	void RenderOpaqueChunk(Chunk* chunk);
 	void RenderSemiAlphaChunk(Chunk* chunk);
@@ -38,7 +37,6 @@ public:
 	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
 	void RenderTransparency();
-	void RenderShadowMap();
 
 	Chunk* GetChunkByPosition(int x, int y, int z);
 	
@@ -54,12 +52,11 @@ private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunkList(Camera& camera);
 	void UpdateUnloadChunkList();
-	void UpdateRenderChunkList(Camera& camera, Light& light);
+	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 	void UpdateChunkConstant(float dt);
 
-	bool FrustumCulling(
-		Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow);
+	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	void InitChunkBuffer(Chunk* chunk);
 	
@@ -76,7 +73,6 @@ private:
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
 	std::vector<Chunk*> m_renderMirrorChunkList;
-	std::vector<Chunk*> m_renderShadowChunkList;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodIndexBuffers;

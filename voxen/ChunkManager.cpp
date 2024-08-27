@@ -68,7 +68,7 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	return true;
 }
 
-void ChunkManager::Update(float dt, Camera& camera, Light& light)
+void ChunkManager::Update(float dt, Camera& camera)
 {
 	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
@@ -77,7 +77,7 @@ void ChunkManager::Update(float dt, Camera& camera, Light& light)
 
 	UpdateLoadChunkList(camera);
 	UpdateUnloadChunkList();
-	UpdateRenderChunkList(camera, light);
+	UpdateRenderChunkList(camera);
 	UpdateInstanceInfoList(camera);
 	UpdateChunkConstant(dt);
 }
@@ -210,13 +210,6 @@ void ChunkManager::RenderTransparency()
 	}
 }
 
-void ChunkManager::RenderShadowMap()
-{
-	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
-	for (auto& c : m_renderShadowChunkList)
-		RenderLowLodChunk(c);
-}
-
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
 	std::map<std::tuple<int, int, int>, bool> renderableChunkMap;
@@ -317,11 +310,10 @@ void ChunkManager::UpdateUnloadChunkList()
 	}
 }
 
-void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
+void ChunkManager::UpdateRenderChunkList(Camera& camera)
 {
 	m_renderChunkList.clear();
 	m_renderMirrorChunkList.clear();
-	m_renderShadowChunkList.clear();
 
 	for (auto& p : m_chunkMap) {
 		if (!p.second->IsLoaded())
@@ -331,16 +323,12 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
 			continue;
 
 		Vector3 chunkPos = p.second->GetPosition();
-		if (FrustumCulling(chunkPos, camera, light, false, false)) {
+		if (FrustumCulling(chunkPos, camera, false)) {
 			m_renderChunkList.push_back(p.second);
 		}
 
-		if (FrustumCulling(chunkPos, camera, light, false, true)) {
-			m_renderShadowChunkList.push_back(p.second);
-		}
-
 		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
-		if (FrustumCulling(mirrorChunkPos, camera, light, true, false)) {
+		if (FrustumCulling(mirrorChunkPos, camera, true)) {
 			m_renderMirrorChunkList.push_back(p.second);
 		}
 	}
@@ -402,14 +390,9 @@ void ChunkManager::UpdateChunkConstant(float dt)
 	}
 }
 
-bool ChunkManager::FrustumCulling(
-	Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow)
+bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirror)
 {
 	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-
-	if (useShadow) {
-		invMat = (light.GetViewMatrix(2) * light.GetProjectionMatrix(2)).Invert();
-	};
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
