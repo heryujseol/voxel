@@ -31,14 +31,13 @@ public:
 	inline Matrix GetViewMatrix(int i) { return m_view[i]; };
 	inline Matrix GetProjectionMatrix(int i) { return m_proj[i]; };
 
-private:
+private: 
 	Vector3 m_dir;
 	float m_scale;
 	Vector3 m_radianceColor;
 	float m_radianceWeight;
 
 	Vector3 m_up;
-	Vector3 m_sunPos;
 
 	Matrix m_view[3];
 	Matrix m_proj[3];
