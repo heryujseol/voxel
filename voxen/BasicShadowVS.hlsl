@@ -1,7 +1,14 @@
-cbuffer ChunkConstantBuffer : register(b0)
+cbuffer CameraConstantBuffer : register(b0)
+{
+    matrix view;
+    matrix proj;
+}
+
+cbuffer ChunkConstantBuffer : register(b1)
 {
     matrix world;
 }
+
 
 struct vsOutput
 {

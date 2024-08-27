@@ -65,8 +65,6 @@ private:
 	void RenderMirrorWorld();
 	void RenderWaterPlane();
 
-	void RenderShadowMap();
-
 	HWND m_hwnd;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	AppConstantData m_constantData;

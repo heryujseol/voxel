@@ -13,7 +13,7 @@ struct psInput
 
 float main(psInput input) : SV_Target0
 {
-    if (input.normal.y <= 0 || input.posWorld.y < 62.0 - 1e-4 || 62.0 + 1e-4 < input.posWorld.y)
+    if (input.normal.y <= 0 || input.posWorld.y < 64.0 - 1e-4 || 64.0 + 1e-4 < input.posWorld.y)
         discard;
     
     float pixelDepth = input.posProj.z;
