@@ -56,11 +56,10 @@ cbuffer AppConstantBuffer : register(b10)
 
 cbuffer ShadowConstantBuffer : register(b11)
 {
-    Matrix shadowViewProj[3];
+    Matrix shadowViewProj[4];
     float4 topLX;
     float4 viewPortW;
 }
-
 
 float3 sRGB2Linear(float3 color)
 {
@@ -197,11 +196,11 @@ float getShadowFactor(float3 posWorld)
     float width, height, numMips;
     shadowTex.GetDimensions(0, width, height, numMips);
     
-    float g_topLX[3] = { topLX.x, topLX.y, topLX.z };
-    float g_viewPortW[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
-    float biasA[3] = { 0.002, 0.0025, 0.00275 };
+    float g_topLX[4] = { topLX.x, topLX.y, topLX.z, topLX.w };
+    float g_viewPortW[4] = { viewPortW.x, viewPortW.y, viewPortW.z, viewPortW.w };
+    float biasA[4] = { 0.002, 0.003, 0.002, 0.002 };
     
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         float4 shadowPos = mul(float4(posWorld, 1.0), shadowViewProj[i]);
         shadowPos.xyz /= shadowPos.w;
@@ -222,26 +221,32 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float dx = 1.0 / width;
-        float dy = 1.0 / height;
+        float dx = 3.0 / width;
+        float dy = 3.0 / height;
 
         float percentLit = 0.0;
-        const float2 offsets[9] =
+        const float2 poissonDisk[16] =
         {
-            float2(-dx, -dy), float2(0.0, -dy), float2(dx, -dy),
-            float2(-dx, 0.0), float2(0.0, 0.0), float2(dx, 0.0),
-            float2(-dx, dy), float2(0.0, dy), float2(dx, dy)
+            float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
+            float2(-0.094184101, -0.92938870), float2(0.34495938, 0.29387760),
+            float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
+            float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
+            float2(0.44323325, -0.97511554), float2(0.53742981, -0.47373420),
+            float2(-0.26496911, -0.41893023), float2(0.79197514, 0.19090188),
+            float2(-0.24188840, 0.99706507), float2(-0.81409955, 0.91437590),
+            float2(0.19984126, 0.78641367), float2(0.14383161, -0.14100790)
         };
+
         
         shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
         shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
         
         float2 texcoord;
-        float denom = 9.0;
+        float denom = 16.0;
         [unroll]
-        for (int j = 0; j < 9; ++j)
+        for (int j = 0; j < 16; ++j)
         {
-            texcoord = shadowPos.xy + offsets[j];
+            texcoord = shadowPos.xy + float2(dx, dy) * poissonDisk[j];
             texcoord = clamp(texcoord, 0.0, 1.0);
             percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
         }

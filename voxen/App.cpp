@@ -184,8 +184,8 @@ void App::Render()
     // 1. Deferred Render Pass
     {
         FillGBuffer();
-        //MaskMSAAEdge();
-        //RenderSSAO();
+        MaskMSAAEdge();
+        RenderSSAO();
         ShadingBasic();
     }
 

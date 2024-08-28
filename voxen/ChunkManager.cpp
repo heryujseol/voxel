@@ -410,7 +410,7 @@ bool ChunkManager::FrustumCulling(
 	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
 
 	if (useShadow) {
-		invMat = (light.GetViewMatrix(2) * light.GetProjectionMatrix(2)).Invert();
+		invMat = (light.GetViewMatrix(3) * light.GetProjectionMatrix(3)).Invert();
 	};
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
