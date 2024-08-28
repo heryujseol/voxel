@@ -177,6 +177,7 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	
+	// 0. Shadow Map
 	{
         RenderShadowMap();
     }
@@ -570,7 +571,7 @@ void App::RenderWaterPlane()
 
 void App::RenderShadowMap()
 {
-	Graphics::context->RSSetViewports(3, m_light.m_shadowViewPorts);
+	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
 
 	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);

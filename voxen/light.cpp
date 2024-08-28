@@ -117,9 +117,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.025f, 0.1f, 0.3f, 0.5f };
-		float topLX[CASCADE_NUM] = { 0.0f, 2048.0f, 3072.0f, 3584.0f };
-		float viewportWidth[CASCADE_NUM] = { 2048.0f, 1024.0f, 512.0f, 256.0f };
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.01f, 0.03f, 0.1f, 0.3f };
+		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 1536.0f, 1792.0f };
+		float viewportWidth[CASCADE_NUM] = { 1024.0f, 512.0f, 256.0f, 128.0f };
 
 		if (angle >= Utils::PI / 2.0f) {
 			m_up *= -1;
@@ -160,7 +160,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 			radius = std::ceil(radius * 16.0f) / 16.0f;
 			
-			Vector3 sunPos = center + (m_dir * radius * 2.0f);
+			Vector3 sunPos = center + (m_dir * radius * 1.0f);
 
 			float farZ = (sunPos - center).Length() + radius;
 

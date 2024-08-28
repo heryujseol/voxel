@@ -250,6 +250,16 @@ float getShadowFactor(float3 posWorld)
             texcoord = clamp(texcoord, 0.0, 1.0);
             percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
         }
+        ////////////////
+        if (i == 0)
+            return 0.133;
+        else if (i == 1)
+            return 0.263;
+        else if (i == 2)
+            return 0.393;
+        else if (i == 3)
+            return 0.553;
+        ////////////////
         return percentLit / denom;
     }
     return 1.0;
@@ -276,6 +286,15 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     // todo
     float shadowFactor = getShadowFactor(position);
+    if (shadowFactor == 0.133)
+        return float3(1, 0, 0);
+    else if (shadowFactor == 0.263)
+        return float3(0, 1, 0);
+    else if (shadowFactor == 0.393)
+        return float3(0, 0, 1);
+    else if (shadowFactor == 0.553)
+        return float3(1, 1, 0);
+    
     shadowFactor = pow(shadowFactor, 10.0);
     
     float3 radiance = radianceColor * shadowFactor; // radiance °ª ¼öÁ¤\
