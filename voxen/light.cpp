@@ -117,13 +117,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.01f, 0.03f, 0.1f, 0.3f };
-		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 1536.0f, 1792.0f };
-		float viewportWidth[CASCADE_NUM] = { 1024.0f, 512.0f, 256.0f, 128.0f };
-
-		if (angle >= Utils::PI / 2.0f) {
-			m_up *= -1;
-		}
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.075f, 0.225f, 0.3f };
+		float topLX[CASCADE_NUM] = { 0.0f, 2048.0f, 3072.0f, 3584.0f };
+		float viewportWidth[CASCADE_NUM] = { 2048.0f, 1024.0f, 512.0f, 256.0f };
 
 		Vector3 frustum[8]{ { -1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f, 0.0f }, { 1.0f, -1.0f, 0.0f },
 			{ -1.0f, -1.0f, 0.0f },
@@ -152,30 +148,41 @@ void Light::Update(UINT dateTime, Camera& camera)
 			Vector3 center = Vector3(0.0f);
 			for (auto& v : tFrustum)
 				center += v;
-			center *= 1.0f / 8.0f;
+			center /= 8.0f;
 
 			float radius = 0.0f;
 			for (auto& v : tFrustum)
 				radius = max(radius, (v - center).Length());
 
-			radius = std::ceil(radius * 16.0f) / 16.0f;
-			
-			Vector3 sunPos = center + (m_dir * radius * 1.0f);
+			Vector3 sunPos = center + m_dir * (radius + 10.0f);
+			Matrix lightViewMatrix = XMMatrixLookToLH(sunPos, -m_dir, m_up);
 
+			Vector3 lightFrustum[8];
+			for (int j = 0; j < 8; ++j) {
+				lightFrustum[j] = Vector3::Transform(tFrustum[j], lightViewMatrix); // world -> lightView
+			}
+
+			Vector3 minCorner = lightFrustum[0];
+			Vector3 maxCorner = lightFrustum[0];
+			for (int j = 1; j < 8; ++j) {
+				minCorner = Vector3::Min(minCorner, lightFrustum[j]);
+				maxCorner = Vector3::Max(maxCorner, lightFrustum[j]);
+			}
+
+			float width = maxCorner.x - minCorner.x;
+			float height = maxCorner.y - minCorner.y;
 			float farZ = (sunPos - center).Length() + radius;
 
-			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
-			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, farZ);
-			Matrix viewProj = m_view[i] * m_proj[i];
+			m_view[i] = lightViewMatrix;
+			m_proj[i] = XMMatrixOrthographicLH(width, height, 0.0f, farZ);
 
-			m_shadowConstantData.viewProj[i] = viewProj.Transpose();
+			m_shadowConstantData.viewProj[i] = (m_view[i] * m_proj[i]).Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
 			m_shadowConstantData.viewWidth[i] = viewportWidth[i];
 
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
 				m_shadowConstantData.viewWidth[i], m_shadowConstantData.viewWidth[i]);
 		}
-		std::cout << std::endl;
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);
 	}
 }

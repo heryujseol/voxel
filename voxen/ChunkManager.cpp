@@ -337,14 +337,18 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
 			m_renderChunkList.push_back(p.second);
 		}
 
-		if (FrustumCulling(chunkPos, camera, light, false, true)) {
-			m_renderShadowChunkList.push_back(p.second);
+		for (int i = 0; i < Light::CASCADE_NUM; ++i) {
+			if (FrustumCulling(chunkPos, camera, light, false, true, i)) {
+				m_renderShadowChunkList.push_back(p.second);
+				break;
+			}
 		}
 
 		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
 		if (FrustumCulling(mirrorChunkPos, camera, light, true, false)) {
 			m_renderMirrorChunkList.push_back(p.second);
 		}
+		
 	}
 }
 
@@ -405,12 +409,12 @@ void ChunkManager::UpdateChunkConstant(float dt)
 }
 
 bool ChunkManager::FrustumCulling(
-	Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow)
+	Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow, int index)
 {
 	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
 
 	if (useShadow) {
-		invMat = (light.GetViewMatrix(3) * light.GetProjectionMatrix(3)).Invert();
+		invMat = (light.GetViewMatrix(index) * light.GetProjectionMatrix(index)).Invert();
 	};
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),

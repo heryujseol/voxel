@@ -28,7 +28,7 @@ float4 main(psInput input) : SV_TARGET
     float roughness = 0.98;
     
     float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
-    float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
+    float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
     
     float3 lighting = ambientLighting + directLighting;
     float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
@@ -55,7 +55,7 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float roughness = 0.98;
         
         float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
-        float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
+        float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
         
         float3 lighting = ambientLighting + directLighting;
         float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);

@@ -147,7 +147,6 @@ float getFaceAmbient(float3 normal)
 
 float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
 {
-    ao = 1.0;
     // skycolor ambient (envMap을 가정함)
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
@@ -157,33 +156,35 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     float dayAltitude = PI / 12.0;
     float maxHorizonAltitude = -PI / 24.0;
     if (sunAltitude <= dayAltitude)
-    {        
+    {
         float w = smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude);
         ambientColor = lerp(eyeHorizonColor, ambientColor, w);
     }
     
+    float3 ambientWeight = 0.5;
+    
     // face ambient
     float faceAmbient = getFaceAmbient(normal);
     
-    if (cameraDummyData.x == 0)
+    if (cameraDummyData.x != 0)
         return float3(0.0, 0.0, 0.0);
     
-    return ao * albedo * ambientColor * faceAmbient;
+    return ao * albedo * ambientColor * faceAmbient * ambientWeight;
 }
 
-float3 SchlickFresnel(float3 F0, float NdotH)
+float3 schlickFresnel(float3 F0, float NdotH)
 {
     return F0 + (1 - F0) * pow(2, (-5.55473 * (NdotH) - 6.98316) * NdotH);
 }
 
-float NdfGGX(float NdotH, float roughness)
+float ndfGGX(float NdotH, float roughness)
 {
     float alpha = roughness * roughness;
     float alpha2 = alpha * alpha;
     return alpha2 / (3.141592 * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2));
 }
 
-float SchlickGGX(float NdotI, float NdotO, float roughness)
+float schlickGGX(float NdotI, float NdotO, float roughness)
 {
     float k = (roughness + 1) * (roughness + 1) / 8;
     float gl = NdotI / (NdotI * (1 - k) + k);
@@ -191,14 +192,23 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return gl * gv;
 }
 
-float getShadowFactor(float3 posWorld)
+float getRandom(float3 seed, int i)
+{
+    float4 seed4 = float4(seed, i);
+    float dot_product = dot(seed4, float4(12.9898, 78.233, 45.164, 94.673));
+    return frac(sin(dot_product) * 43758.5453);
+}
+
+float getShadowFactor(float3 posWorld, float3 normal)
 {
     float width, height, numMips;
     shadowTex.GetDimensions(0, width, height, numMips);
     
+    float dx = 3.0 / width;
+    float dy = 3.0 / height;
+    
     float g_topLX[4] = { topLX.x, topLX.y, topLX.z, topLX.w };
     float g_viewPortW[4] = { viewPortW.x, viewPortW.y, viewPortW.z, viewPortW.w };
-    float biasA[4] = { 0.002, 0.003, 0.002, 0.002 };
     
     for (int i = 0; i < 4; ++i)
     {
@@ -213,7 +223,13 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float bias = biasA[i];
+        float bias = cameraDummyData.y;
+        //if (i == 0)
+            //bias = 0.0001 + 0.0002 * pow((1.0 - dot(normal, lightDir)), 1.5);
+        /*
+        bias 수정
+        겹칠 때? 서로 다른 건?
+        */
         
         float depth = shadowPos.z - bias;
         if (depth < 0.0 || depth > 1.0)
@@ -221,10 +237,6 @@ float getShadowFactor(float3 posWorld)
             continue;
         }
         
-        float dx = 3.0 / width;
-        float dy = 3.0 / height;
-
-        float percentLit = 0.0;
         const float2 poissonDisk[16] =
         {
             float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
@@ -236,36 +248,31 @@ float getShadowFactor(float3 posWorld)
             float2(-0.24188840, 0.99706507), float2(-0.81409955, 0.91437590),
             float2(0.19984126, 0.78641367), float2(0.14383161, -0.14100790)
         };
-
         
         shadowPos.x = (shadowPos.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
         shadowPos.y = (shadowPos.y * (g_viewPortW[i] / height));
         
-        float2 texcoord;
         float denom = 16.0;
+        float percentLit = 0.0;
         [unroll]
         for (int j = 0; j < 16; ++j)
         {
-            texcoord = shadowPos.xy + float2(dx, dy) * poissonDisk[j];
-            texcoord = clamp(texcoord, 0.0, 1.0);
+            int index = int(16.0 * getRandom(posWorld, j)) % 16u;
+            float2 texcoord = shadowPos.xy + float2(dx, dy) * poissonDisk[index];
+            
+            texcoord.x = clamp(texcoord.x, g_topLX[i] / width, (g_topLX[i] + g_viewPortW[i]) / width);
+            texcoord.y = clamp(texcoord.y, 0.0, g_viewPortW[i] / height);
+            
             percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
         }
-        ////////////////
-        if (i == 0)
-            return 0.133;
-        else if (i == 1)
-            return 0.263;
-        else if (i == 2)
-            return 0.393;
-        else if (i == 3)
-            return 0.553;
-        ////////////////
+        
         return percentLit / denom;
     }
+    
     return 1.0;
 }
 
-float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float metallic, float roughness)
+float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float metallic, float roughness, bool useShadow)
 {
     float3 pixelToEye = normalize(eyePos - position);
     float3 halfway = normalize(pixelToEye + lightDir);
@@ -276,28 +283,19 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
     float3 F0 = lerp(Fdielectric, albedo, metallic);
-    float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye))); // HoV
-    float D = NdfGGX(NdotH, roughness);
-    float3 G = SchlickGGX(NdotI, NdotO, roughness);
-    float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);  
+    float3 F = schlickFresnel(F0, max(0.0, dot(halfway, pixelToEye))); // HoV
+    float D = ndfGGX(NdotH, roughness);
+    float3 G = schlickGGX(NdotI, NdotO, roughness);
+    float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
 
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
-    // todo
-    float shadowFactor = getShadowFactor(position);
-    if (shadowFactor == 0.133)
-        return float3(1, 0, 0);
-    else if (shadowFactor == 0.263)
-        return float3(0, 1, 0);
-    else if (shadowFactor == 0.393)
-        return float3(0, 0, 1);
-    else if (shadowFactor == 0.553)
-        return float3(1, 1, 0);
+    float shadowFactor = 1.0;
+    if (useShadow)
+        shadowFactor = getShadowFactor(position, normal);
     
-    shadowFactor = pow(shadowFactor, 10.0);
-    
-    float3 radiance = radianceColor * shadowFactor; // radiance 값 수정\
+    float3 radiance = radianceColor * shadowFactor;
     
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }

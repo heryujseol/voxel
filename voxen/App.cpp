@@ -123,6 +123,8 @@ void App::Run()
 				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
 				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
 
+			ImGui::SliderFloat("bias", &m_camera.m_constantData.dummy.y, 0.0f, 0.1f, "%.10f");
+
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -139,8 +141,8 @@ void App::Run()
 void App::Update(float dt)
 {
 	static float acc = 0.0f;
-
-	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	if (!m_keyPressed['T'])
+		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
@@ -198,14 +200,14 @@ void App::Render()
 	// 3. Forward Render Pass MSAA
 	{
 		if (m_camera.IsUnderWater()) {
-			RenderFogFilter();
+			//RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();
 			RenderWaterPlane();
 		}
 		else {
-			RenderMirrorWorld();
-			RenderWaterPlane();
+			//RenderMirrorWorld();
+			//RenderWaterPlane();
 			//RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();

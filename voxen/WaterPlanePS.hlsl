@@ -33,7 +33,7 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 0)).rgb;
     float3 ambientLighting = getAmbientLighting(1.0, textureColor, input.normal);
     
-    float3 directLighting = getDirectLighting(input.normal, input.posWorld, textureColor, 0.0, 0.05);
+    float3 directLighting = getDirectLighting(input.normal, input.posWorld, textureColor, 0.0, 0.05, true);
     
     float3 waterColor = ambientLighting + directLighting;
     
