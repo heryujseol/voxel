@@ -117,7 +117,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.075f, 0.225f, 0.3f };
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.075f, 0.15f, 0.3f };
 		float topLX[CASCADE_NUM] = { 0.0f, 2048.0f, 3072.0f, 3584.0f };
 		float viewportWidth[CASCADE_NUM] = { 2048.0f, 1024.0f, 512.0f, 256.0f };
 
@@ -150,31 +150,25 @@ void Light::Update(UINT dateTime, Camera& camera)
 				center += v;
 			center /= 8.0f;
 
-			float radius = 0.0f;
-			for (auto& v : tFrustum)
-				radius = max(radius, (v - center).Length());
-
-			Vector3 sunPos = center + m_dir * (radius + 10.0f);
+			float radius = (tFrustum[0] - tFrustum[6]).Length() / 2.0f;
+			Vector3 sunPos = center + m_dir * (radius * 2.0f);
 			Matrix lightViewMatrix = XMMatrixLookToLH(sunPos, -m_dir, m_up);
 
 			Vector3 lightFrustum[8];
 			for (int j = 0; j < 8; ++j) {
-				lightFrustum[j] = Vector3::Transform(tFrustum[j], lightViewMatrix); // world -> lightView
+				lightFrustum[j] =
+					Vector3::Transform(tFrustum[j], lightViewMatrix); // world -> lightView
 			}
-
 			Vector3 minCorner = lightFrustum[0];
 			Vector3 maxCorner = lightFrustum[0];
 			for (int j = 1; j < 8; ++j) {
 				minCorner = Vector3::Min(minCorner, lightFrustum[j]);
 				maxCorner = Vector3::Max(maxCorner, lightFrustum[j]);
 			}
-
-			float width = maxCorner.x - minCorner.x;
-			float height = maxCorner.y - minCorner.y;
-			float farZ = (sunPos - center).Length() + radius;
-
+			
 			m_view[i] = lightViewMatrix;
-			m_proj[i] = XMMatrixOrthographicLH(width, height, 0.0f, farZ);
+			m_proj[i] = XMMatrixOrthographicOffCenterLH(
+				minCorner.x, maxCorner.x, minCorner.y, maxCorner.y, minCorner.z, maxCorner.z);
 
 			m_shadowConstantData.viewProj[i] = (m_view[i] * m_proj[i]).Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];

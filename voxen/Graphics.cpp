@@ -1079,7 +1079,7 @@ bool Graphics::InitSamplerStates()
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.BorderColor[0] = 100.0f;
+	desc.BorderColor[0] = 1.0f;
 	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
