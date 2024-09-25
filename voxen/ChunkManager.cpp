@@ -214,7 +214,6 @@ void ChunkManager::RenderTransparency()
 
 void ChunkManager::RenderShadowMap()
 {
-	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
 	for (auto& c : m_renderShadowChunkList)
 		RenderLowLodChunk(c);
 }
@@ -336,7 +335,7 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, Light& light)
 		if (FrustumCulling(chunkPos, camera, light, false, false)) {
 			m_renderChunkList.push_back(p.second);
 		}
-
+		
 		for (int i = 0; i < Light::CASCADE_NUM; ++i) {
 			if (FrustumCulling(chunkPos, camera, light, false, true, i)) {
 				m_renderShadowChunkList.push_back(p.second);
@@ -411,11 +410,14 @@ void ChunkManager::UpdateChunkConstant(float dt)
 bool ChunkManager::FrustumCulling(
 	Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow, int index)
 {
-	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-
+	Matrix invMat = Matrix();
+	
 	if (useShadow) {
 		invMat = (light.GetViewMatrix(index) * light.GetProjectionMatrix(index)).Invert();
-	};
+	}
+	else {
+		invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
+	}
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),

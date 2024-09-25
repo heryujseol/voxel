@@ -21,7 +21,9 @@ float4 main(psInput input) : SV_TARGET
     albedo += albedoTex.Load(input.posProj.xy, 2).rgb;
     albedo += albedoTex.Load(input.posProj.xy, 3).rgb;
     albedo /= SAMPLE_COUNT;
+    
     float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
+    ao = pow(ao, 2.0);
     
     // todo
     float metallic = 0.0;
@@ -48,7 +50,9 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float3 normal = normalEdgeTex.Load(input.posProj.xy, i).xyz;
         float4 position = positionTex.Load(input.posProj.xy, i);
         float3 albedo = albedoTex.Load(input.posProj.xy, i).rgb; 
+        
         float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
+        ao = pow(ao, 2.0);
         
         // todo
         float metallic = 0.0;

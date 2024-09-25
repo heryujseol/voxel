@@ -63,16 +63,15 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> noneCullRS;
 	ComPtr<ID3D11RasterizerState> mirrorRS;
-	ComPtr<ID3D11RasterizerState> frontCullRS;
+	ComPtr<ID3D11RasterizerState> shadowRS;
 
 
 	// Sampler State
 	ComPtr<ID3D11SamplerState> pointWrapSS;
 	ComPtr<ID3D11SamplerState> linearWrapSS;
-	ComPtr<ID3D11SamplerState> linearClampSS;
-	ComPtr<ID3D11SamplerState> shadowPointSS;
-	ComPtr<ID3D11SamplerState> shadowCompareSS;
 	ComPtr<ID3D11SamplerState> pointClampSS;
+	ComPtr<ID3D11SamplerState> linearClampSS;
+	ComPtr<ID3D11SamplerState> shadowCompareSS;
 
 
 	// Depth Stencil State
@@ -1014,16 +1013,16 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
-	// frontCullRS
+	// shadowRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+	rastDesc.DepthClipEnable = false;
 	rastDesc.FrontCounterClockwise = false;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, frontCullRS.GetAddressOf());
+	ret = Graphics::device->CreateRasterizerState(&rastDesc, shadowRS.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create frontCULL RS" << std::endl;
+		std::cout << "failed create shadow RS" << std::endl;
 		return false;
 	}
-
 
 	return true;
 }
@@ -1047,47 +1046,6 @@ bool Graphics::InitSamplerStates()
 		return false;
 	}
 
-	// linear wrap
-	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	ret = Graphics::device->CreateSamplerState(&desc, linearWrapSS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create linear Wrap SS" << std::endl;
-		return false;
-	}
-
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	ret = Graphics::device->CreateSamplerState(&desc, linearClampSS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create linear Clamp SS" << std::endl;
-		return false;
-	}
-
-	// shadowPointSS
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.BorderColor[0] = 1.0f;
-	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	device->CreateSamplerState(&desc, shadowPointSS.GetAddressOf());
-
-	// shadowCompareSS
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	desc.BorderColor[0] = 1.0f;
-	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create shadowCompareSS" << std::endl;
-		return false;
-	}
-
 	// point clamp
 	desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -1096,6 +1054,38 @@ bool Graphics::InitSamplerStates()
 	ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create point clamp SS" << std::endl;
+		return false;
+	}
+
+	// linear wrap
+	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	ret = Graphics::device->CreateSamplerState(&desc, linearWrapSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create linear wrap SS" << std::endl;
+		return false;
+	}
+
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ret = Graphics::device->CreateSamplerState(&desc, linearClampSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create linear clamp SS" << std::endl;
+		return false;
+	}
+
+	// shadowCompareSS
+	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shadowCompare SS" << std::endl;
 		return false;
 	}
 
@@ -1222,10 +1212,9 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointWrapSS.Get());
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
-	basicPSO.samplerStates.push_back(linearClampSS.Get());
-	basicPSO.samplerStates.push_back(shadowPointSS.Get());
-	basicPSO.samplerStates.push_back(shadowCompareSS.Get());
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.samplerStates.push_back(linearClampSS.Get());
+	basicPSO.samplerStates.push_back(shadowCompareSS.Get());
 	basicPSO.depthStencilState = basicDSS;
 	basicPSO.stencilRef = 0;
 	basicPSO.blendState = nullptr;
@@ -1307,7 +1296,7 @@ void Graphics::InitGraphicsPSO()
 
 	// basicshadowPSO
 	basicShadowPSO = basicPSO;
-	basicShadowPSO.rasterizerState = noneCullRS;
+	basicShadowPSO.rasterizerState = shadowRS;
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;

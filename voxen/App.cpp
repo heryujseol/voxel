@@ -418,9 +418,8 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	ppSRVs.push_back(Graphics::shadowSRV.Get());
+	
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
@@ -428,6 +427,11 @@ void App::ShadingBasic()
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
 	m_postEffect.Render();
+
+	ID3D11ShaderResourceView* nullSRV[] = {
+		0,
+	};
+	Graphics::context->PSSetShaderResources(11, 1, nullSRV);
 }
 
 void App::ConvertToMSAA()
@@ -580,6 +584,7 @@ void App::RenderShadowMap()
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
+	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
 	ChunkManager::GetInstance()->RenderShadowMap();
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);

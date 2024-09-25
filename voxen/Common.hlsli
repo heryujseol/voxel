@@ -18,10 +18,10 @@ static const float2 poissonDisk[16] =
 
 SamplerState pointWrapSS : register(s0);
 SamplerState linearWrapSS : register(s1);
-SamplerState linearClampSS : register(s2);
-SamplerState shadowPointSS : register(s3);
+SamplerState pointClampSS : register(s2);
+SamplerState linearClampSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
-SamplerState pointClampSS : register(s5);
+
 
 Texture2D shadowTex : register(t11);
 
@@ -71,6 +71,8 @@ cbuffer ShadowConstantBuffer : register(b11)
     Matrix shadowViewProj[4];
     float4 topLX;
     float4 viewPortW;
+    float4 frustumW;
+    float4 frustumH;
 }
 
 float3 sRGB2Linear(float3 color)
@@ -178,8 +180,8 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     // face ambient
     float faceAmbient = getFaceAmbient(normal);
     
-    if (cameraDummyData.x != 0)
-        return float3(0.0, 0.0, 0.0);
+    if (cameraDummyData.x == 0)
+        return float3(0, 0, 0);
     
     return ao * albedo * ambientColor * faceAmbient * ambientWeight;
 }
@@ -211,61 +213,89 @@ float getRandom(float3 seed, int i)
     return frac(sin(dot_product) * 43758.5453);
 }
 
-float getShadowFactor(float3 posWorld, float3 normal, out float3 color)
+float getShadowFactor(float3 posWorld, float3 normal)
 {
     float width, height, numMips;
     shadowTex.GetDimensions(0, width, height, numMips);
     
-    float dx = 3.0 / width;
-    float dy = 3.0 / height;
+    float topLXOffsets[4] = { topLX.x, topLX.y, topLX.z, topLX.w };
+    float viewPortWidth[4] = { viewPortW.x, viewPortW.y, viewPortW.z, viewPortW.w };
+    float frustumWidth[4] = { frustumW.x, frustumW.y, frustumW.z, frustumW.w };
+    float frustumHeight[4] = { frustumH.x, frustumH.y, frustumH.z, frustumH.w };
     
-    float g_topLX[4] = { topLX.x, topLX.y, topLX.z, topLX.w };
-    float g_viewPortW[4] = { viewPortW.x, viewPortW.y, viewPortW.z, viewPortW.w };
+    // 경계선
+    // CSM간 bias
+    // flickering
     
-    color = radianceColor;
+    float dx = 2.0 / viewPortWidth[0];
+    float dy = 2.0 / viewPortWidth[0];
+    
     for (int i = 0; i < 4; ++i)
     {
         float4 lightProj = mul(float4(posWorld, 1.0), shadowViewProj[i]);
         lightProj.xyz /= lightProj.w;
         
-        if (lightProj.x < -1.0 || lightProj.x > 1.0 || 
-            lightProj.y < -1.0 || lightProj.y > 1.0 || 
+        if (lightProj.x < -1.0 || lightProj.x > 1.0 ||
+            lightProj.y < -1.0 || lightProj.y > 1.0 ||
             lightProj.z < 0.0 || lightProj.z > 1.0)
         {
-            continue;
+            dx *= 0.5;
+            dy *= 0.5;
+                
+            continue ;
         }
         
+        //float bias = 0.0002 + 0.018 * pow(1.0 - max(dot(lightDir, normal), 0.0), 3.0);
+        //bias *= pow(2.0, i);
         float bias = cameraDummyData.y;
-        //if (i == 0)
-            //bias = 0.0001 + 0.0002 * pow((1.0 - dot(normal, lightDir)), 1.5);
-        /*
-        어떻게 두 cascade 사이를 부드럽게 이을 것인가 -> blendWeight를 이용하여 겹치는 부분을 샘플링
-        bias
-        pcf의 문제를 어떻게 해결할 것인가
-        */
-        
-        
-        float depth = lightProj.z - bias;
-        
         float2 lightTexcoord = float2(lightProj.x * 0.5 + 0.5, lightProj.y * -0.5 + 0.5);
+        
         // scaling
-        lightTexcoord.x = (lightTexcoord.x * (g_viewPortW[i] / width)) + (g_topLX[i] / width);
-        lightTexcoord.y = (lightTexcoord.y * (g_viewPortW[i] / height));
+        float2 scaledTexcoord;
+        scaledTexcoord.x = (lightTexcoord.x * (viewPortWidth[i] / width)) + (topLXOffsets[i] / width);
+        scaledTexcoord.y = (lightTexcoord.y * (viewPortWidth[i] / height));
         
         float denom = 1.0;
+        //float percentLit = shadowTex.SampleCmpLevelZero(shadowCompareSS, scaledTexcoord, lightProj.z - bias).r;
         float percentLit = 0.0;
-        [unroll]
-        for (int j = 0; j < 1; ++j)
+        float depth = shadowTex.SampleLevel(linearClampSS, scaledTexcoord, 0.0).r;
+        if (depth < lightProj.z - bias)
         {
-            int index = int(16.0 * getRandom(posWorld, j)) % 16u;
-            float2 texcoord = lightTexcoord.xy; //+ float2(dx, dy) * poissonDisk[index];
-            
-            texcoord.x = clamp(texcoord.x, g_topLX[i] / width, (g_topLX[i] + g_viewPortW[i]) / width);
-            texcoord.y = clamp(texcoord.y, 0.0, g_viewPortW[i] / height);
-                        
-            percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, depth).r;
+            percentLit = 0.0;
+        }
+        else
+        {
+            percentLit = 1.0;
         }
         
+        [loop]
+        for (int j = 0; j < 16; ++j)
+        {
+            int index = int(16.0 * getRandom(posWorld, j)) % 16u;
+            float2 texcoord = scaledTexcoord.xy + float2(dx, dy) * poissonDisk[index];
+            
+            if (texcoord.x < topLXOffsets[i] / width || texcoord.x > (topLXOffsets[i] + viewPortWidth[i]) / width ||
+                texcoord.y < 0.0 || texcoord.y > viewPortWidth[i] / height)
+            {
+                continue;
+            }
+            else
+            {
+                //percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS, texcoord, lightProj.z - bias).r;
+                
+                depth = shadowTex.SampleLevel(linearClampSS, texcoord, 0.0).r;
+                if (depth < lightProj.z - bias)
+                {
+                    percentLit += 0.0;
+                }
+                else
+                {
+                    percentLit += 1.0;
+                }
+                
+                denom += 1.0;
+            }
+        }
         return (percentLit / denom);
     }
     return 1.0;
@@ -290,13 +320,11 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     
-    float3 color = float3(1, 1, 1);
     float shadowFactor = 1.0;
     if (useShadow)
-        shadowFactor = getShadowFactor(position, normal, color);
+        shadowFactor = getShadowFactor(position, normal);
     
-    //float3 radiance = radianceColor * shadowFactor;
-    float3 radiance = color * shadowFactor;
+    float3 radiance = radianceWeight * radianceColor * shadowFactor;
     
     return (diffuseBRDF + specularBRDF) * radiance * NdotI;
 }

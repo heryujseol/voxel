@@ -108,7 +108,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 		m_lightConstantData.lightDir = m_dir;
 		m_lightConstantData.radianceWeight = m_radianceWeight;
-		m_lightConstantData.radianceColor = m_radianceColor;
+		m_lightConstantData.radianceColor = Utils::SRGB2Linear(m_radianceColor);
 		m_lightConstantData.maxRadianceWeight = MAX_RADIANCE_WEIGHT;
 
 		DXUtils::UpdateConstantBuffer(m_lightConstantBuffer, m_lightConstantData);
@@ -117,7 +117,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.03f, 0.075f, 0.15f, 0.3f };
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.025f, 0.05f, 0.075f, 0.1f };
 		float topLX[CASCADE_NUM] = { 0.0f, 2048.0f, 3072.0f, 3584.0f };
 		float viewportWidth[CASCADE_NUM] = { 2048.0f, 1024.0f, 512.0f, 256.0f };
 
@@ -127,6 +127,8 @@ void Light::Update(UINT dateTime, Camera& camera)
 			{ -1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, -1.0f, 1.0f },
 			{ -1.0f, -1.0f, 1.0f } };
 
+		Matrix invView = camera.GetViewMatrix().Invert();
+		Matrix invProj = camera.GetProjectionMatrix().Invert();
 		Matrix toWorld = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
 
 		for (auto& v : frustum)
@@ -150,32 +152,33 @@ void Light::Update(UINT dateTime, Camera& camera)
 				center += v;
 			center /= 8.0f;
 
-			float radius = (tFrustum[0] - tFrustum[6]).Length() / 2.0f;
-			Vector3 sunPos = center + m_dir * (radius * 2.0f);
-			Matrix lightViewMatrix = XMMatrixLookToLH(sunPos, -m_dir, m_up);
-
-			Vector3 lightFrustum[8];
-			for (int j = 0; j < 8; ++j) {
-				lightFrustum[j] =
-					Vector3::Transform(tFrustum[j], lightViewMatrix); // world -> lightView
+			float radius = 0.0f; // 89.xxf
+			for (auto& v : tFrustum) {
+				radius = max(radius, (v - center).Length());
 			}
-			Vector3 minCorner = lightFrustum[0];
-			Vector3 maxCorner = lightFrustum[0];
-			for (int j = 1; j < 8; ++j) {
-				minCorner = Vector3::Min(minCorner, lightFrustum[j]);
-				maxCorner = Vector3::Max(maxCorner, lightFrustum[j]);
-			}
+			radius = ceil(radius);
 			
-			m_view[i] = lightViewMatrix;
-			m_proj[i] = XMMatrixOrthographicOffCenterLH(
-				minCorner.x, maxCorner.x, minCorner.y, maxCorner.y, minCorner.z, maxCorner.z);
+			float scalar = (viewportWidth[i] / (radius * 4.0f));
+			Matrix lightViewMatrix = scalar * XMMatrixLookToLH(Vector3::Zero, -m_dir, m_up);
+			Matrix lightViewInverse = lightViewMatrix.Invert();
 
+			center = Vector3::Transform(center, lightViewMatrix);
+			center.x = (float)floor(center.x);
+			center.y = (float)floor(center.y);
+			center = Vector3::Transform(center, lightViewInverse);
+
+			Vector3 sunPos = center + m_dir * (radius * 2.0f);
+					
+			m_view[i] = XMMatrixLookToLH(sunPos, -m_dir, m_up);
+			m_proj[i] = XMMatrixOrthographicOffCenterLH(
+				-radius, radius, -radius, radius, 0.001f, radius * 6.0f);
+			
 			m_shadowConstantData.viewProj[i] = (m_view[i] * m_proj[i]).Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
-			m_shadowConstantData.viewWidth[i] = viewportWidth[i];
+			m_shadowConstantData.viewportWidth[i] = viewportWidth[i];
 
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-				m_shadowConstantData.viewWidth[i], m_shadowConstantData.viewWidth[i]);
+				m_shadowConstantData.viewportWidth[i], m_shadowConstantData.viewportWidth[i]);
 		}
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);
 	}
