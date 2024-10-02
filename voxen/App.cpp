@@ -200,14 +200,14 @@ void App::Render()
 	// 3. Forward Render Pass MSAA
 	{
 		if (m_camera.IsUnderWater()) {
-			//RenderFogFilter();
+			RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();
 			RenderWaterPlane();
 		}
 		else {
-			//RenderMirrorWorld();
-			//RenderWaterPlane();
+			RenderMirrorWorld();
+			RenderWaterPlane();
 			RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();

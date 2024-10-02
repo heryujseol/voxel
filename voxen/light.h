@@ -12,7 +12,7 @@ using namespace Microsoft::WRL;
 class Light {
 
 public:
-	static const int CASCADE_NUM = 4;
+	static const int CASCADE_NUM = 3;
 
 	Light();
 	~Light();
@@ -30,18 +30,17 @@ public:
 
 	D3D11_VIEWPORT m_shadowViewPorts[CASCADE_NUM];
 
-	inline Matrix GetViewMatrix(int i) { return m_view[i]; };
-	inline Matrix GetProjectionMatrix(int i) { return m_proj[i]; };
+	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(m_position, -m_dir, m_up); }
+	inline Matrix GetProjectionMatrixFromCascade(int i) { return m_proj[i]; };
 
 private:
+	Vector3 m_position;
 	Vector3 m_dir;
 	float m_scale;
 	Vector3 m_radianceColor;
 	float m_radianceWeight;
 
 	Vector3 m_up;
-
-	Matrix m_view[CASCADE_NUM];
 	Matrix m_proj[CASCADE_NUM];
 
 	const Vector3 RADIANCE_DAY_COLOR = Vector3(1.0f, 1.0f, 1.0f);

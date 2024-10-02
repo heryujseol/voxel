@@ -1068,6 +1068,7 @@ bool Graphics::InitSamplerStates()
 		return false;
 	}
 
+	// linear clamp
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -1079,10 +1080,13 @@ bool Graphics::InitSamplerStates()
 
 	// shadowCompareSS
 	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	desc.ComparisonFunc = D3D11_COMPARISON_LESS;
+	desc.BorderColor[0] = 0.0f;
+	desc.BorderColor[1] = 0.0f;
+	desc.BorderColor[2] = 0.0f;
 	ret = Graphics::device->CreateSamplerState(&desc, shadowCompareSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shadowCompare SS" << std::endl;

@@ -7,8 +7,8 @@ Texture2D mirrorDepthTex : register(t2);
 struct psInput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION;
-    float3 normal : NORMAL;
+    sample float3 posWorld : POSITION;
+    sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };

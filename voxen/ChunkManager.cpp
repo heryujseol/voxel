@@ -413,7 +413,7 @@ bool ChunkManager::FrustumCulling(
 	Matrix invMat = Matrix();
 	
 	if (useShadow) {
-		invMat = (light.GetViewMatrix(index) * light.GetProjectionMatrix(index)).Invert();
+		invMat = (light.GetViewMatrix() * light.GetProjectionMatrixFromCascade(index)).Invert();
 	}
 	else {
 		invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();

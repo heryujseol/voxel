@@ -1,6 +1,6 @@
 cbuffer ShadowConstantBuffer : register(b0)
 {
-    Matrix viewProj[4];
+    Matrix viewProj[3];
 }
 
 struct vsOutput
@@ -14,12 +14,12 @@ struct gsOutput
     uint VPIndex : SV_ViewportArrayIndex;
 };
 
-[maxvertexcount(12)]
+[maxvertexcount(9)]
 void main(triangle vsOutput input[3], inout TriangleStream<gsOutput> output)
 {
     gsOutput element;
     
-    for (int cascade = 0; cascade < 4; ++cascade)
+    for (int cascade = 0; cascade < 3; ++cascade)
     {
         element.VPIndex = cascade;
         
