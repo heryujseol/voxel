@@ -30,11 +30,10 @@ public:
 
 	D3D11_VIEWPORT m_shadowViewPorts[CASCADE_NUM];
 
-	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(m_position, -m_dir, m_up); }
+	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(Vector3::Zero, -m_dir, m_up); }
 	inline Matrix GetProjectionMatrixFromCascade(int i) { return m_proj[i]; };
 
 private:
-	Vector3 m_position;
 	Vector3 m_dir;
 	float m_scale;
 	Vector3 m_radianceColor;

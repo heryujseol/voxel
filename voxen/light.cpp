@@ -8,7 +8,7 @@
 using namespace DirectX::SimpleMath;
 
 Light::Light()
-	: m_position(0.0f), m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f),
+	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f),
 	  m_radianceColor(1.0f), m_radianceWeight(1.0f), m_lightConstantBuffer(nullptr),
 	  m_shadowConstantBuffer(nullptr)
 {
@@ -46,8 +46,6 @@ void Light::Update(UINT dateTime, Camera& camera)
 		m_dir.Normalize();
 
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), rotationAxisMatrix);
-
-		m_position = camera.GetPosition() + m_dir * 100.0f;
 
 		// radiance
 		if (dateTime < App::DAY_START)
@@ -122,6 +120,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.015f, 0.05f, 0.125f};
 		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 2048.0f };
 		float viewportWidth[CASCADE_NUM] = { 1024.0f, 1024.0f, 1024.0f};
+		float diagonals[CASCADE_NUM] = { 30.0f, 170.0f, 309.0f };
 
 		Matrix cameraViewProjInverse =
 			(camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
@@ -165,20 +164,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 				lightViewCornerMax = XMVectorMax(lightViewCornerMax, lightViewCascadeCorner[j]);
 			}
 			
-			Vector3 diagonal = worldCascadeCorner[6] - worldCascadeCorner[0];
-			diagonal = XMVector3Length(diagonal);
-
-			if (i == 0) {
-				diagonal = Vector3(30.0f);
-			}
-			else if (i == 1) {
-				diagonal = Vector3(170.0f);
-			}
-			else if (i == 2) {
-				diagonal = Vector3(309.0f);
-			}
-			
-
+			Vector3 diagonal(diagonals[i]);
 			float cascadeBound = diagonal.x;
 
 			Vector3 maxminVector = lightViewCornerMax - lightViewCornerMin;
