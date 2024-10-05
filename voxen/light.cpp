@@ -38,6 +38,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// light
 	{
+		// dir
 		Matrix rotationAxisMatrix = Matrix::CreateFromAxisAngle(
 			Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle);
 
@@ -47,21 +48,27 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), rotationAxisMatrix);
 
-		// radiance
+		// strength
+		if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
+			m_radianceWeight = 0.0f;
+		}
+		else {
+			float currentAltitude = m_dir.y;
+			float nightEndAltitude = -1.7f / 12.0f * Utils::PI;
+			
+			float w = (currentAltitude - nightEndAltitude) / (1.0f - nightEndAltitude);
+
+			m_radianceWeight = Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, w);
+		}
+
+		// color
 		if (dateTime < App::DAY_START)
 			dateTime += App::DAY_CYCLE_AMOUNT;
 
 		if (App::DAY_START <= dateTime && dateTime < App::DAY_END) {
-			m_radianceWeight = MAX_RADIANCE_WEIGHT;
 			m_radianceColor = RADIANCE_DAY_COLOR;
 		}
 		else if (App::DAY_END <= dateTime && dateTime < App::NIGHT_START) {
-			float radianceWeightFactor =
-				(float)(dateTime - App::DAY_END) / (App::NIGHT_START - App::DAY_END);
-
-			m_radianceWeight =
-				Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, 1.0f - radianceWeightFactor);
-
 			if (App::DAY_END <= dateTime && dateTime < App::MAX_SUNSET) {
 				float radianceColorFactor =
 					(float)(dateTime - App::DAY_END) / (App::MAX_SUNSET - App::DAY_END);
@@ -79,14 +86,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 			}
 		}
 		else if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
-			m_radianceWeight = 0.0f;
 			m_radianceColor = RADIANCE_NIGHT_COLOR;
 		}
 		else if (App::NIGHT_END <= dateTime && dateTime <= App::DAY_START + App::DAY_CYCLE_AMOUNT) {
-			float radianceWeightFactor = (float)(dateTime - App::NIGHT_END) /
-										 (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::NIGHT_END);
-
-			m_radianceWeight = Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, radianceWeightFactor);
 
 			if (App::NIGHT_END <= dateTime && dateTime < App::MAX_SUNRISE) {
 				float radianceColorFactor =
@@ -117,10 +119,10 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.015f, 0.05f, 0.125f};
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.015f, 0.035f, 0.15f};
 		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 2048.0f };
 		float viewportWidth[CASCADE_NUM] = { 1024.0f, 1024.0f, 1024.0f};
-		float diagonals[CASCADE_NUM] = { 30.0f, 170.0f, 309.0f };
+		float diagonals[CASCADE_NUM] = { 30.0f, 88.0f, 337.0f };
 
 		Matrix cameraViewProjInverse =
 			(camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
@@ -165,7 +167,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 			}
 			
 			Vector3 diagonal(diagonals[i]);
-			float cascadeBound = diagonal.x;
+			float cascadeBound = diagonals[i];
 
 			Vector3 maxminVector = lightViewCornerMax - lightViewCornerMin;
 			Vector3 borderOffset = (diagonal - maxminVector) * 0.5f;

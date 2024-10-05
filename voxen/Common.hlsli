@@ -159,7 +159,6 @@ float getFaceAmbient(float3 normal)
 
 float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
 {
-    // skycolor ambient (envMap을 가정함)
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
     
@@ -173,13 +172,8 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
         ambientColor = lerp(eyeHorizonColor, ambientColor, w);
     }
     
-    float3 ambientWeight = 0.5;
-    
-    // face ambient
+    float ambientWeight = 0.5;
     float faceAmbient = getFaceAmbient(normal);
-        
-    if (cameraDummyData.x == 0)
-        return float3(0, 0, 0);
     
     return ao * albedo * ambientColor * faceAmbient * ambientWeight;
 }
@@ -218,7 +212,6 @@ float getShadowFactor(float3 posWorld, float3 normal)
     
     float topLXOffsets[3] = { topLX.x, topLX.y, topLX.z };
     float viewPortWidth[3] = { viewPortW.x, viewPortW.y, viewPortW.z };
-    
     float pcfMargin = 0.02;
     
     [loop]
@@ -229,16 +222,14 @@ float getShadowFactor(float3 posWorld, float3 normal)
         
         if (lightProj.x < -1.0 + pcfMargin || lightProj.x > 1.0 - pcfMargin ||
             lightProj.y < -1.0 + pcfMargin || lightProj.y > 1.0 - pcfMargin ||
-            lightProj.z < 0.0 || lightProj.z > 1.0)
+            lightProj.z < 0.0 + pcfMargin  || lightProj.z > 1.0 - pcfMargin)
         {
             continue;
         }
         
-        //float bias = 0.002 + 0.001 * pow(1.0 - max(dot(lightDir, normal), 0.0), 3.0);
-        float bias = cameraDummyData.y;
+        float bias = 0.001 + 0.01 * pow(1.0 - max(dot(lightDir, normal), 0.0), 3.0);
         float2 lightTexcoord = float2(lightProj.x * 0.5 + 0.5, lightProj.y * -0.5 + 0.5);
         
-        // scaling
         float2 scaledTexcoord;
         scaledTexcoord.x = (lightTexcoord.x * (viewPortWidth[i] / width)) + (topLXOffsets[i] / width);
         scaledTexcoord.y = (lightTexcoord.y * (viewPortWidth[i] / height));
@@ -246,18 +237,19 @@ float getShadowFactor(float3 posWorld, float3 normal)
         float percentLit = 0.0;
         percentLit = shadowTex.SampleCmpLevelZero(shadowCompareSS, scaledTexcoord, lightProj.z - bias).r;
         
-        float dx = 1.0 / viewPortWidth[i];
+        float delta = 0.25 / viewPortWidth[i];
         [unroll]
         for (int y = -1; y <= 1; ++y)
         {
             for (int x = -1; x <= 1; ++x)
             {
                 percentLit += shadowTex.SampleCmpLevelZero(shadowCompareSS,
-                                   scaledTexcoord.xy + float2(x * dx, y * dx), lightProj.z - bias).r;
+                                   scaledTexcoord.xy + float2(x * delta, y * delta), lightProj.z - bias).r;
             }
-                
         }
-        return percentLit / 10.0;
+        
+        float shadowValue = percentLit / 10.0;
+        return shadowValue + (1.0 - shadowValue) * (1.0 - saturate(radianceWeight / maxRadianceWeight));
     }
     
     return 1.0;
