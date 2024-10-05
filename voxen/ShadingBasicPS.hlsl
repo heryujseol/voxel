@@ -21,14 +21,16 @@ float4 main(psInput input) : SV_TARGET
     albedo += albedoTex.Load(input.posProj.xy, 2).rgb;
     albedo += albedoTex.Load(input.posProj.xy, 3).rgb;
     albedo /= SAMPLE_COUNT;
+    
     float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
+    ao = pow(ao, 1.5);
     
     // todo
     float metallic = 0.0;
     float roughness = 0.98;
     
     float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
-    float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
+    float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
     
     float3 lighting = ambientLighting + directLighting;
     float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);
@@ -48,14 +50,16 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float3 normal = normalEdgeTex.Load(input.posProj.xy, i).xyz;
         float4 position = positionTex.Load(input.posProj.xy, i);
         float3 albedo = albedoTex.Load(input.posProj.xy, i).rgb; 
+        
         float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
+        ao = pow(ao, 1.5);
         
         // todo
         float metallic = 0.0;
         float roughness = 0.98;
         
         float3 ambientLighting = getAmbientLighting(ao, albedo, normal);
-        float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness);
+        float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
         
         float3 lighting = ambientLighting + directLighting;
         float3 clampLighting = clamp(lighting, 0.0f, 1000.0f);

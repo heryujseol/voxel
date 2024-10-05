@@ -8,8 +8,9 @@
 using namespace DirectX::SimpleMath;
 
 Light::Light()
-	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f), m_radianceColor(1.0f),
-	  m_radianceWeight(1.0f), m_lightConstantBuffer(nullptr), m_shadowConstantBuffer(nullptr)
+	: m_dir(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), m_scale(0.0f),
+	  m_radianceColor(1.0f), m_radianceWeight(1.0f), m_lightConstantBuffer(nullptr),
+	  m_shadowConstantBuffer(nullptr)
 {
 }
 
@@ -37,29 +38,37 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// light
 	{
+		// dir
 		Matrix rotationAxisMatrix = Matrix::CreateFromAxisAngle(
 			Vector3(-cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), angle);
 
-		m_dir = Vector3::Transform(Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), rotationAxisMatrix);
+		m_dir = Vector3::Transform(
+			Vector3(cos(Utils::PI / 4.0f), 0.0f, cos(Utils::PI / 4.0f)), rotationAxisMatrix);
 		m_dir.Normalize();
 
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), rotationAxisMatrix);
 
-		// radiance
+		// strength
+		if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
+			m_radianceWeight = 0.0f;
+		}
+		else {
+			float currentAltitude = m_dir.y;
+			float nightEndAltitude = -1.7f / 12.0f * Utils::PI;
+			
+			float w = (currentAltitude - nightEndAltitude) / (1.0f - nightEndAltitude);
+
+			m_radianceWeight = Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, w);
+		}
+
+		// color
 		if (dateTime < App::DAY_START)
 			dateTime += App::DAY_CYCLE_AMOUNT;
 
 		if (App::DAY_START <= dateTime && dateTime < App::DAY_END) {
-			m_radianceWeight = MAX_RADIANCE_WEIGHT;
 			m_radianceColor = RADIANCE_DAY_COLOR;
 		}
 		else if (App::DAY_END <= dateTime && dateTime < App::NIGHT_START) {
-			float radianceWeightFactor =
-				(float)(dateTime - App::DAY_END) / (App::NIGHT_START - App::DAY_END);
-
-			m_radianceWeight =
-				Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, 1.0f - radianceWeightFactor);
-
 			if (App::DAY_END <= dateTime && dateTime < App::MAX_SUNSET) {
 				float radianceColorFactor =
 					(float)(dateTime - App::DAY_END) / (App::MAX_SUNSET - App::DAY_END);
@@ -77,14 +86,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 			}
 		}
 		else if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
-			m_radianceWeight = 0.0f;
 			m_radianceColor = RADIANCE_NIGHT_COLOR;
 		}
 		else if (App::NIGHT_END <= dateTime && dateTime <= App::DAY_START + App::DAY_CYCLE_AMOUNT) {
-			float radianceWeightFactor = (float)(dateTime - App::NIGHT_END) /
-										 (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::NIGHT_END);
-
-			m_radianceWeight = Utils::Smootherstep(0.0f, MAX_RADIANCE_WEIGHT, radianceWeightFactor);
 
 			if (App::NIGHT_END <= dateTime && dateTime < App::MAX_SUNRISE) {
 				float radianceColorFactor =
@@ -95,8 +99,9 @@ void Light::Update(UINT dateTime, Camera& camera)
 			}
 
 			if (App::MAX_SUNRISE <= dateTime && dateTime < App::DAY_START + App::DAY_CYCLE_AMOUNT) {
-				float radianceColorFactor = (float)(dateTime - App::MAX_SUNRISE) /
-											(App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
+				float radianceColorFactor =
+					(float)(dateTime - App::MAX_SUNRISE) /
+					(App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_SUNRISE_COLOR, RADIANCE_DAY_COLOR, radianceColorFactor);
@@ -105,7 +110,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 		m_lightConstantData.lightDir = m_dir;
 		m_lightConstantData.radianceWeight = m_radianceWeight;
-		m_lightConstantData.radianceColor = m_radianceColor;
+		m_lightConstantData.radianceColor = Utils::SRGB2Linear(m_radianceColor);
 		m_lightConstantData.maxRadianceWeight = MAX_RADIANCE_WEIGHT;
 
 		DXUtils::UpdateConstantBuffer(m_lightConstantBuffer, m_lightConstantData);
@@ -114,85 +119,82 @@ void Light::Update(UINT dateTime, Camera& camera)
 
 	// shadow
 	{
-		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.02f, 0.05f, 0.1f };
-		float topLX[CASCADE_NUM] = { 0.0f, 1536.0f, 2816.0f};
-		float viewportWith[CASCADE_NUM] = { 1536.0f, 1080.0f, 1024.0f };
-		
-		if (angle >= Utils::PI / 2.0f)
-		{
-			m_up *= -1;
+		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.015f, 0.035f, 0.15f};
+		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 2048.0f };
+		float viewportWidth[CASCADE_NUM] = { 1024.0f, 1024.0f, 1024.0f};
+		float diagonals[CASCADE_NUM] = { 30.0f, 88.0f, 337.0f };
+
+		Matrix cameraViewProjInverse =
+			(camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
+		Matrix lightViewMatrix = GetViewMatrix();
+
+		Vector3 frustumCorner[8]{ { -1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f, 0.0f },
+			{ 1.0f, -1.0f, 0.0f }, { -1.0f, -1.0f, 0.0f },
+
+			{ -1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, -1.0f, 1.0f },
+			{ -1.0f, -1.0f, 1.0f } };
+
+		// camera proj -> world space
+		Vector3 worldFrustumCorner[8];
+		for (int i = 0; i < 8; ++i) {
+			worldFrustumCorner[i] = Vector3::Transform(frustumCorner[i], cameraViewProjInverse);
 		}
 
-		Vector3 frustum[8]{
-			{ -1.0f, 1.0f, 0.0f },
-			{ 1.0f, 1.0f, 0.0f }, 
-			{ 1.0f, -1.0f, 0.0f },
-			{ -1.0f, -1.0f, 0.0f },
-
-			{ -1.0f, 1.0f, 1.0f },
-			{ 1.0f, 1.0f, 1.0f },
-			{ 1.0f, -1.0f, 1.0f },
-			{ -1.0f, -1.0f, 1.0f } 
-		};
-
-		Matrix toWorld = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-
-		for (auto& v : frustum)
-			v = Vector3::Transform(v, toWorld);
-
 		for (int i = 0; i < CASCADE_NUM; ++i) {
-			Vector3 tFrustum[8];
-			for (int j = 0; j < 8; ++j)
-				tFrustum[j] = frustum[j];
-
+			// slice frustum to fit cascade
+			Vector3 worldCascadeCorner[8];
+			Vector3 lightViewCascadeCorner[8];
 			for (int j = 0; j < 4; ++j) {
-				Vector3 v = tFrustum[j + 4] - tFrustum[j];
+				Vector3 worldBeginToEnd = worldFrustumCorner[j + 4] - worldFrustumCorner[j];
 
-				Vector3 n = v * cascade[i];
-				Vector3 f = v * cascade[i + 1];
+				Vector3 toNear = worldBeginToEnd * cascade[i];
+				Vector3 toFar = worldBeginToEnd * cascade[i + 1];
 
-				tFrustum[j + 4] = tFrustum[j] + f;
-				tFrustum[j] = tFrustum[j] + n;
+				worldCascadeCorner[j] = worldFrustumCorner[j] + toNear;
+				worldCascadeCorner[j + 4] = worldFrustumCorner[j] + toFar;
+
+				lightViewCascadeCorner[j] =
+					Vector3::Transform(worldCascadeCorner[j], lightViewMatrix);
+				lightViewCascadeCorner[j + 4] =
+					Vector3::Transform(worldCascadeCorner[j + 4], lightViewMatrix);
 			}
 
-			Vector3 center;
-			for (auto& v : tFrustum)
-				center += v;
-			center *= 1.0f / 8.0f;
-
-			float radius = 0.0f;
-			for (auto& v : tFrustum)
-				radius = max(radius, (v - center).Length());
-			radius = std::ceil(radius * 16.0f) / 16.0f;
+			Vector3 lightViewCornerMin = Vector3(D3D11_FLOAT32_MAX);
+			Vector3 lightViewCornerMax = Vector3(-D3D11_FLOAT32_MAX);
+			for (int j = 0; j < 8; ++j) {
+				lightViewCornerMin = XMVectorMin(lightViewCornerMin, lightViewCascadeCorner[j]);
+				lightViewCornerMax = XMVectorMax(lightViewCornerMax, lightViewCascadeCorner[j]);
+			}
 			
-			float value = max(500.0f, radius * 2.0f);
-			Vector3 sunPos = center + (-m_dir * -value);
+			Vector3 diagonal(diagonals[i]);
+			float cascadeBound = diagonals[i];
 
-			m_view[i] = XMMatrixLookAtLH(sunPos, center, m_up);
-			m_proj[i] = XMMatrixOrthographicLH(radius * 2.0f, radius * 2.0f, 0.0f, 2000.0f);
+			Vector3 maxminVector = lightViewCornerMax - lightViewCornerMin;
+			Vector3 borderOffset = (diagonal - maxminVector) * 0.5f;
 
-			Vector3 shadowOrigin = Vector3(0.0f, 0.0f, 0.0f);
-			shadowOrigin = Vector3::Transform(shadowOrigin, (m_view[i] * m_proj[i]));
-			shadowOrigin.x *= App::SHADOW_WIDTH * 0.5f + App::SHADOW_WIDTH * 0.5f;
-			shadowOrigin.y *= App::SHADOW_HEIGHT * 0.5f + App::SHADOW_HEIGHT * 0.5f;
+			lightViewCornerMax += borderOffset;
+			lightViewCornerMin -= borderOffset;
+			
+			float worldUnitsPerTexel = cascadeBound / viewportWidth[i];
 
-			Vector3 roundedOrigin =
-				Vector3(round(shadowOrigin.x), round(shadowOrigin.y), shadowOrigin.z);
-			Vector3 roundOffset =
-				Vector3((roundedOrigin.x - shadowOrigin.x) * (2.0f / App::SHADOW_WIDTH),
-					(roundedOrigin.y - shadowOrigin.y) * (2.0f / App::SHADOW_HEIGHT),
-					0.0f);
+			lightViewCornerMin /= worldUnitsPerTexel;
+			lightViewCornerMin = XMVectorFloor(lightViewCornerMin);
+			lightViewCornerMin *= worldUnitsPerTexel;
 
-			Matrix viewProj = m_view[i] * m_proj[i];
-			viewProj._41 += roundOffset.x;
-			viewProj._42 += roundOffset.y;
+			lightViewCornerMax /= worldUnitsPerTexel;
+			lightViewCornerMax = XMVectorFloor(lightViewCornerMax);
+			lightViewCornerMax *= worldUnitsPerTexel;
 
-			m_shadowConstantData.viewProj[i] = viewProj.Transpose();
+			m_proj[i] = XMMatrixOrthographicOffCenterLH(lightViewCornerMin.x, lightViewCornerMax.x,
+				lightViewCornerMin.y, lightViewCornerMax.y, lightViewCornerMin.z,
+				lightViewCornerMax.z);
+
+			m_shadowConstantData.viewProj[i] = (lightViewMatrix * m_proj[i]).Transpose();
 			m_shadowConstantData.topLX[i] = topLX[i];
-			m_shadowConstantData.viewWith[i] = viewportWith[i];
+			m_shadowConstantData.viewportWidth[i] = viewportWidth[i];
 
 			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-					m_shadowConstantData.viewWith[i], m_shadowConstantData.viewWith[i]);
+				m_shadowConstantData.viewportWidth[i], m_shadowConstantData.viewportWidth[i]);
 		}
 
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);

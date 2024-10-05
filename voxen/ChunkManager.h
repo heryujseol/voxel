@@ -59,7 +59,7 @@ private:
 	void UpdateChunkConstant(float dt);
 
 	bool FrustumCulling(
-		Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow);
+		Vector3 position, Camera& camera, Light& light, bool useMirror, bool useShadow, int index = 0);
 
 	void InitChunkBuffer(Chunk* chunk);
 	

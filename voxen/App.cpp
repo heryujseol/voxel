@@ -123,6 +123,8 @@ void App::Run()
 				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
 				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
 
+			ImGui::SliderFloat("bias", &m_camera.m_constantData.dummy.y, 0.0f, 0.1f, "%.10f");
+
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -139,8 +141,8 @@ void App::Run()
 void App::Update(float dt)
 {
 	static float acc = 0.0f;
-
-	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	if (!m_keyPressed['T'])
+		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
@@ -177,6 +179,7 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	
+	// 0. Shadow Map
 	{
         RenderShadowMap();
     }
@@ -184,8 +187,8 @@ void App::Render()
     // 1. Deferred Render Pass
     {
         FillGBuffer();
-        //MaskMSAAEdge();
-        //RenderSSAO();
+        MaskMSAAEdge();
+        RenderSSAO();
         ShadingBasic();
     }
 
@@ -205,7 +208,7 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			//RenderFogFilter();
+			RenderFogFilter();
 			RenderSkybox();
 			RenderCloud();
 		}
@@ -415,9 +418,8 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	ppSRVs.push_back(Graphics::shadowSRV.Get());
+	
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
-
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
@@ -425,6 +427,11 @@ void App::ShadingBasic()
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
 	m_postEffect.Render();
+
+	ID3D11ShaderResourceView* nullSRV[] = {
+		0,
+	};
+	Graphics::context->PSSetShaderResources(11, 1, nullSRV);
 }
 
 void App::ConvertToMSAA()
@@ -570,13 +577,14 @@ void App::RenderWaterPlane()
 
 void App::RenderShadowMap()
 {
-	Graphics::context->RSSetViewports(3, m_light.m_shadowViewPorts);
+	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
 
 	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
+	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
 	ChunkManager::GetInstance()->RenderShadowMap();
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);

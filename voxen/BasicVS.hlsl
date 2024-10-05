@@ -8,8 +8,8 @@ cbuffer ChunkConstantBuffer : register(b0)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION;
-    float3 normal : NORMAL;
+    sample float3 posWorld : POSITION;
+    sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
 };

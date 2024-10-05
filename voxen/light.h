@@ -12,6 +12,8 @@ using namespace Microsoft::WRL;
 class Light {
 
 public:
+	static const int CASCADE_NUM = 3;
+
 	Light();
 	~Light();
 
@@ -26,10 +28,10 @@ public:
 	ComPtr<ID3D11Buffer> m_shadowConstantBuffer;
 	ShadowConstantData m_shadowConstantData;
 
-	D3D11_VIEWPORT m_shadowViewPorts[3];
+	D3D11_VIEWPORT m_shadowViewPorts[CASCADE_NUM];
 
-	inline Matrix GetViewMatrix(int i) { return m_view[i]; };
-	inline Matrix GetProjectionMatrix(int i) { return m_proj[i]; };
+	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(Vector3::Zero, -m_dir, m_up); }
+	inline Matrix GetProjectionMatrixFromCascade(int i) { return m_proj[i]; };
 
 private:
 	Vector3 m_dir;
@@ -38,11 +40,8 @@ private:
 	float m_radianceWeight;
 
 	Vector3 m_up;
+	Matrix m_proj[CASCADE_NUM];
 
-	Matrix m_view[3];
-	Matrix m_proj[3];
-
-	static const int CASCADE_NUM = 3;
 	const Vector3 RADIANCE_DAY_COLOR = Vector3(1.0f, 1.0f, 1.0f);
 	const Vector3 RADIANCE_SUNRISE_COLOR = Vector3(0.72f, 0.60f, 0.34f);
 	const Vector3 RADIANCE_SUNSET_COLOR = Vector3(0.64f, 0.26f, 0.04f);

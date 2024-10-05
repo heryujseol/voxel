@@ -65,17 +65,15 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> wireRS;
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
 	extern ComPtr<ID3D11RasterizerState> mirrorRS;
-	extern ComPtr<ID3D11RasterizerState> frontCullRS;
+	extern ComPtr<ID3D11RasterizerState> shadowRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
-	extern ComPtr<ID3D11SamplerState> linearClampSS;
-	extern ComPtr<ID3D11SamplerState> shadowPointSS;
-	extern ComPtr<ID3D11SamplerState> shadowCompareSS;
 	extern ComPtr<ID3D11SamplerState> pointClampSS;
-
-
+	extern ComPtr<ID3D11SamplerState> linearClampSS;
+	extern ComPtr<ID3D11SamplerState> shadowCompareSS;
+	
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;

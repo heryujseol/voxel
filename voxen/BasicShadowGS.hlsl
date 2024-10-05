@@ -1,8 +1,6 @@
-cbuffer LightConstantBuffer : register(b0)
+cbuffer ShadowConstantBuffer : register(b0)
 {
     Matrix viewProj[3];
-    float4 topLX;
-    float4 viewPortW;
 }
 
 struct vsOutput
@@ -21,14 +19,14 @@ void main(triangle vsOutput input[3], inout TriangleStream<gsOutput> output)
 {
     gsOutput element;
     
-    for (int face = 0; face < 3; ++face)
+    for (int cascade = 0; cascade < 3; ++cascade)
     {
-        element.VPIndex = face;
+        element.VPIndex = cascade;
         
         for (int i = 0; i < 3; ++i)
         {
             float4 position = float4(input[i].posWorld.xyz, 1.0);
-            element.pos = mul(position, viewProj[face]);
+            element.pos = mul(position, viewProj[cascade]);
             output.Append(element);
         }
         output.RestartStrip();

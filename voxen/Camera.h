@@ -11,7 +11,7 @@ using namespace DirectX::SimpleMath;
 
 class Camera {
 public:
-	static const int MAX_RENDER_DISTANCE = 200;
+	static const int MAX_RENDER_DISTANCE = 260;
 	static const int LOD_RENDER_DISTANCE = 160;
 
 	Camera();
@@ -39,6 +39,8 @@ public:
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
 	
+	CameraConstantData m_constantData;
+
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
@@ -67,7 +69,7 @@ private:
 
 	bool m_isUnderWater;
 
-	CameraConstantData m_constantData;
+	//CameraConstantData m_constantData;
 
 	Vector3 lookTo[6] = {
 		Vector3(1.0f, 0.0f, 0.0f),
