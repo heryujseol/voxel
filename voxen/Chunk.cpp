@@ -112,7 +112,7 @@ void Chunk::InitChunkData()
 
 				m_blocks[x][y][z].SetType(transparencyType);
 				if (worldY <= baseLevel) {
-					m_blocks[x][y][z].SetType(3);
+					m_blocks[x][y][z].SetType(2);
 
 					if (d1 * d1 + d2 * d2 <= 0.004f) {
 						m_blocks[x][y][z].SetType(transparencyType);

@@ -141,10 +141,9 @@ void App::Run()
 void App::Update(float dt)
 {
 	static float acc = 0.0f;
-	if (!m_keyPressed['T'])
-		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
-	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
+	m_postEffect.Update(dt, m_camera.IsUnderWater());
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
 
 	if (m_keyToggle['F']) {

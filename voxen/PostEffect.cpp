@@ -87,7 +87,7 @@ bool PostEffect::Initialize()
 	return true;
 }
 
-void PostEffect::Update(float dt, bool isUnderWater, float radiance)
+void PostEffect::Update(float dt, bool isUnderWater)
 {
 	if (isUnderWater) {
 		m_waterAdaptationTime += dt;
@@ -101,8 +101,7 @@ void PostEffect::Update(float dt, bool isUnderWater, float radiance)
 		m_waterFilterConstantData.filterColor =
 			Utils::SRGB2Linear(m_waterFilterConstantData.filterColor);
 
-		m_waterFilterConstantData.filterStrength =
-			(0.9f - (0.5f * percetage)) * std::clamp(radiance, 0.25f, 1.0f);
+		m_waterFilterConstantData.filterStrength = (0.9f - (0.5f * percetage));
 
 		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
 		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);
