@@ -29,10 +29,12 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
 	extern ComPtr<ID3D11VertexShader> basicShadowVS;
+	extern ComPtr<ID3D11VertexShader> instanceShadowVS;
 
 
 	// Geometry Shader
 	extern ComPtr<ID3D11GeometryShader> basicShadowGS;
+	extern ComPtr<ID3D11GeometryShader> instanceShadowGS;
 
 
 	// Pixel Shader
@@ -58,6 +60,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> bloomDownPS;
 	extern ComPtr<ID3D11PixelShader> bloomUpPS;
 	extern ComPtr<ID3D11PixelShader> combineBloomPS;
+	extern ComPtr<ID3D11PixelShader> instanceShadowPS;
 
 
 	// Rasterizer State
@@ -219,6 +222,7 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
+	extern GraphicsPSO instanceShadowPSO; 
 	extern GraphicsPSO ssaoPSO;
 	extern GraphicsPSO ssaoEdgePSO;
 	extern GraphicsPSO edgeMaskingPSO;

@@ -352,8 +352,8 @@ namespace DXUtils {
 
 	static bool CreateTextureArrayFromAtlasFile(ComPtr<ID3D11Texture2D>& texture,
 		ComPtr<ID3D11ShaderResourceView>& srv, std::string filename,
-		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = 4, UINT tileSizeW = 128,
-		UINT tileSizeH = 128, UINT tileCountW = 16, UINT tileCountH = 16)
+		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = 4, UINT tileSizeW = 16,
+		UINT tileSizeH = 16, UINT tileCountW = 16, UINT tileCountH = 16)
 	{
 		// Read Atlas image
 		int width, height, channel = 4;

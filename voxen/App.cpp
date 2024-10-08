@@ -110,20 +110,14 @@ void App::Run()
 
 			ImGui::Text("x : %.4f y : %.4f z : %.4f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
-			/*int flag = 0;
-			flag += ImGui::SliderFloat(
-				"Bias", &m_light.m_shadowConstantData.dummy2, -0.0100, 0.0100, "%.4f");
-			if (flag) {
-				DXUtils::UpdateConstantBuffer(
-					m_light.m_shadowConstantBuffer, m_light.m_shadowConstantData);
-			}*/
 
-			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
-				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),
-				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
-				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
+			float c =
+				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z);
+			float e = Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z);
+			float pv =
+				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z);
 
-			ImGui::SliderFloat("bias", &m_camera.m_constantData.dummy.y, 0.0f, 0.1f, "%.10f");
+			ImGui::Text("C : %.2f | E : %.2f | PV : %.2f", c, e, pv); 
 
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
@@ -578,13 +572,27 @@ void App::RenderShadowMap()
 {
 	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
 
-	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
-	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
-	ChunkManager::GetInstance()->RenderShadowMap();
+	// Basic Shadow Map
+	{
+		Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::shadowDSV.Get());
+
+		Graphics::SetPipelineStates(Graphics::basicShadowPSO);
+		ChunkManager::GetInstance()->RenderBasicShadowMap();
+	}
+	
+	// Instance Shadow Map
+	{
+		Graphics::context->OMSetRenderTargets(
+			0, nullptr, Graphics::shadowDSV.Get());
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
+
+		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);
+		ChunkManager::GetInstance()->RenderInstance();
+	}
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }

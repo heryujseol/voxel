@@ -161,7 +161,7 @@ namespace Terrain {
 		}
 	}
 
-	static float GetContinentalness(float x, float z) 
+	static float GetContinentalness(int x, int z) 
 	{ 
 		float scale = 1024.0f;
 		
@@ -171,7 +171,10 @@ namespace Terrain {
 		float cNoise = PerlinFbm(x / scale, z / scale, freq, octave);
 		float cValue = SplineContinentalness(cNoise);
 
-		return cValue;
+		if (cValue <= 0.3f)
+			return cValue / 0.3f - 1.0f; // [-1.0f, 0.0f]
+		else
+			return (cValue - 0.3f) / 0.7f; // [0.0f, 1.0f]
 	}
 
 	static float SplineErosion(float value) 
@@ -212,7 +215,7 @@ namespace Terrain {
 		}
 	}
 
-	static float GetErosion(float x, float z) 
+	static float GetErosion(int x, int z) 
 	{
 		float scale = 1024.0f;
 		float bias = 123.0f;
@@ -260,7 +263,7 @@ namespace Terrain {
 		}
 	}
 
-	static float GetPeaksValley(float x, float z)
+	static float GetPeaksValley(int x, int z)
 	{
 		float scale = 512.0f;
 		float bias = 4.0f;
@@ -271,18 +274,11 @@ namespace Terrain {
 		float pvNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
 		float pvValue = SplinePeaksValley(pvNoise);
 
-		return pvValue;
+		return (pvValue - 0.5f) * 2.0f;
 	}
 
 	static float GetBaseLevel(float c, float e, float pv) 
-	{	
-		if (c <= 0.3f)
-			c = c / 0.3f - 1.0f; // [-1.0f, 0.0f]
-		else
-			c = (c - 0.3f) / 0.7f; // [0.0f, 1.0f]
-	
-		pv = (pv - 0.5f) * 2.0f;
-		                             
+	{	                          
 		float baseLevel =
 			64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
 		
@@ -309,5 +305,13 @@ namespace Terrain {
 			PerlinFbm(x / scale + bias, y / (scale / 2.0f) + bias, z / scale + bias, freq, octave);
 
 		return dNoise;
+	}
+		
+	static float GetTemperature(int x, int z) { 
+		return 1.0;
+	}
+
+	static float GetMoisture(int x, int z) { 
+		return 1.0; 
 	}
 }

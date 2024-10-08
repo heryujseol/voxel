@@ -27,10 +27,12 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> basicShadowVS;
+	ComPtr<ID3D11VertexShader> instanceShadowVS;
 
 
 	// Geometry Shader
 	ComPtr<ID3D11GeometryShader> basicShadowGS;
+	ComPtr<ID3D11GeometryShader> instanceShadowGS;
 
 
 	// Pixel Shader
@@ -56,6 +58,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> bloomDownPS;
 	ComPtr<ID3D11PixelShader> bloomUpPS;
 	ComPtr<ID3D11PixelShader> combineBloomPS;
+	ComPtr<ID3D11PixelShader> instanceShadowPS;
 
 
 	// Rasterizer State
@@ -219,6 +222,7 @@ namespace Graphics {
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
+	GraphicsPSO instanceShadowPSO; 
 	GraphicsPSO ssaoPSO;
 	GraphicsPSO ssaoEdgePSO;
 	GraphicsPSO edgeMaskingPSO;
@@ -659,7 +663,7 @@ bool Graphics::InitShaderResourceBuffers()
 	// Asset Files
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png", format)) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas2.png", format)) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
@@ -726,7 +730,7 @@ bool Graphics::InitGraphicsState()
 
 bool Graphics::InitVertexShaderAndInputLayouts()
 {
-	// BasicVS & BasicIL
+	// Basic
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc = {
 		{ "DATA", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
@@ -736,10 +740,14 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		std::cout << "failed create basic vs" << std::endl;
 		return false;
 	}
-
+	
+	// Basic Shadow
+	std::vector<D3D_SHADER_MACRO> macros;
+	macros.push_back({ "USE_SHADOW", "1" });
+	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"BasicShadowVS.hlsl", basicShadowVS, basicIL, elementDesc)) {
-		std::cout << "failed create basic vs" << std::endl;
+			L"BasicVS.hlsl", basicShadowVS, basicIL, elementDesc, macros.data())) {
+		std::cout << "failed create basic shadow vs" << std::endl;
 		return false;
 	}
 
@@ -792,14 +800,33 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Instance Shadow
+	macros.clear();
+	macros.push_back({ "USE_SHADOW", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"InstanceVS.hlsl", instanceShadowVS, instanceIL, elementDesc6, macros.data())) {
+		std::cout << "failed create instance shadow vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
 bool Graphics::InitGeometryShaders()
 { 
 	// BasicShadowGS
-	if (!DXUtils::CreateGeometryShader(L"BasicShadowGS.hlsl", basicShadowGS)) {
+	if (!DXUtils::CreateGeometryShader(L"ShadowGS.hlsl", basicShadowGS)) {
 		std::cout << "failed create basic shadow gs" << std::endl;
+		return false;
+	}
+
+	// InstanceShadowGS
+	std::vector<D3D_SHADER_MACRO> macros;
+	macros.push_back({ "USE_INSTANCE", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreateGeometryShader(L"ShadowGS.hlsl", instanceShadowGS, macros.data())) {
+		std::cout << "failed create instance shadow gs" << std::endl;
 		return false;
 	}
 
@@ -964,6 +991,12 @@ bool Graphics::InitPixelShaders()
 	// bloomUpPS
 	if (!DXUtils::CreatePixelShader(L"BloomUpPS.hlsl", bloomUpPS)) {
 		std::cout << "failed create bloom up ps" << std::endl;
+		return false;
+	}
+
+	// instanceShadowPS
+	if (!DXUtils::CreatePixelShader(L"InstanceShadowPS.hlsl", instanceShadowPS)) {
+		std::cout << "failed create instance shadowe ps" << std::endl;
 		return false;
 	}
 
@@ -1298,12 +1331,19 @@ void Graphics::InitGraphicsPSO()
 	waterFilterPSO = samplingPSO;
 	waterFilterPSO.pixelShader = waterFilterPS;
 
-	// basicshadowPSO
+	// basicShadowPSO
 	basicShadowPSO = basicPSO;
 	basicShadowPSO.rasterizerState = shadowRS;
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
+
+	// instanceShadowPSO
+	instanceShadowPSO = instancePSO;
+	instanceShadowPSO.rasterizerState = shadowRS;
+	instanceShadowPSO.vertexShader = instanceShadowVS;
+	instanceShadowPSO.geometryShader = instanceShadowGS;
+	instanceShadowPSO.pixelShader = instanceShadowPS;
 
 	// ssaoPSO
 	ssaoPSO = samplingPSO;

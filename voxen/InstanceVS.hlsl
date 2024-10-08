@@ -11,29 +11,38 @@ struct vsInput
 
 struct vsOutput
 {
+#ifdef USE_SHADOW
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION;
-    float3 normal : NORMAL;
+    float2 texcoord : TEXCOORD;
+    uint type : TYPE;
+#else
+    float4 posProj : SV_POSITION;
+    sample float3 posWorld : POSITION;
+    sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint type : TYPE;
+#endif
 };
 
 vsOutput main(vsInput input)
 {
     vsOutput output;
     
-    output.posWorld = mul(float4(input.posModel, 1.0), input.instanceWorld).xyz;
+    output.posProj = mul(float4(input.posModel, 1.0), input.instanceWorld);
     
-    output.posProj = mul(float4(output.posWorld, 1.0), view);
+#ifndef USE_SHADOW
+    output.posWorld = output.posProj.xyz;
+    
+    output.posProj = mul(output.posProj, view);
     output.posProj = mul(output.posProj, proj);
     
     output.normal = input.normal; // invTranspose 고려하지 않음 -> ununiform scaling X
     float3 toEye = normalize(eyePos - output.posWorld);
     if (dot(output.normal, toEye) < 0.0)
         output.normal *= -1;
-        
-    output.texcoord = input.texcoord;
+#endif
     
+    output.texcoord = input.texcoord;
     output.type = input.type;
     
     return output;

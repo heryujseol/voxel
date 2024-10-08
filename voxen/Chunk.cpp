@@ -89,11 +89,12 @@ void Chunk::InitChunkData()
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
+			// float temperature = Terrain::GetTemperature(worldX, worldZ);
+			// float moisture = Terrain::GetMoisture(worldX, worldZ);
 
 			float baseLevel = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
-
 				int worldY = (int)m_offsetPosition.y + y - 1;
 
 				if (worldY == 256) {
@@ -128,7 +129,7 @@ void Chunk::InitInstanceInfoData()
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				/*
+				
 				// instance testing
 				int choose[4] = { 128, 129, 130, 144 };
 				static int loop = 0;
@@ -146,7 +147,7 @@ void Chunk::InitInstanceInfoData()
 
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
-				*/
+				
 			}
 		}
 	}

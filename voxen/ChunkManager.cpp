@@ -212,7 +212,8 @@ void ChunkManager::RenderTransparency()
 	}
 }
 
-void ChunkManager::RenderShadowMap()
+
+void ChunkManager::RenderBasicShadowMap()
 {
 	for (auto& c : m_renderShadowChunkList)
 		RenderLowLodChunk(c);

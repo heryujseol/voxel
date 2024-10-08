@@ -38,7 +38,7 @@ public:
 	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
 	void RenderTransparency();
-	void RenderShadowMap();
+	void RenderBasicShadowMap();
 
 	Chunk* GetChunkByPosition(int x, int y, int z);
 	

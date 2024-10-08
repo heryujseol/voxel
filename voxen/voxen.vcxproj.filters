@@ -155,10 +155,7 @@
     <FxCompile Include="BlurPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="BasicShadowVS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="BasicShadowGS.hlsl">
+    <FxCompile Include="ShadowGS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="WaterFilterPS.hlsl">
@@ -180,6 +177,9 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="BloomUpPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="InstanceShadowPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>
