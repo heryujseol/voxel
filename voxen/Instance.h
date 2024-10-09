@@ -5,38 +5,33 @@
 
 using namespace DirectX::SimpleMath;
 
-enum INSTANCE_TYPE : uint8_t {
-	CROSS = 0,
-	FENCE = 1,
-	SQUARE = 2,
-	NONE = 3,
-};
+
 
 class Instance {
 public:
 	static const int INSTANCE_TYPE_COUNT = 3;
 
-	static inline INSTANCE_TYPE GetInstanceType(uint8_t type)
+	static inline INSTANCE_TYPE GetInstanceType(uint8_t texIndex)
 	{
-		if (128 <= type && type < 128 + 16)
-			return INSTANCE_TYPE::CROSS;
-		else if (128 + 16 <= type && type < 128 + 16 * 2)
-			return INSTANCE_TYPE::FENCE;
-		else if (128 + 16 * 2 <= type && type < 128 + 16 * 3)
-			return INSTANCE_TYPE::SQUARE;
+		if (128 <= texIndex && texIndex < 128 + 16)
+			return INSTANCE_TYPE::I_CROSS;
+		else if (128 + 16 <= texIndex && texIndex < 128 + 16 * 2)
+			return INSTANCE_TYPE::I_FENCE;
+		else if (128 + 16 * 2 <= texIndex && texIndex < 128 + 16 * 3)
+			return INSTANCE_TYPE::I_SQUARE;
 		else
-			return INSTANCE_TYPE::NONE;
+			return INSTANCE_TYPE::I_NONE;
 	}
 
-	Instance() : m_type(0), m_world(Matrix()) {}
+	Instance() : m_world(Matrix()), m_texIndex(TEXTURE_INDEX::T_SHORT_GRASS) {}
 	~Instance() {}
 
-	inline uint8_t GetType() const { return m_type; }
-	inline void SetType(uint8_t type) { m_type = type; }
+	inline TEXTURE_INDEX GetTextureIndex() const { return m_texIndex; }
+	inline void SetTextureIndex(TEXTURE_INDEX index) { m_texIndex = index; }
 	inline const Matrix& GetWorld() const { return m_world; }
 	inline void SetWorld(const Matrix& world) { m_world = world; }
 
 private:
-	uint8_t m_type;
 	Matrix m_world; // scale rotate position
+	TEXTURE_INDEX m_texIndex;
 };

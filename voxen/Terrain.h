@@ -23,7 +23,7 @@ namespace Terrain {
 
 		float rx = -1.0f + 2.0f * qx * uf;
 		float ry = -1.0f + 2.0f * qy * uf;
-		
+
 		return Vector2(rx, ry);
 	}
 
@@ -62,7 +62,7 @@ namespace Terrain {
 		float n1 = Hash(x1, y0).Dot(p - Vector2((float)x1, (float)y0));
 		float n2 = Hash(x0, y1).Dot(p - Vector2((float)x0, (float)y1));
 		float n3 = Hash(x1, y1).Dot(p - Vector2((float)x1, (float)y1));
-		
+
 		float i0 = Utils::CubicLerp(n0, n1, p.x - (float)x0);
 		float i1 = Utils::CubicLerp(n2, n3, p.x - (float)x0);
 
@@ -88,14 +88,14 @@ namespace Terrain {
 		float n5 = Hash(x1, y0, z1).Dot(p - Vector3((float)x1, (float)y0, (float)z1));
 		float n6 = Hash(x1, y1, z0).Dot(p - Vector3((float)x1, (float)y1, (float)z0));
 		float n7 = Hash(x1, y1, z1).Dot(p - Vector3((float)x1, (float)y1, (float)z1));
-	
+
 		float i0 = Utils::CubicLerp(n0, n1, p.z - z0);
 		float i1 = Utils::CubicLerp(n2, n3, p.z - z0);
 		float i2 = Utils::CubicLerp(i0, i1, p.y - y0);
 		float i3 = Utils::CubicLerp(n4, n5, p.z - z0);
 		float i4 = Utils::CubicLerp(n6, n7, p.z - z0);
 		float i5 = Utils::CubicLerp(i3, i4, p.y - y0);
-		
+
 		return Utils::CubicLerp(i2, i5, p.x - x0);
 	}
 
@@ -134,7 +134,7 @@ namespace Terrain {
 	static float SplineContinentalness(float value)
 	{
 		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
-		
+
 		if (value <= -0.51f) {
 			float w = (value - -1.0f) / (-0.51f - -1.0f);
 			return Utils::CubicLerp(0.0f, 0.14f, w);
@@ -161,10 +161,10 @@ namespace Terrain {
 		}
 	}
 
-	static float GetContinentalness(int x, int z) 
-	{ 
+	static float GetContinentalness(int x, int z)
+	{
 		float scale = 1024.0f;
-		
+
 		float freq = 2.0f;
 		int octave = 6;
 
@@ -177,7 +177,7 @@ namespace Terrain {
 			return (cValue - 0.3f) / 0.7f; // [0.0f, 1.0f]
 	}
 
-	static float SplineErosion(float value) 
+	static float SplineErosion(float value)
 	{
 		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
 
@@ -215,7 +215,7 @@ namespace Terrain {
 		}
 	}
 
-	static float GetErosion(int x, int z) 
+	static float GetErosion(int x, int z)
 	{
 		float scale = 1024.0f;
 		float bias = 123.0f;
@@ -225,12 +225,12 @@ namespace Terrain {
 
 		float eNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
 		float eValue = SplineErosion(eNoise);
-		
+
 		return eValue;
 	}
 
-	static float SplinePeaksValley(float value) 
-	{ 
+	static float SplinePeaksValley(float value)
+	{
 		value = std::clamp(abs(value * 1.5f), 0.0f, 1.0f);
 
 		if (value <= 0.05f) {
@@ -277,11 +277,10 @@ namespace Terrain {
 		return (pvValue - 0.5f) * 2.0f;
 	}
 
-	static float GetBaseLevel(float c, float e, float pv) 
-	{	                          
-		float baseLevel =
-			64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
-		
+	static float GetBaseLevel(float c, float e, float pv)
+	{
+		float baseLevel = 64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
+
 		return max(baseLevel, 1.0f);
 	}
 
@@ -306,12 +305,18 @@ namespace Terrain {
 
 		return dNoise;
 	}
-		
-	static float GetTemperature(int x, int z) { 
-		return 1.0;
+
+	static float GetTemperature(int x, int z) { return 1.0; }
+
+	static float GetHumidity(int x, int z) { return 1.0; }
+
+	static BIOME_TYPE GetBiome(float temperature, float humidity) { return BIOME_TYPE::PLAINS; }
+	
+	static BLOCK_TYPE GetBlockType(BIOME_TYPE biome, float currentHeight, float maxHeight) {
+		return BLOCK_TYPE::B_DIRT;
 	}
 
-	static float GetMoisture(int x, int z) { 
-		return 1.0; 
+	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, int face) {
+		return TEXTURE_INDEX::T_DIRT;
 	}
 }

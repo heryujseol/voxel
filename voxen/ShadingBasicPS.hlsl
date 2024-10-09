@@ -23,7 +23,7 @@ float4 main(psInput input) : SV_TARGET
     albedo /= SAMPLE_COUNT;
     
     float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
-    ao = pow(ao, 1.5);
+    ao = pow(abs(ao), 1.5);
     
     // todo
     float metallic = 0.0;

@@ -22,7 +22,6 @@ SamplerState pointClampSS : register(s2);
 SamplerState linearClampSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 
-
 Texture2D shadowTex : register(t11);
 
 cbuffer CameraConstantBuffer : register(b7)

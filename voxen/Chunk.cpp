@@ -46,8 +46,7 @@ ChunkInitMemory* Chunk::Initialize(ChunkInitMemory* memory)
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 	// sum += duration.count();
 	// count++;
-	std::cout << "Function duration: "
-			  << "duration: " << duration.count() << " microseconds" << std::endl;
+	std::cout << "duration: " << duration.count() << " microseconds" << std::endl;
 	////////////////////////////////////
 
 	return memory;
@@ -89,32 +88,34 @@ void Chunk::InitChunkData()
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
-			// float temperature = Terrain::GetTemperature(worldX, worldZ);
-			// float moisture = Terrain::GetMoisture(worldX, worldZ);
-
 			float baseLevel = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
+
+			float temperature = Terrain::GetTemperature(worldX, worldZ);
+			float humidity = Terrain::GetHumidity(worldX, worldZ);
+			BIOME_TYPE biome = Terrain::GetBiome(temperature, humidity);
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
 
+				// set static transparency type
 				if (worldY == 256) {
-					m_blocks[x][y][z].SetType(0);
+					m_blocks[x][y][z].SetType(BLOCK_TYPE::B_AIR);
 					continue;
 				}
 				if (worldY == 0) {
-					m_blocks[x][y][z].SetType(4);
+					m_blocks[x][y][z].SetType(BLOCK_TYPE::B_BEDROCK);
 					continue;
 				}
-
-				float d1 = Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 256.0f);
-				float d2 = Terrain::GetDensity2(worldX, worldY, worldZ, 123.0f, 512.0f);
-
-				uint8_t transparencyType = worldY <= 63 ? 1 : 0;
-
+				BLOCK_TYPE transparencyType = worldY <= 63 ? BLOCK_TYPE::B_WATER : BLOCK_TYPE::B_AIR;
 				m_blocks[x][y][z].SetType(transparencyType);
-				if (worldY <= baseLevel) {
-					m_blocks[x][y][z].SetType(2);
 
+				if (worldY <= baseLevel) {
+					// set block type
+					m_blocks[x][y][z].SetType(Terrain::GetBlockType(biome, baseLevel, worldY));
+					
+					// cave
+					float d1 = Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 256.0f);
+					float d2 = Terrain::GetDensity2(worldX, worldY, worldZ, 123.0f, 512.0f);
 					if (d1 * d1 + d2 * d2 <= 0.004f) {
 						m_blocks[x][y][z].SetType(transparencyType);
 					}
@@ -131,16 +132,14 @@ void Chunk::InitInstanceInfoData()
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
 				
 				// instance testing
-				int choose[4] = { 128, 129, 130, 144 };
-				static int loop = 0;
-				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::AIR ||
-						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::WATER) &&
+				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_AIR ||
+						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_WATER) &&
 					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType()) && x % 3 == 0 &&
 					z % 3 == 0) {
 					Instance instance;
 
-					uint8_t type = choose[loop++ % 4];
-					instance.SetType(type);
+					TEXTURE_INDEX texIndex = T_SHORT_GRASS;
+					instance.SetTextureIndex(texIndex);
 
 					Vector3 pos = Vector3((float)x, (float)y, (float)z) + Vector3(0.5f);
 					instance.SetWorld(Matrix::CreateTranslation(pos));
@@ -158,10 +157,10 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 	memory->Clear();
 
 	// 1. make axis column bit data
-	std::unordered_map<uint8_t, bool> llTypeMap;
-	std::unordered_map<uint8_t, bool> opTypeMap;
-	std::unordered_map<uint8_t, bool> tpTypeMap;
-	std::unordered_map<uint8_t, bool> saTypeMap;
+	std::unordered_map<BLOCK_TYPE, bool> llTypeMap;
+	std::unordered_map<BLOCK_TYPE, bool> opTypeMap;
+	std::unordered_map<BLOCK_TYPE, bool> tpTypeMap;
+	std::unordered_map<BLOCK_TYPE, bool> saTypeMap;
 
 	// 2. cull face column bit
 	// 0: x axis & left->right side (- => + : dir +)
@@ -173,8 +172,8 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
-				uint8_t type = m_blocks[x][y][z].GetType();
-				if (type == BLOCK_TYPE::AIR)
+				BLOCK_TYPE type = m_blocks[x][y][z].GetType();
+				if (type == BLOCK_TYPE::B_AIR)
 					continue;
 
 				if (Block::IsTransparency(type)) {
@@ -350,12 +349,14 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6]
 }
 
 void Chunk::GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
-	std::vector<VoxelVertex>& vertices, std::vector<uint32_t>& indices, uint8_t type)
+	std::vector<VoxelVertex>& vertices, std::vector<uint32_t>& indices, BLOCK_TYPE blockType)
 {
-	// face 0, 1 : left-right
-	// face 2, 3 : top-bottom
-	// face 4, 5 : front-back
+	// face 0, 1 : left,right
+	// face 2, 3 : top,bottom
+	// face 4, 5 : front,back
 	for (int face = 0; face < 6; ++face) {
+		TEXTURE_INDEX textureIndex = Terrain::GetBlockTextureIndex(blockType, face);
+
 		for (int s = 0; s < CHUNK_SIZE; ++s) {
 			for (int i = 0; i < CHUNK_SIZE; ++i) {
 				uint64_t faceBit = faceColBit[Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
@@ -381,22 +382,22 @@ void Chunk::GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
 
 					if (face == 0)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s, step, i, w, ones, face, type);
+							vertices, indices, s, step, i, w, ones, face, textureIndex);
 					else if (face == 1)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s + 1, step, i, w, ones, face, type);
+							vertices, indices, s + 1, step, i, w, ones, face, textureIndex);
 					else if (face == 2)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s, step, w, ones, face, type);
+							vertices, indices, i, s, step, w, ones, face, textureIndex);
 					else if (face == 3)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s + 1, step, w, ones, face, type);
+							vertices, indices, i, s + 1, step, w, ones, face, textureIndex);
 					else if (face == 4)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s, w, ones, face, type);
+							vertices, indices, i, step, s, w, ones, face, textureIndex);
 					else // face == 5
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s + 1, w, ones, face, type);
+							vertices, indices, i, step, s + 1, w, ones, face, textureIndex);
 
 					step += ones;
 				}
@@ -405,7 +406,7 @@ void Chunk::GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
 	}
 }
 
-uint8_t Chunk::GetBlockTypeByPosition(Vector3 pos)
+BLOCK_TYPE Chunk::GetBlockTypeByPosition(Vector3 pos)
 {
 	int padding = 1;
 

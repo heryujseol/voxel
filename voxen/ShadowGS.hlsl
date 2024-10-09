@@ -8,7 +8,7 @@ struct gsInput
     float4 posWorld : SV_POSITION;
 #ifdef USE_INSTANCE
     float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 #endif
 };
 
@@ -17,7 +17,7 @@ struct gsOutput
     float4 pos : SV_POSITION;
 #ifdef USE_INSTANCE
     float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 #endif
     uint VPIndex : SV_ViewportArrayIndex;
 };
@@ -38,7 +38,7 @@ void main(triangle gsInput input[3], inout TriangleStream<gsOutput> output)
             
 #ifdef USE_INSTANCE
             element.texcoord = input[i].texcoord;
-            element.type = input[i].type;
+            element.texIndex = input[i].texIndex;
 #endif
             output.Append(element);
         }

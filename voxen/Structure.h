@@ -4,7 +4,36 @@
 
 using namespace DirectX::SimpleMath;
 
-typedef uint32_t VoxelVertex;
+enum BLOCK_TYPE : uint8_t {
+	B_AIR = 0,
+	B_WATER = 1,
+	B_GRASS = 2,
+	B_DIRT = 3,
+	B_STONE = 4,
+	B_SAND = 5,
+	B_BEDROCK = 6
+};
+
+enum BIOME_TYPE : uint8_t { PLAINS = 0 };
+
+enum TEXTURE_INDEX : uint8_t {
+	T_WATER = 0,
+	T_GRASS_TOP = 1,
+	T_DIRT = 16,
+	T_SHORT_GRASS = 128,
+	
+};
+
+enum INSTANCE_TYPE : uint8_t {
+	I_CROSS = 0,
+	I_FENCE = 1,
+	I_SQUARE = 2,
+	I_NONE = 3,
+};
+
+struct VoxelVertex {
+	uint32_t data;
+};
 
 struct SkyboxVertex {
 	Vector3 position; 
@@ -28,7 +57,7 @@ struct InstanceVertex {
 
 struct InstanceInfoVertex {
 	Matrix instanceWorld;
-	uint32_t type;
+	uint32_t texIndex;
 };
 
 struct CameraConstantData {

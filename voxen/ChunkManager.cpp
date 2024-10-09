@@ -371,12 +371,12 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 		const std::map<std::tuple<int, int, int>, Instance>& instanceMap = c->GetInstanceMap();
 		for (auto& p : instanceMap) {
 			InstanceInfoVertex info;
-			info.type = p.second.GetType();
+			info.texIndex = p.second.GetTextureIndex();
 
 			info.instanceWorld =
 				(p.second.GetWorld() * Matrix::CreateTranslation(chunkPosition)).Transpose();
 
-			m_instanceInfoList[Instance::GetInstanceType(info.type)].push_back(info);
+			m_instanceInfoList[Instance::GetInstanceType(info.texIndex)].push_back(info);
 		}
 	}
 
@@ -548,12 +548,12 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	// Instance Type 0 : CROSS
 	MeshGenerator::CreateCrossInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
-			m_instanceVertexBuffers[INSTANCE_TYPE::CROSS], instanceVertices)) {
+			m_instanceVertexBuffers[INSTANCE_TYPE::I_CROSS], instanceVertices)) {
 		std::cout << "failed create cross instance vertex buffer in chunk manager" << std::endl;
 		return false;
 	}
 	if (!DXUtils::CreateIndexBuffer(
-			m_instanceIndexBuffers[INSTANCE_TYPE::CROSS], instanceIndices)) {
+			m_instanceIndexBuffers[INSTANCE_TYPE::I_CROSS], instanceIndices)) {
 		std::cout << "failed create cross instance index buffer in chunk manager" << std::endl;
 		return false;
 	}
@@ -564,12 +564,12 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	// Instance Type 1 : FENCE
 	MeshGenerator::CreateFenceInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
-			m_instanceVertexBuffers[INSTANCE_TYPE::FENCE], instanceVertices)) {
+			m_instanceVertexBuffers[INSTANCE_TYPE::I_FENCE], instanceVertices)) {
 		std::cout << "failed create fence instance vertex buffer in chunk manager" << std::endl;
 		return false;
 	}
 	if (!DXUtils::CreateIndexBuffer(
-			m_instanceIndexBuffers[INSTANCE_TYPE::FENCE], instanceIndices)) {
+			m_instanceIndexBuffers[INSTANCE_TYPE::I_FENCE], instanceIndices)) {
 		std::cout << "failed create fence instance index buffer in chunk manager" << std::endl;
 		return false;
 	}
@@ -580,12 +580,12 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	// Instance Type 2 : SQUARE
 	MeshGenerator::CreateSquareInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
-			m_instanceVertexBuffers[INSTANCE_TYPE::SQUARE], instanceVertices)) {
+			m_instanceVertexBuffers[INSTANCE_TYPE::I_SQUARE], instanceVertices)) {
 		std::cout << "failed create SQUARE instance vertex buffer in chunk manager" << std::endl;
 		return false;
 	}
 	if (!DXUtils::CreateIndexBuffer(
-			m_instanceIndexBuffers[INSTANCE_TYPE::SQUARE], instanceIndices)) {
+			m_instanceIndexBuffers[INSTANCE_TYPE::I_SQUARE], instanceIndices)) {
 		std::cout << "failed create SQUARE instance index buffer in chunk manager" << std::endl;
 		return false;
 	}

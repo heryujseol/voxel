@@ -6,7 +6,7 @@ struct vsInput
     float3 normal : NORMAL;
     float2 texcoord : TEXCOORD;
     matrix instanceWorld : WORLD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 };
 
 struct vsOutput
@@ -14,13 +14,13 @@ struct vsOutput
 #ifdef USE_SHADOW
     float4 posProj : SV_POSITION;
     float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 #else
     float4 posProj : SV_POSITION;
     sample float3 posWorld : POSITION;
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 #endif
 };
 
@@ -43,7 +43,8 @@ vsOutput main(vsInput input)
 #endif
     
     output.texcoord = input.texcoord;
-    output.type = input.type;
+    
+    output.texIndex = input.texIndex;
     
     return output;
 }

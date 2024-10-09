@@ -5,6 +5,11 @@ cbuffer ChunkConstantBuffer : register(b0)
     matrix world;
 }
 
+struct vsInput
+{
+    uint data : DATA;
+};
+
 struct vsOutput
 {
 #ifdef USE_SHADOW
@@ -14,19 +19,19 @@ struct vsOutput
     sample float3 posWorld : POSITION;
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 #endif
 };
 
-vsOutput main(uint data : DATA)
+vsOutput main(vsInput input)
 {
     vsOutput output;
     
-    int x = (data >> 23) & 63;
-    int y = (data >> 17) & 63;
-    int z = (data >> 11) & 63;
-    uint face = (data >> 8) & 7;
-    uint type = data & 255;
+    int x = (input.data >> 23) & 63;
+    int y = (input.data >> 17) & 63;
+    int z = (input.data >> 11) & 63;
+    uint face = (input.data >> 8) & 7;
+    uint texIndex = input.data & 255;
     
     float3 position = float3(float(x), float(y), float(z));
     
@@ -43,8 +48,7 @@ vsOutput main(uint data : DATA)
     output.normal = getNormal(face);
     
     output.texcoord = getVoxelTexcoord(position, face);
-    
-    output.type = (type - 1) * 6 + face;
+    output.texIndex = texIndex;
 
     return output;
 #endif

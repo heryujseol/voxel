@@ -1,8 +1,7 @@
 #include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
-Texture2D grassColorMap : register(t1);
-Texture2D mirrorDepthTex : register(t2);
+Texture2D mirrorDepthTex : register(t1);
 
 struct psInput
 {
@@ -10,7 +9,7 @@ struct psInput
     sample float3 posWorld : POSITION;
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 };
 
 struct psOutput
@@ -23,12 +22,8 @@ struct psOutput
 
 psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
-    //float temperature = 0.5;
-    //float downfall = 1.0;
-    //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
-    
 #ifdef USE_ALPHA_CLIP 
-    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
+    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
         discard;
     
     [unroll]
@@ -39,7 +34,7 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
         // 정확한 coverage값은 아님
         // SSAO에서는 coverage에 따라 weight를 두고 연산하지만 weight가 모두 1인 상태라고 보면 됨
         // Lighting에서는 coverage 구분 없이 그냥 4번 연산함 -> albedo가 다르기 때문
-        if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0, offsets[i]).a != 1.0)
+        if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0, offsets[i]).a != 1.0)
         {
             coverage = (1 << sampleIndex);
         }
@@ -54,7 +49,8 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
     
     output.position = float4(input.posWorld, 1.0);
     
-    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
+    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
+    
     output.albedo = float4(albedo);
     
     output.coverage = coverage;
@@ -65,7 +61,7 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
 float4 mainMirror(psInput input) : SV_TARGET
 {
 #ifdef USE_ALPHA_CLIP 
-    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.type), 0.0).a != 1.0)
+    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
         discard;
 #endif
     
@@ -76,7 +72,7 @@ float4 mainMirror(psInput input) : SV_TARGET
     if (pixelDepth <= planeDepth) // 거울보다 가까운 미러월드는 필요 없음
         discard;
     
-    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.type));
+    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
     float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
     
     return float4(ambient, albedo.a);

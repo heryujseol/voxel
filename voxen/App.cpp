@@ -342,7 +342,6 @@ void App::FillGBuffer()
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
@@ -530,7 +529,6 @@ void App::RenderMirrorWorld()
 	{
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
 		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
-		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::mirrorDepthSRV.Get());
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 		ChunkManager::GetInstance()->RenderMirrorWorld();
@@ -572,22 +570,20 @@ void App::RenderShadowMap()
 {
 	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
 
+	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::shadowDSV.Get());
+
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
 	// Basic Shadow Map
 	{
-		Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::shadowDSV.Get());
-
 		Graphics::SetPipelineStates(Graphics::basicShadowPSO);
 		ChunkManager::GetInstance()->RenderBasicShadowMap();
 	}
 	
 	// Instance Shadow Map
 	{
-		Graphics::context->OMSetRenderTargets(
-			0, nullptr, Graphics::shadowDSV.Get());
 		Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
 
 		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);

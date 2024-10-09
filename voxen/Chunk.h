@@ -75,7 +75,7 @@ public:
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 
-	uint8_t GetBlockTypeByPosition(Vector3 pos);
+	BLOCK_TYPE GetBlockTypeByPosition(Vector3 pos);
 
 private:
 	void InitChunkData();
@@ -85,8 +85,7 @@ private:
 	void MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6],
 		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6]);
 	void GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
-		std::vector<VoxelVertex>& vertices,
-		std::vector<uint32_t>& indices, uint8_t type);
+		std::vector<VoxelVertex>& vertices, std::vector<uint32_t>& indices, BLOCK_TYPE blockType);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 	std::map<std::tuple<int, int, int>, Instance> m_instanceMap;
