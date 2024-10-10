@@ -342,6 +342,8 @@ void App::FillGBuffer()
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
@@ -529,6 +531,8 @@ void App::RenderMirrorWorld()
 	{
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
 		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+		ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::mirrorDepthSRV.Get());
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 		ChunkManager::GetInstance()->RenderMirrorWorld();

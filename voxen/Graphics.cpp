@@ -160,6 +160,12 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
+	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
+
+	ComPtr<ID3D11Texture2D> foliageColorMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> foliageColorMapSRV;
+
 	ComPtr<ID3D11Texture2D> sunBuffer;
 	ComPtr<ID3D11ShaderResourceView> sunSRV;
 
@@ -218,7 +224,7 @@ namespace Graphics {
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
-	GraphicsPSO instanceShadowPSO; 
+	GraphicsPSO instanceShadowPSO;
 	GraphicsPSO ssaoPSO;
 	GraphicsPSO ssaoEdgePSO;
 	GraphicsPSO edgeMaskingPSO;
@@ -664,6 +670,18 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
+	if (!DXUtils::CreateTexture2DFromFile(
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass.png", format)) {
+		std::cout << "failed create texture from grass file" << std::endl;
+		return false;
+	}
+
+	if (!DXUtils::CreateTexture2DFromFile(
+			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage.png", format)) {
+		std::cout << "failed create texture from foliage file" << std::endl;
+		return false;
+	}
+
 	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png", format)) {
 		std::cout << "failed create texture from sun file" << std::endl;
 		return false;
@@ -723,6 +741,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	// Basic
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc = {
 		{ "DATA", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BIOME", 0, DXGI_FORMAT_R8_UINT, 0, 4, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
@@ -730,7 +749,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		std::cout << "failed create basic vs" << std::endl;
 		return false;
 	}
-	
+
 	// Basic Shadow
 	std::vector<D3D_SHADER_MACRO> macros;
 	macros.push_back({ "USE_SHADOW", "1" });
@@ -782,7 +801,9 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-		{ "INDEX", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
+		{ "INDEX", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "BIOME", 0, DXGI_FORMAT_R8_UINT, 1, 68, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
+
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
@@ -804,7 +825,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 }
 
 bool Graphics::InitGeometryShaders()
-{ 
+{
 	// BasicShadowGS
 	if (!DXUtils::CreateGeometryShader(L"ShadowGS.hlsl", basicShadowGS)) {
 		std::cout << "failed create basic shadow gs" << std::endl;

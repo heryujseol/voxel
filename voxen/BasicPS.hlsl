@@ -1,7 +1,9 @@
 #include "Common.hlsli"
 
 Texture2DArray atlasTextureArray : register(t0);
-Texture2D mirrorDepthTex : register(t1);
+Texture2D grassColorMap : register(t1);
+Texture2D foliageColorMap : register(t2);
+Texture2D mirrorDepthTex : register(t3);
 
 struct psInput
 {
@@ -10,6 +12,7 @@ struct psInput
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint texIndex : INDEX;
+    uint biome : BIOME;
 };
 
 struct psOutput
@@ -19,6 +22,90 @@ struct psOutput
     float4 albedo : SV_Target2;
     uint coverage : SV_Target3;
 };
+
+#define BIOME_TYPE_PLAINS   0
+#define BIOME_TYPE_JUNGLE   1
+#define BIOME_TYPE_DESERT   2
+#define BIOME_TYPE_SWAMP    3
+#define BIOME_TYPE_FOREST   4
+#define BIOME_TYPE_SAVANNA  5
+#define BIOME_TYPE_TAIGA    6
+#define BIOME_TYPE_TUNDRA   7
+#define BIOME_TYPE_BADLAND  8
+
+void getTemperatureAndDownfall(uint biome, out float temperature, out float downfall)
+{
+    if (biome == BIOME_TYPE_PLAINS)
+    {
+        temperature = 0.8;
+        downfall = 0.4;
+    }
+    else if (biome == BIOME_TYPE_JUNGLE)
+    {
+        temperature = 0.95;
+        downfall = 0.9;
+    }
+    else if (biome == BIOME_TYPE_DESERT)
+    {
+        temperature = 1.0; // 2.0?
+        downfall = 0.0;
+    }
+    else if (biome == BIOME_TYPE_SWAMP)
+    {
+        temperature = 0.8;
+        downfall = 0.9;
+    }
+    else if (biome == BIOME_TYPE_FOREST)
+    {
+        temperature = 0.7;
+        downfall = 0.8;
+    }
+    else if (biome == BIOME_TYPE_SAVANNA)
+    {
+        temperature = 1.0; // 2.0?
+        downfall = 0.0;
+    }
+    else if (biome == BIOME_TYPE_TAIGA)
+    {
+        temperature = 0.25;
+        downfall = 0.8;
+    }
+    else if (biome == BIOME_TYPE_TUNDRA)
+    {
+        temperature = 0.0;
+        downfall = 0.5;
+    }
+    else if (biome == BIOME_TYPE_BADLAND)
+    {
+        temperature = 1.0;
+        downfall = 0.0;
+    }
+    else
+    {
+        temperature = 0.5;
+        downfall = 0.5;
+    }
+}
+
+void getGrassColor(uint biome, float temperature, float downfall, out float3 grassColor)
+{
+    
+}
+
+void getFoliageColor(uint biome, float temperature, float downfall, out float3 foliageColor)
+{
+    
+}
+
+void getWaterColor(uint biome)
+{
+    
+}
+
+bool useColorMap(uint index)
+{
+    return true;
+}
 
 psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
@@ -49,11 +136,26 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
     
     output.position = float4(input.posWorld, 1.0);
     
+    output.coverage = coverage;
+    
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
     
-    output.albedo = float4(albedo);
+    // check texIndex -> Grass와 같은 흑백 강도를 표현하는 인덱스
+    if (useColorMap(input.texIndex))
+    {
+        float temperature, downfall;
+        getTemperatureAndDownfall(input.biome, temperature, downfall);
+        
+        float4 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(1.0 - temperature, 1.0 - temperature * downfall), 0.0);
+        
+        albedo *= grassColor;
+    }
+    else
+    {
+        
+    }
     
-    output.coverage = coverage;
+    output.albedo = float4(albedo);
     
     return output;
 }

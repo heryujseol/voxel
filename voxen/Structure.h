@@ -43,6 +43,7 @@ enum INSTANCE_TYPE : uint8_t {
 
 struct VoxelVertex {
 	uint32_t data;
+	uint8_t biome;
 };
 
 struct SkyboxVertex {
@@ -68,6 +69,7 @@ struct InstanceVertex {
 struct InstanceInfoVertex {
 	Matrix instanceWorld;
 	uint32_t texIndex;
+	uint8_t biome;
 };
 
 struct CameraConstantData {

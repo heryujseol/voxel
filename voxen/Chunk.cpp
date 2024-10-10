@@ -142,8 +142,9 @@ void Chunk::InitInstanceInfoData()
 					z % 3 == 0) {
 					Instance instance;
 
-					TEXTURE_INDEX texIndex = T_SHORT_GRASS;
-					instance.SetTextureIndex(texIndex);
+					instance.SetTextureIndex(TEXTURE_INDEX::T_SHORT_GRASS);
+
+					instance.SetBiome(m_biomes[x + 1][z + 1]);
 
 					Vector3 pos = Vector3((float)x, (float)y, (float)z) + Vector3(0.5f);
 					instance.SetWorld(Matrix::CreateTranslation(pos));
@@ -309,32 +310,28 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 		for (const auto& t : llTypeMap) {
 			const auto& p = std::make_pair(b.first, t.first);
 			if (llSliceColBit.find(p) != llSliceColBit.end()) {
-				GreedyMeshing(llSliceColBit[std::make_pair(b.first, t.first)], m_lowLodVertices,
-					m_lowLodIndices, t.first);
+				GreedyMeshing(llSliceColBit[p], m_lowLodVertices, m_lowLodIndices, p);
 			}
 		}
 
 		for (const auto& t : opTypeMap) {
 			const auto& p = std::make_pair(b.first, t.first);
 			if (opSliceColBit.find(p) != opSliceColBit.end()) {
-				GreedyMeshing(opSliceColBit[std::make_pair(b.first, t.first)], m_opaqueVertices,
-					m_opaqueIndices, t.first);
+				GreedyMeshing(opSliceColBit[p], m_opaqueVertices, m_opaqueIndices, p);
 			}
 		}
 
 		for (const auto& t : tpTypeMap) {
 			const auto& p = std::make_pair(b.first, t.first);
 			if (tpSliceColBit.find(p) != tpSliceColBit.end()) {
-				GreedyMeshing(tpSliceColBit[std::make_pair(b.first, t.first)],
-					m_transparencyVertices, m_transparencyIndices, t.first);
+				GreedyMeshing(tpSliceColBit[p], m_transparencyVertices, m_transparencyIndices, p);
 			}
 		}
 
 		for (const auto& t : saTypeMap) {
 			const auto& p = std::make_pair(b.first, t.first);
 			if (saSliceColBit.find(p) != saSliceColBit.end()) {
-				GreedyMeshing(saSliceColBit[std::make_pair(b.first, t.first)], m_semiAlphaVertices,
-					m_semiAlphaIndices, t.first);
+				GreedyMeshing(saSliceColBit[p], m_semiAlphaVertices, m_semiAlphaIndices, p);
 			}
 		}
 	}
@@ -395,13 +392,14 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6]
 }
 
 void Chunk::GreedyMeshing(std::vector<uint64_t>& faceColBit, std::vector<VoxelVertex>& vertices,
-	std::vector<uint32_t>& indices, BLOCK_TYPE blockType)
+	std::vector<uint32_t>& indices, std::pair<BIOME_TYPE, BLOCK_TYPE> types)
 {
 	// face 0, 1 : left,right
 	// face 2, 3 : top,bottom
 	// face 4, 5 : front,back
 	for (int face = 0; face < 6; ++face) {
-		TEXTURE_INDEX textureIndex = Terrain::GetBlockTextureIndex(blockType, face);
+		TEXTURE_INDEX textureIndex = Terrain::GetBlockTextureIndex(types.second, face);
+		BIOME_TYPE biome = types.first;
 
 		for (int s = 0; s < CHUNK_SIZE; ++s) {
 			for (int i = 0; i < CHUNK_SIZE; ++i) {
@@ -428,22 +426,22 @@ void Chunk::GreedyMeshing(std::vector<uint64_t>& faceColBit, std::vector<VoxelVe
 
 					if (face == 0)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s, step, i, w, ones, face, textureIndex);
+							vertices, indices, s, step, i, w, ones, face, biome, textureIndex);
 					else if (face == 1)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s + 1, step, i, w, ones, face, textureIndex);
+							vertices, indices, s + 1, step, i, w, ones, face, biome, textureIndex);
 					else if (face == 2)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s, step, w, ones, face, textureIndex);
+							vertices, indices, i, s, step, w, ones, face, biome, textureIndex);
 					else if (face == 3)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s + 1, step, w, ones, face, textureIndex);
+							vertices, indices, i, s + 1, step, w, ones, face, biome, textureIndex);
 					else if (face == 4)
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s, w, ones, face, textureIndex);
+							vertices, indices, i, step, s, w, ones, face, biome, textureIndex);
 					else // face == 5
 						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s + 1, w, ones, face, textureIndex);
+							vertices, indices, i, step, s + 1, w, ones, face, biome, textureIndex);
 
 					step += ones;
 				}

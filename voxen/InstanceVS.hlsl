@@ -7,6 +7,7 @@ struct vsInput
     float2 texcoord : TEXCOORD;
     matrix instanceWorld : WORLD;
     uint texIndex : INDEX;
+    uint biome : BIOME;
 };
 
 struct vsOutput
@@ -21,6 +22,7 @@ struct vsOutput
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint texIndex : INDEX;
+    uint biome : BIOME;
 #endif
 };
 

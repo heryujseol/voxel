@@ -23,15 +23,21 @@ public:
 			return INSTANCE_TYPE::I_NONE;
 	}
 
-	Instance() : m_world(Matrix()), m_texIndex(TEXTURE_INDEX::T_SHORT_GRASS) {}
+	Instance() : m_world(Matrix()), m_texIndex(TEXTURE_INDEX::T_SHORT_GRASS), m_biome(BIOME_TYPE::PLAINS) {}
 	~Instance() {}
+
+	inline const Matrix& GetWorld() const { return m_world; }
+	inline void SetWorld(const Matrix& world) { m_world = world; }
+
+	inline BIOME_TYPE GetBiome() const { return m_biome; }
+	inline void SetBiome(BIOME_TYPE biome) { m_biome = biome; }
 
 	inline TEXTURE_INDEX GetTextureIndex() const { return m_texIndex; }
 	inline void SetTextureIndex(TEXTURE_INDEX index) { m_texIndex = index; }
-	inline const Matrix& GetWorld() const { return m_world; }
-	inline void SetWorld(const Matrix& world) { m_world = world; }
+		
 
 private:
 	Matrix m_world; // scale rotate position
 	TEXTURE_INDEX m_texIndex;
+	BIOME_TYPE m_biome;
 };

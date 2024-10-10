@@ -8,6 +8,7 @@ cbuffer ChunkConstantBuffer : register(b0)
 struct vsInput
 {
     uint data : DATA;
+    uint biome : BIOME;
 };
 
 struct vsOutput
@@ -20,6 +21,7 @@ struct vsOutput
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint texIndex : INDEX;
+    uint biome : BIOME;
 #endif
 };
 
@@ -49,6 +51,8 @@ vsOutput main(vsInput input)
     
     output.texcoord = getVoxelTexcoord(position, face);
     output.texIndex = texIndex;
+    
+    output.biome = input.biome;
 
     return output;
 #endif
