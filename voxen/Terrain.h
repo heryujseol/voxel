@@ -7,6 +7,7 @@
 using namespace DirectX::SimpleMath;
 
 namespace Terrain {
+	static const int BIOME_TYPE_COUNT = 10;
 
 	static Vector2 Hash(uint32_t x, uint32_t y)
 	{
@@ -313,10 +314,18 @@ namespace Terrain {
 	static BIOME_TYPE GetBiome(float temperature, float humidity) { return BIOME_TYPE::PLAINS; }
 	
 	static BLOCK_TYPE GetBlockType(BIOME_TYPE biome, float currentHeight, float maxHeight) {
-		return BLOCK_TYPE::B_DIRT;
+		return BLOCK_TYPE::B_GRASS;
 	}
 
-	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, int face) {
-		return TEXTURE_INDEX::T_DIRT;
+	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, int face) { 
+		// face 0, 1 : left,right
+		// face 2, 3 : top,bottom
+		// face 4, 5 : front,back
+		switch (blockType)
+		case B_GRASS:
+
+			break;
+
+		return T_GRASS_TOP;
 	}
 }

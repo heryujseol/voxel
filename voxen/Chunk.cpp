@@ -1,7 +1,6 @@
 #include "Chunk.h"
 #include "DXUtils.h"
 #include "MeshGenerator.h"
-#include "Terrain.h"
 
 #include <future>
 #include <algorithm>
@@ -19,8 +18,8 @@ ChunkInitMemory* Chunk::Initialize(ChunkInitMemory* memory)
 {
 	////////////////////////////////////
 	// check start time
-	// static long long sum = 0;
-	// static long long count = 0;
+	static long long sum = 0;
+	static long long count = 0;
 	auto start_time = std::chrono::steady_clock::now();
 	////////////////////////////////////
 
@@ -44,9 +43,11 @@ ChunkInitMemory* Chunk::Initialize(ChunkInitMemory* memory)
 	// check end time
 	auto end_time = std::chrono::steady_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	// sum += duration.count();
-	// count++;
-	std::cout << "duration: " << duration.count() << " microseconds" << std::endl;
+	sum += duration.count();
+	count++;
+	std::cout << "duration: " << duration.count() << " micro s"
+			  << " | "
+			  << "average: " << (float)sum / (float)count << " micro s" << std::endl;
 	////////////////////////////////////
 
 	return memory;
@@ -93,6 +94,7 @@ void Chunk::InitChunkData()
 			float temperature = Terrain::GetTemperature(worldX, worldZ);
 			float humidity = Terrain::GetHumidity(worldX, worldZ);
 			BIOME_TYPE biome = Terrain::GetBiome(temperature, humidity);
+			m_biomes[x][z] = biome;
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
@@ -106,13 +108,15 @@ void Chunk::InitChunkData()
 					m_blocks[x][y][z].SetType(BLOCK_TYPE::B_BEDROCK);
 					continue;
 				}
-				BLOCK_TYPE transparencyType = worldY <= 63 ? BLOCK_TYPE::B_WATER : BLOCK_TYPE::B_AIR;
+				BLOCK_TYPE transparencyType =
+					worldY <= 63 ? BLOCK_TYPE::B_WATER : BLOCK_TYPE::B_AIR;
 				m_blocks[x][y][z].SetType(transparencyType);
 
 				if (worldY <= baseLevel) {
 					// set block type
-					m_blocks[x][y][z].SetType(Terrain::GetBlockType(biome, baseLevel, worldY));
-					
+					BLOCK_TYPE type = Terrain::GetBlockType(biome, baseLevel, worldY);
+					m_blocks[x][y][z].SetType(type);
+
 					// cave
 					float d1 = Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 256.0f);
 					float d2 = Terrain::GetDensity2(worldX, worldY, worldZ, 123.0f, 512.0f);
@@ -130,7 +134,7 @@ void Chunk::InitInstanceInfoData()
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				
+
 				// instance testing
 				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_AIR ||
 						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_WATER) &&
@@ -146,7 +150,6 @@ void Chunk::InitInstanceInfoData()
 
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
-				
 			}
 		}
 	}
@@ -162,6 +165,8 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 	std::unordered_map<BLOCK_TYPE, bool> tpTypeMap;
 	std::unordered_map<BLOCK_TYPE, bool> saTypeMap;
 
+	std::unordered_map<BIOME_TYPE, bool> biomeTypeMap;
+
 	// 2. cull face column bit
 	// 0: x axis & left->right side (- => + : dir +)
 	// 1: x axis & right->left side (+ => - : dir -)
@@ -172,7 +177,9 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
+				biomeTypeMap[m_biomes[x][z]] = true;
 				BLOCK_TYPE type = m_blocks[x][y][z].GetType();
+
 				if (type == BLOCK_TYPE::B_AIR)
 					continue;
 
@@ -283,27 +290,58 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 		}
 	}
 
-	MakeFaceSliceColumnBit(memory->llCullColBit, memory->llSliceColBit);
-	MakeFaceSliceColumnBit(memory->opCullColBit, memory->opSliceColBit);
-	MakeFaceSliceColumnBit(memory->tpCullColBit, memory->tpSliceColBit);
-	MakeFaceSliceColumnBit(memory->saCullColBit, memory->saSliceColBit);
+
+	// 4. face cull column bit -> face slice column bit
+	std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>> llSliceColBit;
+	std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>> opSliceColBit;
+	std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>> tpSliceColBit;
+	std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>> saSliceColBit;
+
+	MakeFaceSliceColumnBit(memory->llCullColBit, llSliceColBit);
+	MakeFaceSliceColumnBit(memory->opCullColBit, opSliceColBit);
+	MakeFaceSliceColumnBit(memory->tpCullColBit, tpSliceColBit);
+	MakeFaceSliceColumnBit(memory->saCullColBit, saSliceColBit);
 
 
-	// 4. make vertices by bit slices column
-	for (const auto& p : llTypeMap)
-		GreedyMeshing(memory->llSliceColBit[p.first], m_lowLodVertices, m_lowLodIndices, p.first);
-	for (const auto& p : opTypeMap)
-		GreedyMeshing(memory->opSliceColBit[p.first], m_opaqueVertices, m_opaqueIndices, p.first);
-	for (const auto& p : tpTypeMap)
-		GreedyMeshing(
-			memory->tpSliceColBit[p.first], m_transparencyVertices, m_transparencyIndices, p.first);
-	for (const auto& p : saTypeMap)
-		GreedyMeshing(
-			memory->saSliceColBit[p.first], m_semiAlphaVertices, m_semiAlphaIndices, p.first);
+	// 5. make vertices by bit slices column (greedy meshing)
+	for (const auto& b : biomeTypeMap) {
+
+		for (const auto& t : llTypeMap) {
+			const auto& p = std::make_pair(b.first, t.first);
+			if (llSliceColBit.find(p) != llSliceColBit.end()) {
+				GreedyMeshing(llSliceColBit[std::make_pair(b.first, t.first)], m_lowLodVertices,
+					m_lowLodIndices, t.first);
+			}
+		}
+
+		for (const auto& t : opTypeMap) {
+			const auto& p = std::make_pair(b.first, t.first);
+			if (opSliceColBit.find(p) != opSliceColBit.end()) {
+				GreedyMeshing(opSliceColBit[std::make_pair(b.first, t.first)], m_opaqueVertices,
+					m_opaqueIndices, t.first);
+			}
+		}
+
+		for (const auto& t : tpTypeMap) {
+			const auto& p = std::make_pair(b.first, t.first);
+			if (tpSliceColBit.find(p) != tpSliceColBit.end()) {
+				GreedyMeshing(tpSliceColBit[std::make_pair(b.first, t.first)],
+					m_transparencyVertices, m_transparencyIndices, t.first);
+			}
+		}
+
+		for (const auto& t : saTypeMap) {
+			const auto& p = std::make_pair(b.first, t.first);
+			if (saSliceColBit.find(p) != saSliceColBit.end()) {
+				GreedyMeshing(saSliceColBit[std::make_pair(b.first, t.first)], m_semiAlphaVertices,
+					m_semiAlphaIndices, t.first);
+			}
+		}
+	}
 }
 
 void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6],
-	uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6])
+	std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>>& sliceColBit)
 {
 	/*
 	 *     ---------------
@@ -329,18 +367,26 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6]
 					int bitPos = Utils::TrailingZeros(colbit); // 1110001000 -> trailing zero : 3
 					colbit = colbit & (colbit - 1ULL);		   // 1110000000
 
-					uint8_t type = 0;
-					if (face < 2) {
+					BIOME_TYPE biome = BIOME_TYPE::PLAINS;
+					BLOCK_TYPE type = BLOCK_TYPE::B_AIR;
+					if (face < 2) { // left right
 						type = m_blocks[bitPos + 1][h + 1][w + 1].GetType();
+						biome = m_biomes[bitPos + 1][w + 1];
 					}
-					else if (face < 4) {
+					else if (face < 4) { // top bottom
 						type = m_blocks[w + 1][bitPos + 1][h + 1].GetType();
+						biome = m_biomes[w + 1][h + 1];
 					}
-					else { // face < 6
+					else { //(face < 6) // front back
 						type = m_blocks[w + 1][h + 1][bitPos + 1].GetType();
+						biome = m_biomes[w + 1][bitPos + 1];
 					}
 
-					sliceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |=
+					const auto& key = std::make_pair(biome, type);
+					if (sliceColBit.find(key) == sliceColBit.end()) {
+						sliceColBit[key] = std::vector<uint64_t>(Chunk::CHUNK_SIZE2 * 6, 0);
+					}
+					sliceColBit[key][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |=
 						(1ULL << h);
 				}
 			}
@@ -348,8 +394,8 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6]
 	}
 }
 
-void Chunk::GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
-	std::vector<VoxelVertex>& vertices, std::vector<uint32_t>& indices, BLOCK_TYPE blockType)
+void Chunk::GreedyMeshing(std::vector<uint64_t>& faceColBit, std::vector<VoxelVertex>& vertices,
+	std::vector<uint32_t>& indices, BLOCK_TYPE blockType)
 {
 	// face 0, 1 : left,right
 	// face 2, 3 : top,bottom

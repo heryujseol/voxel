@@ -7,8 +7,6 @@
 #include <stb_image.h>
 #include <algorithm>
 
-#include "Chunk.h"
-
 using namespace DirectX::SimpleMath;
 
 namespace Utils {

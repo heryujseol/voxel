@@ -4,6 +4,18 @@
 
 using namespace DirectX::SimpleMath;
 
+enum BIOME_TYPE : uint8_t { 
+	PLAINS = 0,
+	JUNGLE = 1,
+	DESERT = 2,
+	SWAMP = 3,
+	FOREST = 4,
+	SAVANNA = 5,
+	TAIGA = 6,
+	TUNDRA = 7,
+	BADLAND = 8
+};
+
 enum BLOCK_TYPE : uint8_t {
 	B_AIR = 0,
 	B_WATER = 1,
@@ -13,8 +25,6 @@ enum BLOCK_TYPE : uint8_t {
 	B_SAND = 5,
 	B_BEDROCK = 6
 };
-
-enum BIOME_TYPE : uint8_t { PLAINS = 0 };
 
 enum TEXTURE_INDEX : uint8_t {
 	T_WATER = 0,
