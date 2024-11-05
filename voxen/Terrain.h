@@ -7,7 +7,6 @@
 using namespace DirectX::SimpleMath;
 
 namespace Terrain {
-	static const int BIOME_TYPE_COUNT = 10;
 
 	static Vector2 Hash(uint32_t x, uint32_t y)
 	{
@@ -285,47 +284,53 @@ namespace Terrain {
 		return max(baseLevel, 1.0f);
 	}
 
-	static float GetDensity(int x, int y, int z, float bias, float scale)
+	static float GetDensity(int x, int y, int z, float bias, float xScale, float yScale, float zScale)
 	{
 		float freq = 2.0f;
 		int octave = 4;
 
 		float dNoise =
-			PerlinFbm(x / scale + bias, y / scale + bias, z / scale + bias, freq, octave);
+			PerlinFbm(x / xScale + bias, y / yScale + bias, z / zScale + bias, freq, octave);
 
 		return dNoise;
 	}
 
-	static float GetDensity2(int x, int y, int z, float bias, float scale)
-	{
-		float freq = 2.0f;
-		int octave = 4;
-
-		float dNoise =
-			PerlinFbm(x / scale + bias, y / (scale / 2.0f) + bias, z / scale + bias, freq, octave);
-
-		return dNoise;
+	static BLOCK_TYPE GetBlockType(int baseLevel, int y) {
+		if (y == baseLevel) {
+			return B_GRASS;
+		}
+		else if (y >= baseLevel - 3) {
+			return B_DIRT;
+		}
+		else {
+			return B_STONE;
+		}
 	}
 
-	static float GetTemperature(int x, int z) { return 1.0; }
+	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, uint8_t face) { 
+		
+		switch (blockType) {
+			case B_GRASS:
+				if (face == DIR::TOP)
+					return T_GRASS_TOP;
+				else if (face == DIR::BOTTOM)
+					return T_DIRT;
+				else
+					return T_GRASS_OVERLAY;
 
-	static float GetHumidity(int x, int z) { return 1.0; }
+			case B_DIRT:
+				return T_DIRT;
 
-	static BIOME_TYPE GetBiome(float temperature, float humidity) { return BIOME_TYPE::PLAINS; }
-	
-	static BLOCK_TYPE GetBlockType(BIOME_TYPE biome, float currentHeight, float maxHeight) {
-		return BLOCK_TYPE::B_GRASS;
-	}
+			case B_STONE:
+				return T_STONE;
 
-	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, int face) { 
-		// face 0, 1 : left,right
-		// face 2, 3 : top,bottom
-		// face 4, 5 : front,back
-		switch (blockType)
-		case B_GRASS:
+			case B_SAND:
+				return T_SAND;
 
-			break;
-
+			case B_BEDROCK:
+				return T_BEDROCK;
+		}
+		
 		return T_GRASS_TOP;
 	}
 }

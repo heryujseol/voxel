@@ -7,8 +7,8 @@
 class Block {
 public:
 	static const int BLOCK_TYPE_COUNT = 256;
-	static inline bool IsOpaqua(BLOCK_TYPE type) { return (1 < type && type < 10);  } // 임시 데이터
-	static inline bool IsSemiAlpha(BLOCK_TYPE type) { return (10 <= type && type < 20); } // 임시 데이터
+	static inline bool IsOpaqua(BLOCK_TYPE type) { return (1 < type && type < 128);  } // 임시 데이터
+	static inline bool IsSemiAlpha(BLOCK_TYPE type) { return (128 <= type && type < 144); } // 임시 데이터
 	static inline bool IsTransparency(BLOCK_TYPE type) { return (type <= 1); } // 임시 데이터
 
 	Block() : m_type(BLOCK_TYPE::B_AIR) {}

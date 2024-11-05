@@ -4,16 +4,13 @@
 
 using namespace DirectX::SimpleMath;
 
-enum BIOME_TYPE : uint8_t { 
-	PLAINS = 0,
-	JUNGLE = 1,
-	DESERT = 2,
-	SWAMP = 3,
-	FOREST = 4,
-	SAVANNA = 5,
-	TAIGA = 6,
-	TUNDRA = 7,
-	BADLAND = 8
+enum DIR : uint8_t {
+	LEFT = 0,
+	RIGHT = 1, 
+	BOTTOM = 2,
+	TOP = 3,
+	FRONT = 4,
+	BACK = 5
 };
 
 enum BLOCK_TYPE : uint8_t {
@@ -23,15 +20,49 @@ enum BLOCK_TYPE : uint8_t {
 	B_DIRT = 3,
 	B_STONE = 4,
 	B_SAND = 5,
-	B_BEDROCK = 6
+	B_BEDROCK = 6,
+	B_SANDSTONE = 7,
+	B_REDSAND = 8,
+	B_REDSANDSTONE = 9,
+	B_TERRACOTTA = 10,
+	B_TERRACOTTA_ORANGE = 11,
+	B_TERRACOTTA_YELLOW = 12,
+	B_TERRACOTTA_WHITE = 13,
+	B_TERRACOTTA_RED = 14,
+	B_TERRACOTTA_BROWN = 15,
+	B_GRAVEL = 16,
 };
 
 enum TEXTURE_INDEX : uint8_t {
 	T_WATER = 0,
 	T_GRASS_TOP = 1,
+	T_GRASS_OVERLAY = 2,
+
+
 	T_DIRT = 16,
-	T_SHORT_GRASS = 128,
-	
+	T_SAND = 17,
+	T_SANDSTONE = 18,
+	T_SANDSTONE_BOTTOM = 19,
+	T_SANDSTONE_TOP = 20,
+
+
+	T_REDSAND = 21,
+	T_REDSANDSTONE = 22,
+	T_REDSANDSTONE_BOTTOM = 23,
+	T_REDSANDSTONE_TOP = 24,
+	T_TERRACOTTA = 25,
+	T_TERRACOTTA_ORANGE = 26,
+	T_TERRACOTTA_YELLOW = 27,
+	T_TERRACOTTA_WHITE = 28,
+	T_TERRACOTTA_RED = 29,
+	T_TERRACOTTA_BROWN = 30,
+	T_GRAVEL = 31,
+
+
+	T_BEDROCK = 32,
+	T_STONE = 33,
+
+	T_SHORT_GRASS = 128
 };
 
 enum INSTANCE_TYPE : uint8_t {
@@ -43,7 +74,6 @@ enum INSTANCE_TYPE : uint8_t {
 
 struct VoxelVertex {
 	uint32_t data;
-	uint8_t biome;
 };
 
 struct SkyboxVertex {
@@ -69,7 +99,6 @@ struct InstanceVertex {
 struct InstanceInfoVertex {
 	Matrix instanceWorld;
 	uint32_t texIndex;
-	uint8_t biome;
 };
 
 struct CameraConstantData {

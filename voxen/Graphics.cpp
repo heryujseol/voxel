@@ -741,7 +741,6 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	// Basic
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc = {
 		{ "DATA", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "BIOME", 0, DXGI_FORMAT_R8_UINT, 0, 4, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
@@ -802,7 +801,6 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "INDEX", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-		{ "BIOME", 0, DXGI_FORMAT_R8_UINT, 1, 68, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
 
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(

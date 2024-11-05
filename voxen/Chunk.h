@@ -84,12 +84,11 @@ private:
 	void InitWorldVerticesData(ChunkInitMemory* memory);
 
 	void MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6],
-		std::map<std::pair<BIOME_TYPE, BLOCK_TYPE>, std::vector<uint64_t>>& sliceColBit);
+		std::unordered_map<BLOCK_TYPE, std::vector<uint64_t>>& sliceColBit);
 	void GreedyMeshing(std::vector<uint64_t>& faceColBit, std::vector<VoxelVertex>& vertices,
-		std::vector<uint32_t>& indices, std::pair<BIOME_TYPE, BLOCK_TYPE> types);
+		std::vector<uint32_t>& indices, BLOCK_TYPE types);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
-	BIOME_TYPE m_biomes[CHUNK_SIZE_P][CHUNK_SIZE_P];
 	std::map<std::tuple<int, int, int>, Instance> m_instanceMap;
 
 	UINT m_id;
