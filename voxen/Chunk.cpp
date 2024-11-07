@@ -91,38 +91,13 @@ void Chunk::InitChunkData()
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
 			float baseLevel = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
 
-			///////////////
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
 
-				// set static transparency type
-				if (worldY == 256) {
-					m_blocks[x][y][z].SetType(BLOCK_TYPE::B_AIR);
-					continue;
-				}
-				if (worldY == 0) {
-					m_blocks[x][y][z].SetType(BLOCK_TYPE::B_BEDROCK);
-					continue;
-				}
-				BLOCK_TYPE transparencyType =
-					worldY <= 63 ? BLOCK_TYPE::B_WATER : BLOCK_TYPE::B_AIR;
-				m_blocks[x][y][z].SetType(transparencyType);
+				BLOCK_TYPE blockType = Terrain::GetBlockType(
+					worldX, worldY, worldZ, baseLevel, continentalness, erosion, peaksValley);
 
-				if (worldY <= baseLevel) {
-					// set block type
-					BLOCK_TYPE type = Terrain::GetBlockType(baseLevel, worldY);
-					m_blocks[x][y][z].SetType(type);
-
-					// cave
-					float d1 =
-						Terrain::GetDensity(worldX, worldY, worldZ, 3.0f, 256.0f, 256.0f, 256.0f);
-					float d2 =
-						Terrain::GetDensity(worldX, worldY, worldZ, 123.0f, 512.0f, 256.0f, 512.0f);
-					if (d1 * d1 + d2 * d2 <= 0.004f) {
-						m_blocks[x][y][z].SetType(transparencyType);
-					}
-				}
-
+				m_blocks[x][y][z].SetType(blockType);
 			}
 		}
 	}

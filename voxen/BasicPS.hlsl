@@ -22,7 +22,20 @@ struct psOutput
     uint coverage : SV_Target3;
 };
 
-psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
+bool useGrassColor(uint texIndex)
+{
+    return texIndex <= 2;
+}
+
+bool useOverlay(uint texIndex)
+{
+    return texIndex == 2;
+}
+
+psOutput
+    main(psInput
+    input, 
+    uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
 #ifdef USE_ALPHA_CLIP 
     if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
@@ -54,6 +67,18 @@ psOutput main(psInput input, uint coverage : SV_COVERAGE, uint sampleIndex : SV_
     output.coverage = coverage;
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
+    if (useGrassColor(input.texIndex))
+    {
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(0.5, 0.75), 0.0).rgb;
+        albedo.rgb *= grassColor;
+    }
+    if (useOverlay(input.texIndex))
+    {
+        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 16));
+        albedo = lerp(dirt, albedo, albedo.a);
+    }
+    
+    
     output.albedo = float4(albedo);
     
     return output;
@@ -74,6 +99,16 @@ float4 mainMirror(psInput input) : SV_TARGET
         discard;
     
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
+    if (useGrassColor(input.texIndex))
+    {
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(0.5, 0.75), 0.0).rgb;
+        albedo.rgb *= grassColor;
+    }
+    if (useOverlay(input.texIndex))
+    {
+        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 16));
+        albedo = lerp(dirt, albedo, albedo.a);
+    }
     
     float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
     
