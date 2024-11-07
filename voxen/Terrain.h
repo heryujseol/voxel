@@ -9,7 +9,14 @@ using namespace DirectX::SimpleMath;
 namespace Terrain {
 	static const int MAX_HEIGHT_LEVEL = 256;
 	static const int MIN_HEIGHT_LEVEL = 0;
-	static const int WATER_HEIGHT_LEVEL = 63;
+
+	static const int SNOW_LEVEL = 128;
+	static const int STONE_LEVEL = 126;
+	static const int GRASS_LEVEL = 70;
+	static const int DIRT_LEVEL = 67;
+	static const int SAND_LEVEL = 64;
+	static const int WATER_LEVEL = 63;
+	
 
 	static Vector2 Hash(uint32_t x, uint32_t y)
 	{
@@ -280,17 +287,6 @@ namespace Terrain {
 		return (pvValue - 0.5f) * 2.0f;
 	}
 
-	static float GetDensity(int x, int y, int z, float bias, float xScale, float yScale, float zScale)
-	{
-		float freq = 2.0f;
-		int octave = 4;
-
-		float dNoise =
-			PerlinFbm(x / xScale + bias, y / yScale + bias, z / zScale + bias, freq, octave);
-
-		return dNoise;
-	}
-
 	static float GetBaseLevel(float c, float e, float pv)
 	{
 		float baseLevel = 64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
@@ -298,55 +294,79 @@ namespace Terrain {
 		return max(baseLevel, 1.0f);
 	}
 
-	static bool IsCave(int x, int y, int z, float threshold) {
-		float density1 = Terrain::GetDensity(x, y, z, 3.0f, 256.0f, 256.0f, 256.0f);
-		float density2 = Terrain::GetDensity(x, y, z, 123.0f, 512.0f, 256.0f, 512.0f);
+	static float GetCaveDensity(
+		int x, int y, int z, float bias, float xScale, float yScale, float zScale)
+	{
+		float dNoise =
+			PerlinFbm(x / xScale + bias, y / yScale + bias, z / zScale + bias, 2.0f, 4);
+
+		return dNoise;
+	}
+
+	static bool IsCave(int x, int y, int z, float threshold)
+	{
+		float density1 = Terrain::GetCaveDensity(x, y, z, 3.0f, 256.0f, 256.0f, 256.0f);
+		float density2 = Terrain::GetCaveDensity(x, y, z, 123.0f, 512.0f, 256.0f, 512.0f);
 
 		return (density1 * density1 + density2 * density2 <= threshold);
 	}
 
-	static BLOCK_TYPE GetBlockType(int x, int y, int z, int baseLevel, float c, float e, float pv) {
+	static BLOCK_TYPE GetBlockType(int x, int y, int z, int baseLevel, float c, float e, float pv)
+	{
 		if (y == MIN_HEIGHT_LEVEL)
 			return B_BEDROCK;
 
-		BLOCK_TYPE type = (y <= WATER_HEIGHT_LEVEL) ? B_WATER : B_AIR;
+		BLOCK_TYPE type = (y <= WATER_LEVEL) ? B_WATER : B_AIR;
 
 		if (y <= baseLevel && !IsCave(x, y, z, 0.004f)) {
-			
-			// 광물층 -> 3d 노이즈를 이용하여 적절한 광물을 섞어주면 될 듯
-			// 3같은 하드한 값이 아닌 c, e, pv를 이용한 적절한 값이면 더 좋을 듯
-			// c [-1, 1]
-			// - 대륙성 : 일반적인 높이에 관련된 노이즈
-			// - 양수로 가면 대륙에 가까움
-			// - 음수로 가면 바다에 가까움
-			// e [0, 1]
-			// - 침식 : 높이 자체에 대한 것보다, 높이의 변화에 대한 값
-			// - 0 : 높이가 64에 쯔음에 머뭄
-			// - 1 : 뒤죽박죽
-			// pv [-1, 1]
-			int biomeLayer = (int)(4.0f * (1.0f - e) * powf(((-pv + 1.0f) * 0.5f), 0.5f));
-			if (y < baseLevel - biomeLayer) { 
+			int biomeLayer = 1 + (int)(4.0f * (1.0f - e) * powf(((-pv + 1.0f) * 0.5f), 0.5f));
+
+			if (y <= baseLevel - biomeLayer) {
 				type = B_STONE;
 			}
-			else {
-				if (y == baseLevel) {
-					type = B_GRASS;
+			else { // 구간 (baseLevel - biomeLayer, baseLevel]
+				int ry = y - int(16.0f * pv * powf((1.0f - e), 1.25f));
+				//int ry = y;
+				if (SNOW_LEVEL <= ry) {
+					type = B_SNOW;
+					if (biomeLayer > 1 && y == baseLevel - biomeLayer + 1)
+						type = B_SNOW_GRASS;
+				}
+				else if (STONE_LEVEL <= ry) {
+					type = B_STONE;
+				}
+				else if (GRASS_LEVEL <= ry) {
+					if (y == baseLevel) {
+						type = B_GRASS;
+					}
+					else {
+						type = B_DIRT;
+					}
+				}
+				else if (DIRT_LEVEL <= ry) {
+					type = B_DIRT;
+				}
+				else if (SAND_LEVEL <= ry) {
+					type = B_SAND;
 				}
 				else {
 					type = B_DIRT;
 				}
-				
 			}
 		}
 
 		return type;
 	}
 
-	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, uint8_t face) { 
-		
+	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, uint8_t face)
+	{
+
 		switch (blockType) {
 		case B_WATER:
 			return T_WATER;
+
+		case B_BEDROCK:
+			return T_BEDROCK;
 
 		case B_GRASS:
 			if (face == DIR::TOP)
@@ -355,6 +375,14 @@ namespace Terrain {
 				return T_DIRT;
 			else
 				return T_GRASS_OVERLAY;
+
+		case B_SNOW_GRASS:
+			if (face == DIR::TOP)
+				return T_SNOW_GRASS_TOP;
+			else if (face == DIR::BOTTOM)
+				return T_DIRT;
+			else
+				return T_SNOW_GRASS_SIDE;
 
 		case B_DIRT:
 			return T_DIRT;
@@ -365,10 +393,11 @@ namespace Terrain {
 		case B_SAND:
 			return T_SAND;
 
-		case B_BEDROCK:
-			return T_BEDROCK;
+		case B_SNOW:
+			return T_SNOW;
 		}
-		
+
+
 		return T_GRASS_TOP;
 	}
 }

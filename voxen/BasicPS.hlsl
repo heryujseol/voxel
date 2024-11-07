@@ -24,7 +24,7 @@ struct psOutput
 
 bool useGrassColor(uint texIndex)
 {
-    return texIndex <= 2;
+    return texIndex <= 2 || texIndex == 128;
 }
 
 bool useOverlay(uint texIndex)
@@ -74,7 +74,7 @@ psOutput
     }
     if (useOverlay(input.texIndex))
     {
-        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 16));
+        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 3));
         albedo = lerp(dirt, albedo, albedo.a);
     }
     
@@ -106,7 +106,7 @@ float4 mainMirror(psInput input) : SV_TARGET
     }
     if (useOverlay(input.texIndex))
     {
-        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 16));
+        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 3));
         albedo = lerp(dirt, albedo, albedo.a);
     }
     

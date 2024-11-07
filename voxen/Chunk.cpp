@@ -106,14 +106,19 @@ void Chunk::InitChunkData()
 void Chunk::InitInstanceInfoData()
 {
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
-		for (int y = 0; y < CHUNK_SIZE; ++y) {
-			for (int z = 0; z < CHUNK_SIZE; ++z) {
-				/*
-				// instance testing
+		for (int z = 0; z < CHUNK_SIZE; ++z) {
+			int worldX = (int)m_offsetPosition.x + x - 1;
+			int worldZ = (int)m_offsetPosition.z + z - 1;
+
+			float noise = Terrain::PerlinFbm(worldX / 8.0f, worldZ / 8.0f, 2.0f, 1);
+
+			for (int y = 0; y < CHUNK_SIZE; ++y) {
+				if (noise < 0.25f)
+					continue;
+
 				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_AIR ||
 						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_WATER) &&
-					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType()) && x % 3 == 0 &&
-					z % 3 == 0) {
+					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType())) {
 					Instance instance;
 
 					instance.SetTextureIndex(TEXTURE_INDEX::T_SHORT_GRASS);
@@ -123,7 +128,7 @@ void Chunk::InitInstanceInfoData()
 
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
-				*/
+				
 			}
 		}
 	}
