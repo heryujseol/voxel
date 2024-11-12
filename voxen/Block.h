@@ -11,7 +11,7 @@ public:
 	static inline bool IsSemiAlpha(BLOCK_TYPE type) { return (128 <= type && type < 144); } // 임시 데이터
 	static inline bool IsTransparency(BLOCK_TYPE type) { return (type <= 1); } // 임시 데이터
 
-	Block() : m_type(BLOCK_TYPE::B_AIR) {}
+	Block() : m_type(BLOCK_TYPE::BLOCK_AIR) {}
 	~Block() {}
 
 	inline BLOCK_TYPE GetType() const { return m_type; }

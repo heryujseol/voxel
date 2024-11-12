@@ -201,9 +201,9 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			RenderFogFilter();
+			//RenderFogFilter();
 			RenderSkybox();
-			RenderCloud();
+			//RenderCloud();
 		}
 	}
 

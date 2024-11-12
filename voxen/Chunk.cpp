@@ -89,13 +89,16 @@ void Chunk::InitChunkData()
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
-			float baseLevel = Terrain::GetBaseLevel(continentalness, erosion, peaksValley);
+
+			float elevation = Terrain::GetElevation(continentalness, erosion, peaksValley);
+			float temperature = Terrain::GetTemperature(worldX, worldZ);
+			float moisture = Terrain::GetHumidity(worldX, worldZ);
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
 
 				BLOCK_TYPE blockType = Terrain::GetBlockType(
-					worldX, worldY, worldZ, baseLevel, continentalness, erosion, peaksValley);
+					worldX, worldY, worldZ, elevation, temperature, moisture, erosion, peaksValley);
 
 				m_blocks[x][y][z].SetType(blockType);
 			}
@@ -116,19 +119,18 @@ void Chunk::InitInstanceInfoData()
 				if (noise < 0.25f)
 					continue;
 
-				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_AIR ||
-						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::B_WATER) &&
+				if ((m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::BLOCK_AIR ||
+						m_blocks[x + 1][y + 1][z + 1].GetType() == BLOCK_TYPE::BLOCK_WATER) &&
 					Block::IsOpaqua(m_blocks[x + 1][y][z + 1].GetType())) {
 					Instance instance;
 
-					instance.SetTextureIndex(TEXTURE_INDEX::T_SHORT_GRASS);
+					instance.SetTextureIndex(TEXTURE_INDEX::TEXTURE_SHORT_GRASS);
 
 					Vector3 pos = Vector3((float)x, (float)y, (float)z) + Vector3(0.5f);
 					instance.SetWorld(Matrix::CreateTranslation(pos));
 
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
-				
 			}
 		}
 	}
@@ -156,7 +158,7 @@ void Chunk::InitWorldVerticesData(ChunkInitMemory* memory)
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 				BLOCK_TYPE type = m_blocks[x][y][z].GetType();
 
-				if (type == BLOCK_TYPE::B_AIR)
+				if (type == BLOCK_TYPE::BLOCK_AIR)
 					continue;
 
 				if (Block::IsTransparency(type)) {
@@ -333,7 +335,7 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6]
 					int bitPos = Utils::TrailingZeros(colbit); // 1110001000 -> trailing zero : 3
 					colbit = colbit & (colbit - 1ULL);		   // 1110000000
 
-					BLOCK_TYPE type = BLOCK_TYPE::B_AIR;
+					BLOCK_TYPE type = BLOCK_TYPE::BLOCK_AIR;
 					if (face <= DIR::RIGHT) { // left right
 						type = m_blocks[bitPos + 1][h + 1][w + 1].GetType();
 					}

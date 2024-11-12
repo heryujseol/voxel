@@ -14,16 +14,16 @@ public:
 	static inline INSTANCE_TYPE GetInstanceType(uint8_t texIndex)
 	{
 		if (128 <= texIndex && texIndex < 128 + 16)
-			return INSTANCE_TYPE::I_CROSS;
+			return INSTANCE_TYPE::INSTANCE_CROSS;
 		else if (128 + 16 <= texIndex && texIndex < 128 + 16 * 2)
-			return INSTANCE_TYPE::I_FENCE;
+			return INSTANCE_TYPE::INSTANCE_FENCE;
 		else if (128 + 16 * 2 <= texIndex && texIndex < 128 + 16 * 3)
-			return INSTANCE_TYPE::I_SQUARE;
+			return INSTANCE_TYPE::INSTANCE_SQUARE;
 		else
-			return INSTANCE_TYPE::I_NONE;
+			return INSTANCE_TYPE::INSTANCE_NONE;
 	}
 
-	Instance() : m_world(Matrix()), m_texIndex(TEXTURE_INDEX::T_SHORT_GRASS) {}
+	Instance() : m_world(Matrix()), m_texIndex(TEXTURE_INDEX::TEXTURE_SHORT_GRASS) {}
 	~Instance() {}
 
 	inline const Matrix& GetWorld() const { return m_world; }

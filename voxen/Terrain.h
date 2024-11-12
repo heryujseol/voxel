@@ -9,14 +9,7 @@ using namespace DirectX::SimpleMath;
 namespace Terrain {
 	static const int MAX_HEIGHT_LEVEL = 256;
 	static const int MIN_HEIGHT_LEVEL = 0;
-
-	static const int SNOW_LEVEL = 128;
-	static const int STONE_LEVEL = 126;
-	static const int GRASS_LEVEL = 70;
-	static const int DIRT_LEVEL = 67;
-	static const int SAND_LEVEL = 64;
-	static const int WATER_LEVEL = 63;
-	
+	static const int WATER_HEIGHT_LEVEL = 63;
 
 	static Vector2 Hash(uint32_t x, uint32_t y)
 	{
@@ -173,12 +166,9 @@ namespace Terrain {
 
 	static float GetContinentalness(int x, int z)
 	{
-		float scale = 1024.0f;
+		float scale = 512.0f;
 
-		float freq = 2.0f;
-		int octave = 6;
-
-		float cNoise = PerlinFbm(x / scale, z / scale, freq, octave);
+		float cNoise = PerlinFbm(x / scale, z / scale, 2.0f, 6);
 		float cValue = SplineContinentalness(cNoise);
 
 		if (cValue <= 0.3f)
@@ -227,13 +217,10 @@ namespace Terrain {
 
 	static float GetErosion(int x, int z)
 	{
-		float scale = 1024.0f;
+		float scale = 512.0f;
 		float bias = 123.0f;
 
-		float freq = 2.0f;
-		int octave = 4;
-
-		float eNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
+		float eNoise = PerlinFbm(x / scale + bias, z / scale + bias, 2.0f, 4);
 		float eValue = SplineErosion(eNoise);
 
 		return eValue;
@@ -275,129 +262,248 @@ namespace Terrain {
 
 	static float GetPeaksValley(int x, int z)
 	{
-		float scale = 512.0f;
+		float scale = 256.0f;
 		float bias = 4.0f;
 
-		float freq = 1.5f;
-		int octave = 6;
-
-		float pvNoise = PerlinFbm(x / scale + bias, z / scale + bias, freq, octave);
+		float pvNoise = PerlinFbm(x / scale + bias, z / scale + bias, 1.5f, 6);
 		float pvValue = SplinePeaksValley(pvNoise);
 
 		return (pvValue - 0.5f) * 2.0f;
 	}
 
-	static float GetBaseLevel(float c, float e, float pv)
+	static float GetElevation(float c, float e, float pv)
 	{
-		float baseLevel = 64.0f + 64.0f * c * (1.0f - e * e) + 64.0f * pv * powf((1.0f - e), 1.25f);
+		float elevation = 64.0f + 64.0f * c * (1.0f - e) + 64.0f * pv * powf((1.0f - e), 1.25f);
 
-		return max(baseLevel, 1.0f);
+		return max(elevation, 1.0f);
 	}
 
 	static float GetCaveDensity(
 		int x, int y, int z, float bias, float xScale, float yScale, float zScale)
 	{
-		float dNoise =
-			PerlinFbm(x / xScale + bias, y / yScale + bias, z / zScale + bias, 2.0f, 4);
+		float dNoise = PerlinFbm(x / xScale + bias, y / yScale + bias, z / zScale + bias, 2.0f, 4);
 
 		return dNoise;
 	}
 
-	static bool IsCave(int x, int y, int z, float threshold)
+	static bool IsCave(int x, int y, int z)
 	{
+		float threshold = 0.004f;
+
 		float density1 = Terrain::GetCaveDensity(x, y, z, 3.0f, 256.0f, 256.0f, 256.0f);
+		if (density1 * density1 > threshold)
+			return false; // ealry return
+
 		float density2 = Terrain::GetCaveDensity(x, y, z, 123.0f, 512.0f, 256.0f, 512.0f);
+		if (density2 * density2 > threshold)
+			return false;
 
 		return (density1 * density1 + density2 * density2 <= threshold);
 	}
 
-	static BLOCK_TYPE GetBlockType(int x, int y, int z, int baseLevel, float c, float e, float pv)
+	static float GetTemperature(int x, int z)
 	{
-		if (y == MIN_HEIGHT_LEVEL)
-			return B_BEDROCK;
+		float scale = 128.0f;
+		float bias = 157.0f;
 
-		BLOCK_TYPE type = (y <= WATER_LEVEL) ? B_WATER : B_AIR;
+		float tNoise = PerlinFbm(x / scale + bias, z / scale + bias, 2.0f, 4);
+		tNoise = std::clamp(tNoise * 1.5f, -1.0f, 1.0f);
 
-		if (y <= baseLevel && !IsCave(x, y, z, 0.004f)) {
-			int biomeLayer = 1 + (int)(4.0f * (1.0f - e) * powf(((-pv + 1.0f) * 0.5f), 0.5f));
+		return (tNoise + 1.0f) * 0.5f;
+	}
 
-			if (y <= baseLevel - biomeLayer) {
-				type = B_STONE;
+	static float GetHumidity(int x, int z)
+	{
+		float scale = 128.0f;
+		float bias = 653.0f;
+
+		float hNoise = PerlinFbm(x / scale + bias, z / scale + bias, 2.0f, 4);
+		hNoise = std::clamp(hNoise * 1.5f, -1.0f, 1.0f);
+
+		return (hNoise + 1.0f) * 0.5f;
+	}
+
+	static BIOME_TYPE GetBiomeType(float elevation, float temperature, float humidity, float y)
+	{
+		if (y < 64.0f) {
+			return BIOME_OCEAN;
+		}
+		else if (y < 68.0f) {
+			return BIOME_BEACH;
+		}
+		else if (y < 76.0f) {
+			if (temperature < 0.5f) {
+				return BIOME_SWAMP;
 			}
-			else { // 구간 (baseLevel - biomeLayer, baseLevel]
-				int ry = y - int(16.0f * pv * powf((1.0f - e), 1.25f));
-				//int ry = y;
-				if (SNOW_LEVEL <= ry) {
-					type = B_SNOW;
-					if (biomeLayer > 1 && y == baseLevel - biomeLayer + 1)
-						type = B_SNOW_GRASS;
-				}
-				else if (STONE_LEVEL <= ry) {
-					type = B_STONE;
-				}
-				else if (GRASS_LEVEL <= ry) {
-					if (y == baseLevel) {
-						type = B_GRASS;
-					}
-					else {
-						type = B_DIRT;
-					}
-				}
-				else if (DIRT_LEVEL <= ry) {
-					type = B_DIRT;
-				}
-				else if (SAND_LEVEL <= ry) {
-					type = B_SAND;
+			else {
+				return BIOME_SAVANNA;
+			}
+		}
+		else {
+			if (temperature < 0.3f) {
+				if (humidity < 0.3f) {
+					return BIOME_SNOWY_TUNDRA;
 				}
 				else {
-					type = B_DIRT;
+					return BIOME_SNOWY_TAIGA;
+				}
+			}
+			else if (temperature < 0.7f) {
+				if (humidity < 0.3f) {
+					return BIOME_MOUNTAINS;
+				}
+				else {
+					return BIOME_PLAINS;
+				}
+			}
+			else {
+				if (humidity < 0.3f) {
+					return BIOME_DESERT;
+				}
+				else if (humidity < 0.6f) {
+					return BIOME_TAIGA;
+				}
+				else {
+					return BIOME_JUNGLE;
 				}
 			}
 		}
+	}
 
-		return type;
+	static BLOCK_TYPE GetBlockTypeByBiome(BIOME_TYPE biomeType)
+	{ 
+		switch (biomeType) {
+		case BIOME_OCEAN:
+			return BLOCK_A; // 예시로 해저에 특정한 블록을 설정
+
+		case BIOME_BEACH:
+			return BLOCK_B;
+
+		case BIOME_SWAMP:
+			return BLOCK_C;
+
+		case BIOME_SAVANNA:
+			return BLOCK_D;
+
+		case BIOME_SNOWY_TUNDRA:
+			return BLOCK_E;
+
+		case BIOME_SNOWY_TAIGA:
+			return BLOCK_F;
+
+		case BIOME_MOUNTAINS:
+			return BLOCK_G;
+
+		case BIOME_PLAINS:
+			return BLOCK_H;
+
+		case BIOME_DESERT:
+			return BLOCK_I;
+
+		case BIOME_TAIGA:
+			return BLOCK_J;
+
+		case BIOME_JUNGLE:
+			return BLOCK_K;
+
+		default:
+			return BLOCK_BEDROCK; // 예외적으로 기본 블록을 설정
+		}
+	}
+
+	static BLOCK_TYPE GetBlockType(int x, int y, int z, float elevation, float temperature,
+		float moisture, float erosion, float peaksValley)
+	{
+		if (y == MIN_HEIGHT_LEVEL)
+			return BLOCK_BEDROCK;
+
+		BLOCK_TYPE blockType = (y <= WATER_HEIGHT_LEVEL) ? BLOCK_WATER : BLOCK_AIR;
+
+		if (y <= elevation && !IsCave(x, y, z)) {
+			int biomeLayer =
+				1 + (int)(4.0f * (1.0f - erosion) * powf(((-peaksValley + 1.0f) * 0.5f), 0.5f));
+
+			if (y <= elevation - biomeLayer) {
+				blockType = BLOCK_STONE;
+				// 3D noise density
+			}
+			else {
+				// Biome Block
+				float ry = y - (int)(32.0f * peaksValley * powf((1.0f - erosion), 1.25f));
+
+				BIOME_TYPE biomeType = GetBiomeType(elevation, temperature, moisture, ry);
+				blockType = GetBlockTypeByBiome(biomeType);
+			}
+		}
+
+		return blockType;
 	}
 
 	static TEXTURE_INDEX GetBlockTextureIndex(BLOCK_TYPE blockType, uint8_t face)
 	{
 
 		switch (blockType) {
-		case B_WATER:
-			return T_WATER;
 
-		case B_BEDROCK:
-			return T_BEDROCK;
+		case BLOCK_WATER:
+			return TEXTURE_WATER;
 
-		case B_GRASS:
+		case BLOCK_BEDROCK:
+			return TEXTURE_BEDROCK;
+
+		case BLOCK_GRASS:
 			if (face == DIR::TOP)
-				return T_GRASS_TOP;
+				return TEXTURE_GRASS_TOP;
 			else if (face == DIR::BOTTOM)
-				return T_DIRT;
+				return TEXTURE_DIRT;
 			else
-				return T_GRASS_OVERLAY;
+				return TEXTURE_GRASS_OVERLAY;
 
-		case B_SNOW_GRASS:
+		case BLOCK_SNOW_GRASS:
 			if (face == DIR::TOP)
-				return T_SNOW_GRASS_TOP;
+				return TEXTURE_SNOW_GRASS_TOP;
 			else if (face == DIR::BOTTOM)
-				return T_DIRT;
+				return TEXTURE_DIRT;
 			else
-				return T_SNOW_GRASS_SIDE;
+				return TEXTURE_SNOW_GRASS_SIDE;
 
-		case B_DIRT:
-			return T_DIRT;
+		case BLOCK_DIRT:
+			return TEXTURE_DIRT;
 
-		case B_STONE:
-			return T_STONE;
+		case BLOCK_STONE:
+			return TEXTURE_STONE;
 
-		case B_SAND:
-			return T_SAND;
+		case BLOCK_SAND:
+			return TEXTURE_SAND;
 
-		case B_SNOW:
-			return T_SNOW;
+		case BLOCK_SNOW:
+			return TEXTURE_SNOW;
+
+		// TESTING
+		case BLOCK_A:
+			return TEXTURE_A;
+		case BLOCK_B:
+			return TEXTURE_B;
+		case BLOCK_C:
+			return TEXTURE_C;
+		case BLOCK_D:
+			return TEXTURE_D;
+		case BLOCK_E:
+			return TEXTURE_E;
+		case BLOCK_F:
+			return TEXTURE_F;
+		case BLOCK_G:
+			return TEXTURE_G;
+		case BLOCK_H:
+			return TEXTURE_H;
+		case BLOCK_I:
+			return TEXTURE_I;
+		case BLOCK_J:
+			return TEXTURE_J;
+		case BLOCK_K:
+			return TEXTURE_K;
+
+		default:
+			return TEXTURE_STONE;
 		}
-
-
-		return T_GRASS_TOP;
 	}
 }
