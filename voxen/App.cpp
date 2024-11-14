@@ -114,10 +114,9 @@ void App::Run()
 			float c =
 				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z);
 			float e = Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z);
-			float pv =
-				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z);
+			float pv = Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z);
 
-			ImGui::Text("C : %.2f | E : %.2f | PV : %.2f", c, e, pv); 
+			ImGui::Text("C : %.2f | E : %.2f | PV : %.2f", c, e, pv);
 
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
@@ -153,13 +152,47 @@ void App::Update(float dt)
 		m_light.Update(m_dateTime, m_camera);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 	}
+
+	if (m_keyToggle['M']) {
+		// update GPU buffer
+		static std::vector<uint8_t> data(Terrain::WORLD_MAP_SIZE * Terrain::WORLD_MAP_SIZE * 4);
+		for (int y = 0; y < Terrain::WORLD_MAP_SIZE; ++y) {
+			for (int x = 0; x < Terrain::WORLD_MAP_SIZE; ++x) {
+				if (y < 1) {
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 0] = 255;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 1] = 0;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 2] = 0;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 3] = 255;
+				}
+				else {
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 0] =
+						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 1] =
+						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 2] =
+						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
+					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 3] = 255;
+				}
+			}
+		}
+
+		D3D11_MAPPED_SUBRESOURCE ms;
+		HRESULT ret = Graphics::context->Map(
+			Graphics::worldMapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		if (FAILED(ret)) {
+			std::cout << "map failed" << std::endl;
+		}
+		uint8_t* pData = (uint8_t*)ms.pData;
+		for (int h = 0; h < Terrain::WORLD_MAP_SIZE; ++h) {
+			memcpy(&pData[h * (ms.RowPitch / (sizeof(uint8_t)))],
+				&data[h * Terrain::WORLD_MAP_SIZE * 4], 360 * sizeof(uint8_t) * 4);
+		}
+		Graphics::context->Unmap(Graphics::worldMapBuffer.Get(), NULL);
+	}
 }
 
 void App::Render()
 {
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-
 	std::vector<ID3D11Buffer*> ppConstantBuffers;
 	ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
@@ -171,24 +204,24 @@ void App::Render()
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
-	
+
 	// 0. Shadow Map
 	{
-        RenderShadowMap();
-    }
+		RenderShadowMap();
+	}
 
-    // 1. Deferred Render Pass
-    {
-        FillGBuffer();
-        MaskMSAAEdge();
-        RenderSSAO();
-        ShadingBasic();
-    }
+	// 1. Deferred Render Pass
+	{
+		FillGBuffer();
+		MaskMSAAEdge();
+		RenderSSAO();
+		ShadingBasic();
+	}
 
-    // 2. No-MSAA to MSAA Texture
-    {
-        ConvertToMSAA();
-    }
+	// 2. No-MSAA to MSAA Texture
+	{
+		ConvertToMSAA();
+	}
 
 	// 3. Forward Render Pass MSAA
 	{
@@ -201,14 +234,14 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			//RenderFogFilter();
+			// RenderFogFilter();
 			RenderSkybox();
-			//RenderCloud();
+			// RenderCloud();
 		}
 	}
 
-    // 4. Post Effect
-    {
+	// 4. Post Effect
+	{
 		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
 			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
@@ -217,7 +250,14 @@ void App::Render()
 		}
 
 		m_postEffect.Bloom();
-    }
+	}
+
+	// 5. World Map
+	{
+		if (m_keyToggle['M']) {
+			RenderWorldMap();
+		}
+	}
 }
 
 bool App::InitWindow()
@@ -412,7 +452,7 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	
+
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
@@ -492,9 +532,6 @@ void App::RenderWaterFilter()
 
 void App::RenderMirrorWorld()
 {
-	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
-
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorDepthRTV.Get(), clearColor);
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
@@ -547,7 +584,6 @@ void App::RenderMirrorWorld()
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(7, 1, m_camera.m_constantBuffer.GetAddressOf());
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }
 
@@ -572,7 +608,7 @@ void App::RenderWaterPlane()
 
 void App::RenderShadowMap()
 {
-	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
+	Graphics::context->RSSetViewports(Light::CASCADE_NUM, Graphics::shadowViewPorts);
 
 	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::shadowDSV.Get());
 
@@ -585,7 +621,7 @@ void App::RenderShadowMap()
 		Graphics::SetPipelineStates(Graphics::basicShadowPSO);
 		ChunkManager::GetInstance()->RenderBasicShadowMap();
 	}
-	
+
 	// Instance Shadow Map
 	{
 		Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
@@ -593,6 +629,18 @@ void App::RenderShadowMap()
 		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);
 		ChunkManager::GetInstance()->RenderInstance();
 	}
+
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+}
+
+void App::RenderWorldMap()
+{
+	Graphics::context->RSSetViewports(1, &Graphics::worldMapViewport);
+
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::worldMapSRV.GetAddressOf());
+
+	Graphics::SetPipelineStates(Graphics::samplingPSO);
+	m_postEffect.Render();
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }

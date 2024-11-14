@@ -318,7 +318,30 @@ namespace DXUtils {
 		return true;
 	}
 
-	static ComPtr<ID3D11Texture2D> CreateStagingTexture(UINT width, UINT height,
+	static bool CreateDynamicTexture(ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height,
+		bool isMSAA, DXGI_FORMAT format, UINT bindFlags, UINT mipLevels = 1, UINT arraySize = 1,
+		UINT miscFlags = 0)
+	{
+		D3D11_TEXTURE2D_DESC desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = width;
+		desc.Height = height;
+		desc.MipLevels = mipLevels;
+		desc.ArraySize = arraySize;
+		desc.Format = format;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		desc.BindFlags = bindFlags;
+
+		HRESULT ret = Graphics::device->CreateTexture2D(&desc, NULL, buffer.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
+		return true;
+	}
+
+	static bool CreateStagingTexture(ComPtr<ID3D11Texture2D>& stagingTexture, UINT width, UINT height,
 		const std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
 		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = sizeof(uint8_t) * 4)
 	{
@@ -333,10 +356,9 @@ namespace DXUtils {
 		desc.Usage = D3D11_USAGE_STAGING;
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
 
-		ComPtr<ID3D11Texture2D> stagingTexture;
 		HRESULT ret = Graphics::device->CreateTexture2D(&desc, NULL, stagingTexture.GetAddressOf());
 		if (FAILED(ret))
-			return nullptr;
+			return false;
 
 		D3D11_MAPPED_SUBRESOURCE ms;
 		Graphics::context->Map(stagingTexture.Get(), NULL, D3D11_MAP_WRITE, NULL, &ms);
@@ -347,7 +369,7 @@ namespace DXUtils {
 		}
 		Graphics::context->Unmap(stagingTexture.Get(), NULL);
 
-		return stagingTexture;
+		return true;
 	}
 
 	static bool CreateTextureArrayFromAtlasFile(ComPtr<ID3D11Texture2D>& texture,
@@ -415,11 +437,12 @@ namespace DXUtils {
 		for (UINT i = 0; i < desc.ArraySize; ++i) {
 			auto& image = imageArray[i];
 
-			ComPtr<ID3D11Texture2D> tempStagingTexture =
-				CreateStagingTexture(tileSizeW, tileSizeH, image, 1, 1, format, pixelSize);
-			if (!tempStagingTexture)
+			ComPtr<ID3D11Texture2D> tempStagingTexture = nullptr;
+			if (!CreateStagingTexture(
+				tempStagingTexture, tileSizeW, tileSizeH, image, 1, 1, format, pixelSize)) {
 				return false;
-
+			}
+				
 			UINT subresourceIndex =
 				D3D11CalcSubresource(0, i, desc.MipLevels); // MipSlice + ArraySlice * MipLevels
 
@@ -455,8 +478,10 @@ namespace DXUtils {
 		std::vector<uint8_t> image;
 		Utils::ReadImage(filename, image, width, height);
 
-		ComPtr<ID3D11Texture2D> stagingTexture =
-			CreateStagingTexture(width, height, image, 0, 1, format, pixelSize);
+		ComPtr<ID3D11Texture2D> stagingTexture = nullptr;
+
+		if (!CreateStagingTexture(stagingTexture, width, height, image, 0, 1, format, pixelSize))
+			return false;
 
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));

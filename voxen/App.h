@@ -67,6 +67,8 @@ private:
 
 	void RenderShadowMap();
 
+	void RenderWorldMap();
+
 	HWND m_hwnd;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	AppConstantData m_constantData;

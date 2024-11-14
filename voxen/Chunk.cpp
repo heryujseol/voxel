@@ -92,13 +92,13 @@ void Chunk::InitChunkData()
 
 			float elevation = Terrain::GetElevation(continentalness, erosion, peaksValley);
 			float temperature = Terrain::GetTemperature(worldX, worldZ);
-			float moisture = Terrain::GetHumidity(worldX, worldZ);
+			float humidity = Terrain::GetHumidity(worldX, worldZ);
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int worldY = (int)m_offsetPosition.y + y - 1;
 
 				BLOCK_TYPE blockType = Terrain::GetBlockType(
-					worldX, worldY, worldZ, elevation, temperature, moisture, erosion, peaksValley);
+					worldX, worldY, worldZ, elevation, temperature, humidity, continentalness, erosion, peaksValley);
 
 				m_blocks[x][y][z].SetType(blockType);
 			}

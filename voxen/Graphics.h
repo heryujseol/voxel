@@ -4,6 +4,7 @@
 #include <wrl.h>
 
 #include "GraphicsPSO.h"
+#include "Light.h"
 
 using namespace Microsoft::WRL;
 
@@ -176,11 +177,17 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
+
+	extern ComPtr<ID3D11Texture2D> worldMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> worldMapSRV;
 	
+
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
 	extern D3D11_VIEWPORT bloomViewport;
+	extern D3D11_VIEWPORT worldMapViewport;
+	extern D3D11_VIEWPORT shadowViewPorts[Light::CASCADE_NUM];
 
 
 	// device, context, swapChain
@@ -203,6 +210,7 @@ namespace Graphics {
 	extern bool InitSamplerStates();
 	extern bool InitDepthStencilStates();
 	extern bool InitBlendStates();
+	extern void InitViewports();
 
 
 	// PSO

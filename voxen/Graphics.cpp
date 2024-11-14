@@ -59,7 +59,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> combineBloomPS;
 	ComPtr<ID3D11PixelShader> instanceShadowPS;
 
-
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
@@ -156,7 +155,7 @@ namespace Graphics {
 	ComPtr<ID3D11ShaderResourceView> shadowSRV;
 
 
-	// Shadow Resource Buffer
+	// Shader Resource Buffer
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
@@ -175,11 +174,16 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
+	ComPtr<ID3D11Texture2D> worldMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> worldMapSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
 	D3D11_VIEWPORT mirrorWorldViewPort;
 	D3D11_VIEWPORT bloomViewport;
+	D3D11_VIEWPORT worldMapViewport;
+	D3D11_VIEWPORT shadowViewPorts[Light::CASCADE_NUM];
 
 
 	// device, context, swapChain
@@ -202,6 +206,7 @@ namespace Graphics {
 	bool InitSamplerStates();
 	bool InitDepthStencilStates();
 	bool InitBlendStates();
+	void InitViewports();
 
 
 	// PSO
@@ -707,6 +712,21 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
+	// world map ui
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateDynamicTexture(worldMapBuffer, Terrain::WORLD_MAP_SIZE,
+			Terrain::WORLD_MAP_SIZE, false, format, bindFlag)) {
+		std::cout << "failed create world map ui buffer" << std::endl;
+		return false;
+	}
+	ret =
+		device->CreateShaderResourceView(worldMapBuffer.Get(), nullptr, worldMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create world map srv" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -732,6 +752,8 @@ bool Graphics::InitGraphicsState()
 
 	if (!InitBlendStates())
 		return false;
+
+	InitViewports();
 
 	return true;
 }
@@ -1005,7 +1027,7 @@ bool Graphics::InitPixelShaders()
 
 	// instanceShadowPS
 	if (!DXUtils::CreatePixelShader(L"InstanceShadowPS.hlsl", instanceShadowPS)) {
-		std::cout << "failed create instance shadowe ps" << std::endl;
+		std::cout << "failed create instance shadow ps" << std::endl;
 		return false;
 	}
 
@@ -1245,6 +1267,28 @@ bool Graphics::InitBlendStates()
 	}
 
 	return true;
+}
+
+void Graphics::InitViewports()
+{
+	// basicViewport;
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, App::WIDTH, App::HEIGHT);
+
+	// mirrorWorldViewPort
+	DXUtils::UpdateViewport(
+		Graphics::mirrorWorldViewPort, 0, 0, App::MIRROR_WIDTH, App::MIRROR_HEIGHT);
+
+	// worldMapViewport
+	UINT worldMapTopX = (App::WIDTH / 2) - (Terrain::WORLD_MAP_UI_SIZE / 2);
+	UINT worldMapTopY = (App::HEIGHT / 2) - (Terrain::WORLD_MAP_UI_SIZE / 2);
+	DXUtils::UpdateViewport(Graphics::worldMapViewport, worldMapTopX, worldMapTopY,
+		Terrain::WORLD_MAP_UI_SIZE, Terrain::WORLD_MAP_UI_SIZE);
+
+	// shadowViewports
+	for (int i = 0; i < Light::CASCADE_NUM; ++i) {
+		DXUtils::UpdateViewport(shadowViewPorts[i], Light::CASCADE_SIZE * i, 0, Light::CASCADE_SIZE,
+			Light::CASCADE_SIZE);
+	}
 }
 
 void Graphics::InitGraphicsPSO()
