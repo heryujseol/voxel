@@ -13,6 +13,8 @@ namespace Utils {
 	static const float PI = 3.14159265f;
 	static const float invPI = 1.0f / PI;
 
+	static int Signf(float x) { return (x > 0) - (x < 0); }
+
 	static float Sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
 
 	static Vector3 SRGB2Linear(Vector3 color)

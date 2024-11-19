@@ -2,6 +2,7 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 #include "Terrain.h"
+#include "SimpleQuadRenderer.h"
 
 #include <iostream>
 #include <imgui.h>
@@ -25,7 +26,7 @@ App::App()
 	  m_keyPressed{
 		  false,
 	  },
-	  m_keyToggle{
+	  m_keyToggled{
 		  false,
 	  }
 {
@@ -57,7 +58,7 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		m_keyPressed[UINT(wParam)] = true;
-		m_keyToggle[UINT(wParam)] = !m_keyToggle[UINT(wParam)];
+		m_keyToggled[UINT(wParam)] = !m_keyToggled[UINT(wParam)];
 		break;
 
 	case WM_KEYUP:
@@ -138,8 +139,10 @@ void App::Update(float dt)
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater());
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
+	
+	m_worldMap.Update(m_camera.GetPosition());
 
-	if (m_keyToggle['F']) {
+	if (m_keyToggled['F']) {
 		acc += DAY_CYCLE_TIME_SPEED * dt;
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
 
@@ -151,43 +154,6 @@ void App::Update(float dt)
 		m_skybox.Update(m_dateTime);
 		m_light.Update(m_dateTime, m_camera);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
-	}
-
-	if (m_keyToggle['M']) {
-		// update GPU buffer
-		static std::vector<uint8_t> data(Terrain::WORLD_MAP_SIZE * Terrain::WORLD_MAP_SIZE * 4);
-		for (int y = 0; y < Terrain::WORLD_MAP_SIZE; ++y) {
-			for (int x = 0; x < Terrain::WORLD_MAP_SIZE; ++x) {
-				if (y < 1) {
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 0] = 255;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 1] = 0;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 2] = 0;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 3] = 255;
-				}
-				else {
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 0] =
-						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 1] =
-						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 2] =
-						(float)(x + y) / (Terrain::WORLD_MAP_SIZE * 2) * 255;
-					data[4 * (x + y * Terrain::WORLD_MAP_SIZE) + 3] = 255;
-				}
-			}
-		}
-
-		D3D11_MAPPED_SUBRESOURCE ms;
-		HRESULT ret = Graphics::context->Map(
-			Graphics::worldMapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-		if (FAILED(ret)) {
-			std::cout << "map failed" << std::endl;
-		}
-		uint8_t* pData = (uint8_t*)ms.pData;
-		for (int h = 0; h < Terrain::WORLD_MAP_SIZE; ++h) {
-			memcpy(&pData[h * (ms.RowPitch / (sizeof(uint8_t)))],
-				&data[h * Terrain::WORLD_MAP_SIZE * 4], 360 * sizeof(uint8_t) * 4);
-		}
-		Graphics::context->Unmap(Graphics::worldMapBuffer.Get(), NULL);
 	}
 }
 
@@ -234,9 +200,9 @@ void App::Render()
 		else {
 			RenderMirrorWorld();
 			RenderWaterPlane();
-			// RenderFogFilter();
+			RenderFogFilter();
 			RenderSkybox();
-			// RenderCloud();
+			RenderCloud();
 		}
 	}
 
@@ -254,9 +220,8 @@ void App::Render()
 
 	// 5. World Map
 	{
-		if (m_keyToggle['M']) {
-			RenderWorldMap();
-		}
+		if (m_keyToggled['M'])
+			m_worldMap.Render();
 	}
 }
 
@@ -350,6 +315,9 @@ bool App::InitScene()
 	if (!m_postEffect.Initialize())
 		return false;
 
+	if (!m_worldMap.Initialize(m_camera.GetPosition()))
+		return false;
+
 	m_constantData.appWidth = WIDTH;
 	m_constantData.appHeight = HEIGHT;
 	m_constantData.mirrorWidth = MIRROR_WIDTH;
@@ -403,7 +371,7 @@ void App::MaskMSAAEdge()
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::edgeMaskingPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderSSAO()
@@ -428,10 +396,10 @@ void App::RenderSSAO()
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 		Graphics::SetPipelineStates(Graphics::ssaoPSO);
-		m_postEffect.Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 
 		Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
-		m_postEffect.Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 	}
 
 	// blur
@@ -457,10 +425,10 @@ void App::ShadingBasic()
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 
 	ID3D11ShaderResourceView* nullSRV[] = {
 		0,
@@ -475,7 +443,7 @@ void App::ConvertToMSAA()
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::samplingPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderSkybox()
@@ -512,7 +480,7 @@ void App::RenderFogFilter()
 		0, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderWaterFilter()
@@ -527,7 +495,7 @@ void App::RenderWaterFilter()
 		0, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderMirrorWorld()
@@ -629,18 +597,6 @@ void App::RenderShadowMap()
 		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);
 		ChunkManager::GetInstance()->RenderInstance();
 	}
-
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-}
-
-void App::RenderWorldMap()
-{
-	Graphics::context->RSSetViewports(1, &Graphics::worldMapViewport);
-
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::worldMapSRV.GetAddressOf());
-
-	Graphics::SetPipelineStates(Graphics::samplingPSO);
-	m_postEffect.Render();
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }

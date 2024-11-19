@@ -62,6 +62,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> bloomUpPS;
 	extern ComPtr<ID3D11PixelShader> combineBloomPS;
 	extern ComPtr<ID3D11PixelShader> instanceShadowPS;
+	extern ComPtr<ID3D11PixelShader> worldMapPS;
 
 
 	// Rasterizer State
@@ -180,6 +181,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> worldMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> worldMapSRV;
+
+	extern ComPtr<ID3D11Texture2D> worldPointBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> worldPointSRV;
 	
 
 	// Viewport
@@ -242,4 +246,5 @@ namespace Graphics {
 	extern GraphicsPSO bloomDownPSO;
 	extern GraphicsPSO bloomUpPSO;
 	extern GraphicsPSO combineBloomPSO;
+	extern GraphicsPSO worldMapPSO;
 }

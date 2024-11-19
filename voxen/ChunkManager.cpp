@@ -16,6 +16,7 @@ ChunkManager* ChunkManager::GetInstance()
 	if (chunkManager == nullptr) {
 		chunkManager = new ChunkManager();
 	}
+
 	return chunkManager;
 }
 
@@ -64,8 +65,6 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 		return false;
 
 	UpdateChunkList(cameraChunkPos);
-
-	
 
 	return true;
 }

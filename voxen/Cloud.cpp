@@ -56,15 +56,15 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 		newMapCenterPosition.x += CLOUD_SCALE_SIZE;
 		m_mapDataOffset.x += CLOUD_SCALE_SIZE;
 	}
-	else if (diffPos.z > CLOUD_SCALE_SIZE) {
+	if (diffPos.z > CLOUD_SCALE_SIZE) {
 		newMapCenterPosition.z += CLOUD_SCALE_SIZE;
 		m_mapDataOffset.z += CLOUD_SCALE_SIZE;
 	}
-	else if (diffPos.x < 0.0f) {
+	if (diffPos.x < 0.0f) {
 		newMapCenterPosition.x -= CLOUD_SCALE_SIZE;
 		m_mapDataOffset.x -= CLOUD_SCALE_SIZE;
 	}
-	else if (diffPos.z < 0.0f) {
+	if (diffPos.z < 0.0f) {
 		newMapCenterPosition.z -= CLOUD_SCALE_SIZE;
 		m_mapDataOffset.z -= CLOUD_SCALE_SIZE;
 	}

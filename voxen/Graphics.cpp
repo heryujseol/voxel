@@ -58,6 +58,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> bloomUpPS;
 	ComPtr<ID3D11PixelShader> combineBloomPS;
 	ComPtr<ID3D11PixelShader> instanceShadowPS;
+	ComPtr<ID3D11PixelShader> worldMapPS;
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
@@ -177,6 +178,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> worldMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> worldMapSRV;
 
+	ComPtr<ID3D11Texture2D> worldPointBuffer;
+	ComPtr<ID3D11ShaderResourceView> worldPointSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -238,6 +242,7 @@ namespace Graphics {
 	GraphicsPSO bloomDownPSO;
 	GraphicsPSO bloomUpPSO;
 	GraphicsPSO combineBloomPSO;
+	GraphicsPSO worldMapPSO;
 }
 
 
@@ -715,8 +720,8 @@ bool Graphics::InitShaderResourceBuffers()
 	// world map ui
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateDynamicTexture(worldMapBuffer, Terrain::WORLD_MAP_SIZE,
-			Terrain::WORLD_MAP_SIZE, false, format, bindFlag)) {
+	if (!DXUtils::CreateDynamicTexture(worldMapBuffer, WorldMap::WORLD_MAP_BUFFER_SIZE,
+			WorldMap::WORLD_MAP_BUFFER_SIZE, false, format, bindFlag)) {
 		std::cout << "failed create world map ui buffer" << std::endl;
 		return false;
 	}
@@ -724,6 +729,13 @@ bool Graphics::InitShaderResourceBuffers()
 		device->CreateShaderResourceView(worldMapBuffer.Get(), nullptr, worldMapSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create world map srv" << std::endl;
+		return false;
+	}
+
+	// world point
+	if (!DXUtils::CreateTexture2DFromFile(
+			worldPointBuffer, worldPointSRV, "../assets/point.png", format)) {
+		std::cout << "failed create texture from world point" << std::endl;
 		return false;
 	}
 
@@ -1031,6 +1043,12 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
+	// worldMapPS
+	if (!DXUtils::CreatePixelShader(L"WorldMapPS.hlsl", worldMapPS)) {
+		std::cout << "failed create world map ps" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -1279,10 +1297,10 @@ void Graphics::InitViewports()
 		Graphics::mirrorWorldViewPort, 0, 0, App::MIRROR_WIDTH, App::MIRROR_HEIGHT);
 
 	// worldMapViewport
-	UINT worldMapTopX = (App::WIDTH / 2) - (Terrain::WORLD_MAP_UI_SIZE / 2);
-	UINT worldMapTopY = (App::HEIGHT / 2) - (Terrain::WORLD_MAP_UI_SIZE / 2);
+	UINT worldMapTopX = (App::WIDTH / 2) - (WorldMap::WORLD_MAP_UI_SIZE / 2);
+	UINT worldMapTopY = (App::HEIGHT / 2) - (WorldMap::WORLD_MAP_UI_SIZE / 2);
 	DXUtils::UpdateViewport(Graphics::worldMapViewport, worldMapTopX, worldMapTopY,
-		Terrain::WORLD_MAP_UI_SIZE, Terrain::WORLD_MAP_UI_SIZE);
+		WorldMap::WORLD_MAP_UI_SIZE, WorldMap::WORLD_MAP_UI_SIZE);
 
 	// shadowViewports
 	for (int i = 0; i < Light::CASCADE_NUM; ++i) {
@@ -1437,6 +1455,10 @@ void Graphics::InitGraphicsPSO()
 	// combineBloomPSO
 	combineBloomPSO = samplingPSO;
 	combineBloomPSO.pixelShader = combineBloomPS;
+
+	// worldMapPSO
+	worldMapPSO = samplingPSO;
+	worldMapPSO.pixelShader = worldMapPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

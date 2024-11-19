@@ -1,35 +1,24 @@
+#include "App.h"
 #include "PostEffect.h"
 #include "Graphics.h"
 #include "DXUtils.h"
-#include "MeshGenerator.h"
-#include "App.h"
 #include "Utils.h"
+#include "SimpleQuadRenderer.h"
 
 #include <algorithm>
 #include <random>
 
 PostEffect::PostEffect()
 	: m_fogFilterConstantBuffer(nullptr), m_waterFilterConstantBuffer(nullptr),
-	  m_ssaoConstantBuffer(nullptr), m_stride(sizeof(SamplingVertex)), m_offset(0),
-	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_waterAdaptationTime(0.0f),
-	  m_waterMaxDuration(2.5f){};
+	  m_ssaoConstantBuffer(nullptr), m_ssaoNoiseConstantBuffer(nullptr),
+	  m_waterAdaptationTime(0.0f), m_waterMaxDuration(2.5f)
+{
+}
 
-PostEffect::~PostEffect(){};
+PostEffect::~PostEffect() {}
 
 bool PostEffect::Initialize()
 {
-	MeshGenerator::CreateSampleSquareMesh(m_vertices, m_indices);
-
-	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
-		std::cout << "failed create fog vertex buffer" << std::endl;
-		return false;
-	}
-
-	if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
-		std::cout << "failed create fog index buffer" << std::endl;
-		return false;
-	}
-
 	m_fogFilterConstantData.fogDistMin = 0.0f;
 	m_fogFilterConstantData.fogDistMax = 0.0f;
 	m_fogFilterConstantData.fogStrength = 1.0f;
@@ -118,15 +107,6 @@ void PostEffect::Update(float dt, bool isUnderWater)
 	DXUtils::UpdateConstantBuffer(m_waterFilterConstantBuffer, m_waterFilterConstantData);
 }
 
-void PostEffect::Render()
-{
-	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	Graphics::context->IASetVertexBuffers(
-		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-
-	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
 void PostEffect::Blur(int count, ComPtr<ID3D11ShaderResourceView>& src,
 	ComPtr<ID3D11RenderTargetView>& dst, ComPtr<ID3D11ShaderResourceView> blurSRV[2],
 	ComPtr<ID3D11RenderTargetView> blurRTV[2], ComPtr<ID3D11PixelShader> blurPS[2])
@@ -140,7 +120,7 @@ void PostEffect::Blur(int count, ComPtr<ID3D11ShaderResourceView>& src,
 			Graphics::context->PSSetShaderResources(0, 1, blurSRV[1].GetAddressOf());
 
 		Graphics::context->PSSetShader(blurPS[0].Get(), nullptr, 0);
-		Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 
 		if (i == count - 1)
 			Graphics::context->OMSetRenderTargets(1, dst.GetAddressOf(), nullptr);
@@ -150,7 +130,7 @@ void PostEffect::Blur(int count, ComPtr<ID3D11ShaderResourceView>& src,
 		Graphics::context->PSSetShaderResources(0, 1, blurSRV[0].GetAddressOf());
 
 		Graphics::context->PSSetShader(blurPS[1].Get(), nullptr, 0);
-		Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 	}
 }
 
@@ -174,7 +154,7 @@ void PostEffect::Bloom()
 			else
 				Graphics::context->PSSetShaderResources(0, 1, Graphics::bloomSRV[i].GetAddressOf());
 
-			Render();
+			SimpleQuadRenderer::GetInstance()->Render();
 		}
 	}
 
@@ -192,7 +172,7 @@ void PostEffect::Bloom()
 
 			Graphics::context->PSSetShaderResources(0, 1, Graphics::bloomSRV[i + 1].GetAddressOf());
 
-			Render();
+			SimpleQuadRenderer::GetInstance()->Render();
 		}
 	}
 
@@ -205,6 +185,6 @@ void PostEffect::Bloom()
 		Graphics::context->PSSetShaderResources(0, 2, ppSRVs);
 
 		Graphics::SetPipelineStates(Graphics::combineBloomPSO);
-		Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 	}
 }

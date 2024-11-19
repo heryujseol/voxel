@@ -7,10 +7,6 @@
 using namespace DirectX::SimpleMath;
 
 namespace Terrain {
-	static const UINT WORLD_MAP_SIZE = 256;
-	static const UINT WORLD_MAP_UI_SIZE = 720;
-	static const std::vector<uint8_t> worldMapData(
-		WORLD_MAP_SIZE* WORLD_MAP_SIZE * sizeof(uint8_t) * 4, 0);
 
 	static const int MAX_HEIGHT_LEVEL = 256;
 	static const int MIN_HEIGHT_LEVEL = 0;
@@ -438,7 +434,7 @@ namespace Terrain {
 	{ 
 		switch (biomeType) {
 		case BIOME_OCEAN:
-			return BLOCK_A; // 예시로 해저에 특정한 블록을 설정
+			return BLOCK_A; 
 
 		case BIOME_BEACH:
 			return BLOCK_B;
@@ -471,7 +467,7 @@ namespace Terrain {
 			return BLOCK_K;
 
 		default:
-			return BLOCK_BEDROCK; // 예외적으로 기본 블록을 설정
+			return BLOCK_BEDROCK;
 		}
 	}
 
@@ -483,7 +479,7 @@ namespace Terrain {
 
 		BLOCK_TYPE blockType = (y <= WATER_HEIGHT_LEVEL) ? BLOCK_WATER : BLOCK_AIR;
 
-		if (y <= elevation && !IsCave(x, y, z)) {
+		if (y < elevation && !IsCave(x, y, z)) {
 			int biomeLayer =
 				1 + (int)(4.0f * (1.0f - erosion) * powf(((-peaksValley + 1.0f) * 0.5f), 0.5f));
 
