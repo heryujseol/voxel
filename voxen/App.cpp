@@ -500,6 +500,8 @@ void App::RenderWaterFilter()
 
 void App::RenderMirrorWorld()
 {
+	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
+
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorDepthRTV.Get(), clearColor);
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
