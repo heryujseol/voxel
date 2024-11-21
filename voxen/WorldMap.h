@@ -28,10 +28,12 @@ public:
 
 private:
 	std::vector<uint8_t> m_mapData;
+
 	Vector3 m_offsetPosition;
 
 	bool UpdateBuffer();
 	void ShiftMapData(int dx, int dz);
-	Vector3 GenerateWorldMapColor(int x, int z);
 	void UpdateMapData(int dx, int dz);
+	Vector3 GenerateWorldMapColor(int x, int z);
+	Vector3 GetMapColorByBiome(BIOME_TYPE biomeType);
 };

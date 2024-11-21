@@ -33,7 +33,7 @@ bool WorldMap::Initialize(Vector3 cameraPosition)
 	return true;
 }
 
-void WorldMap::Update(Vector3 cameraPosition) 
+void WorldMap::Update(Vector3 cameraPosition)
 {
 	Vector3 newOffsetPosition = Utils::CalcOffsetPos(cameraPosition, WORLD_SIZE_PER_PIXEL);
 	Vector3 offsetDiff = m_offsetPosition - newOffsetPosition;
@@ -117,12 +117,12 @@ void WorldMap::ShiftMapData(int dx, int dz)
 }
 
 void WorldMap::UpdateMapData(int dx, int dz)
-{ 
+{
 	if (dx != 0) {
 		int x = (dx < 0) ? WORLD_MAP_BUFFER_SIZE - 1 : 0;
 		for (int z = 0; z < WORLD_MAP_BUFFER_SIZE; ++z) {
 			Vector3 color = GenerateWorldMapColor(x, z);
-			
+
 			int xz = (x + z * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
 			m_mapData[xz + 0] = (UINT)color.x;
 			m_mapData[xz + 1] = (UINT)color.y;
@@ -153,13 +153,62 @@ Vector3 WorldMap::GenerateWorldMapColor(int x, int z)
 	float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 	float erosion = Terrain::GetErosion(worldX, worldZ);
 	float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
-	
-	float elevation = Terrain::GetElevation(continentalness, erosion, peaksValley);
 
-	if (elevation <= Terrain::WATER_HEIGHT_LEVEL) {
-		return Vector3(0, 0, elevation);
+	float elevation = Terrain::GetElevation(continentalness, erosion, peaksValley);
+	float temperature = Terrain::GetTemperature(worldX, worldZ);
+	float humidity = Terrain::GetHumidity(worldX, worldZ);
+
+	if (elevation < 64.0f) {
+		return Vector3(91, 89, 255);
 	}
-	else {
-		return Vector3(elevation, elevation, elevation);
+
+	float r = 32.0f * peaksValley * powf((1.0f - erosion), 1.25f);
+	BIOME_TYPE biomeType = Terrain::GetBiomeType(elevation - r, temperature, humidity);
+
+	return GetMapColorByBiome(biomeType);
+}
+
+Vector3 WorldMap::GetMapColorByBiome(BIOME_TYPE biomeType)
+{ 
+	switch (biomeType) {
+
+	case BIOME_OCEAN:
+		return Vector3(0, 0, 255);
+
+	case BIOME_BEACH:
+		return Vector3(255, 223, 128);
+
+	case BIOME_TUNDRA:
+		return Vector3(235, 235, 235);
+
+	case BIOME_TAIGA:
+		return Vector3(59, 94, 84);
+
+	case BIOME_PLAINS:
+		return Vector3(128, 160, 91);
+
+	case BIOME_SWAMP:
+		return Vector3(20, 249, 183);
+
+	case BIOME_FOREST:
+		return Vector3(59, 123, 78);
+
+	case BIOME_SHRUBLAND:
+		return Vector3(163, 184, 99);
+
+	case BIOME_DESERT:
+		return Vector3(214, 131, 31);
+
+	case BIOME_RAINFOREST:
+		return Vector3(93, 130, 21);
+
+	case BIOME_SEASONFOREST:
+		return Vector3(98, 161, 117);
+
+	case BIOME_SAVANA:
+		return Vector3(182, 173, 97);
+
+	default:
+		return Vector3(255, 0, 0);
 	}
 }

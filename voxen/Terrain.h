@@ -172,10 +172,10 @@ namespace Terrain {
 		float cNoise = PerlinFbm(x / scale, z / scale, 2.0f, 6);
 		float cValue = SplineContinentalness(cNoise);
 
-		if (cValue <= 0.3f)
-			return cValue / 0.3f - 1.0f; // [-1.0f, 0.0f]
+		if (cValue <= 0.1f)
+			return cValue / 0.1f - 1.0f; // [-1.0f, 0.0f]
 		else
-			return (cValue - 0.3f) / 0.7f; // [0.0f, 1.0f]
+			return (cValue - 0.1f) / 0.9f; // [0.0f, 1.0f]
 	}
 
 	static float SplineErosion(float value)
@@ -304,7 +304,7 @@ namespace Terrain {
 
 	static float GetTemperature(int x, int z)
 	{
-		float scale = 1024.0f;
+		float scale = 2048.0f;
 		float seed = 157.0f;
 
 		float tNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
@@ -315,7 +315,7 @@ namespace Terrain {
 
 	static float GetHumidity(int x, int z)
 	{
-		float scale = 1024.0f;
+		float scale = 2048.0f;
 		float seed = 653.0f;
 
 		float hNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
@@ -324,110 +324,58 @@ namespace Terrain {
 		return (hNoise + 1.0f) * 0.5f;
 	}
 
-	static BIOME_TYPE GetBiomeType(float elevation, float temperature, float humidity,
-		float continentalness, float erosion, float peaksValleys)
+	static BIOME_TYPE GetBiomeType(float elevation, float temperature, float humidity)
 	{
+		// OCEAN과 BEACH 바이옴 결정
 		if (elevation < 64.0f) {
-			// 해수면 이하일 경우, BIOME_OCEAN으로 설정하여 바다를 형성합니다.
-			return BIOME_OCEAN;
+			return BIOME_OCEAN; // 해수면 이하: 바다
 		}
-		else if (elevation >= 64.0f && elevation < 68.0f) {
-			// 해수면 바로 위: BIOME_BEACH로 설정하여 해안가를 형성합니다.
-			return BIOME_BEACH;
+		else if (elevation < 68.0f) {
+			return BIOME_BEACH; // 해안선: 해변
 		}
-		else if (elevation >= 68.0f && elevation < 96.0f) {
-			// 낮은 대륙 지형
-			if (continentalness < -0.5f) {
-				return BIOME_OCEAN; // 대륙성이 매우 낮으면 바다에 가까운 지역으로 설정
-			}
-			else if (temperature < 0.3f) {
-				if (humidity > 0.6f) {
-					return BIOME_SNOWY_TAIGA; // 추운 기후와 높은 습도로 인해 눈 덮인 타이가 형성
-				}
-				else {
-					return BIOME_SNOWY_TUNDRA; // 낮은 습도의 추운 기후에서 툰드라 형성
-				}
-			}
-			else if (temperature < 0.6f) {
-				if (humidity > 0.7f && erosion > 0.5f) {
-					return BIOME_SWAMP; // 습도가 높고 중간 온도에서 침식된 지형은 습지로 설정
-				}
-				else if (humidity > 0.4f) {
-					return BIOME_PLAINS; // 중간 습도와 중간 온도에서 숲 형성
-				}
-				else {
-					return BIOME_PLAINS; // 건조한 평지로 설정
-				}
+
+		// 추운 지역
+		if (temperature < 0.25f) {
+			return BIOME_TUNDRA; // 추운 건조 지역
+		}
+
+		if (humidity < 0.25f) {
+			if (temperature < 0.625f) {
+				return BIOME_PLAINS;
 			}
 			else {
-				if (humidity < 0.3f) {
-					return BIOME_DESERT; // 고온 건조 지형은 사막
-				}
-				else if (humidity > 0.6f) {
-					return BIOME_JUNGLE; // 고온 습윤 지형은 정글
-				}
-				else {
-					return BIOME_SAVANNA; // 중간 습도의 고온 지역은 사바나로 설정
-				}
+				return BIOME_DESERT;
 			}
 		}
-		else if (elevation >= 96.0f && elevation < 128.0f) {
-			// 중간 높이의 대륙 지형
-			if (continentalness > 0.5f && peaksValleys > 0.3f) {
-				return BIOME_MOUNTAINS; // 대륙성이 높고 봉우리 값이 높으면 산악 지형
-			}
-			else if (temperature < 0.3f) {
-				if (humidity > 0.5f) {
-					return BIOME_SNOWY_TAIGA; // 추운 고습 지형은 눈 덮인 타이가 형성
-				}
-				else {
-					return BIOME_SNOWY_TUNDRA; // 습도가 낮은 추운 지형은 툰드라
-				}
-			}
-			else if (temperature < 0.7f) {
-				if (humidity > 0.7f) {
-					return BIOME_PLAINS; // 중간 온도와 높은 습도의 지형은 다크 포레스트
-				}
-				else if (humidity > 0.4f) {
-					return BIOME_PLAINS; // 숲으로 설정
-				}
-				else {
-					return BIOME_PLAINS; // 평야로 설정
-				}
-			}
-			else {
-				if (humidity > 0.7f) {
-					return BIOME_JUNGLE; // 고온 다습 지역은 정글
-				}
-				else if (humidity > 0.4f) {
-					return BIOME_SAVANNA; // 사바나 형성
-				}
-				else {
-					return BIOME_DESERT; // 건조한 사막
-				}
-			}
+
+		if (temperature < 0.375f) {
+			return BIOME_TAIGA;
 		}
-		else if (elevation >= 128.0f && elevation < 160.0f) {
-			// 높은 지형
-			if (peaksValleys > 0.5f) {
-				return BIOME_MOUNTAINS; // 높은 봉우리의 산악 지형
+
+		if (temperature < 0.6875f) {
+			if (humidity < 0.5f) {
+				return BIOME_SHRUBLAND;
 			}
-			else if (temperature < 0.3f) {
-				return BIOME_SNOWY_TUNDRA; // 눈 덮인 고지대
-			}
+			else if (humidity < 0.75f) {
+				return BIOME_FOREST;
+			} 
 			else {
-				return BIOME_MOUNTAINS; // 기본 산악 지형
+				return BIOME_SWAMP;
 			}
 		}
 		else {
-			// 매우 높은 고산 지대
-			if (temperature < 0.2f || peaksValleys > 0.8f) {
-				return BIOME_SNOWY_TUNDRA; // 극한의 고산지대
+			if (humidity < 0.5f) {
+				return BIOME_SAVANA;
+			}
+			else if (humidity < 0.75f) {
+				return BIOME_SEASONFOREST;
 			}
 			else {
-				return BIOME_MOUNTAINS; // 일반 고산지대
+				return BIOME_RAINFOREST;
 			}
 		}
+
+		return BIOME_PLAINS;
 	}
 
 	static BLOCK_TYPE GetBlockTypeByBiome(BIOME_TYPE biomeType)
@@ -439,32 +387,35 @@ namespace Terrain {
 		case BIOME_BEACH:
 			return BLOCK_B;
 
-		case BIOME_SWAMP:
+		case BIOME_TUNDRA:
 			return BLOCK_C;
 
-		case BIOME_SAVANNA:
+		case BIOME_TAIGA:
 			return BLOCK_D;
 
-		case BIOME_SNOWY_TUNDRA:
+		case BIOME_PLAINS:
 			return BLOCK_E;
 
-		case BIOME_SNOWY_TAIGA:
+		case BIOME_SWAMP:
 			return BLOCK_F;
 
-		case BIOME_MOUNTAINS:
+		case BIOME_FOREST:
 			return BLOCK_G;
 
-		case BIOME_PLAINS:
+		case BIOME_SHRUBLAND:
 			return BLOCK_H;
 
 		case BIOME_DESERT:
 			return BLOCK_I;
 
-		case BIOME_TAIGA:
+		case BIOME_RAINFOREST:
 			return BLOCK_J;
 
-		case BIOME_JUNGLE:
+		case BIOME_SEASONFOREST:
 			return BLOCK_K;
+
+		case BIOME_SAVANA:
+			return BLOCK_L;
 
 		default:
 			return BLOCK_BEDROCK;
@@ -489,10 +440,9 @@ namespace Terrain {
 			}
 			else {
 				// Biome Block
-				int ry = y - (int)(32.0f * peaksValley * powf((1.0f - erosion), 1.25f));
+				float r = 32.0f * peaksValley * powf((1.0f - erosion), 1.25f);
 
-				BIOME_TYPE biomeType = GetBiomeType(
-					elevation, temperature, humidity, continentalness, erosion, peaksValley);
+				BIOME_TYPE biomeType = GetBiomeType(elevation - r, temperature, humidity);
 				blockType = GetBlockTypeByBiome(biomeType);
 			}
 		}
@@ -561,6 +511,8 @@ namespace Terrain {
 			return TEXTURE_J;
 		case BLOCK_K:
 			return TEXTURE_K;
+		case BLOCK_L:
+			return TEXTURE_L;
 
 		default:
 			return TEXTURE_STONE;
