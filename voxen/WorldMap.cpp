@@ -165,7 +165,9 @@ Vector3 WorldMap::GenerateWorldMapColor(int x, int z)
 	float r = 32.0f * peaksValley * powf((1.0f - erosion), 1.25f);
 	BIOME_TYPE biomeType = Terrain::GetBiomeType(elevation - r, temperature, humidity);
 
-	return GetMapColorByBiome(biomeType);
+	Vector3 color = GetMapColorByBiome(biomeType);
+
+	return color;
 }
 
 Vector3 WorldMap::GetMapColorByBiome(BIOME_TYPE biomeType)

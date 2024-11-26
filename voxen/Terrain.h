@@ -279,23 +279,16 @@ namespace Terrain {
 		return max(elevation, 1.0f);
 	}
 
-	static float GetCaveDensity(
-		int x, int y, int z, float seed, float xScale, float yScale, float zScale)
-	{
-		float dNoise = PerlinFbm(x / xScale + seed, y / yScale + seed, z / zScale + seed, 2.0f, 4);
-
-		return dNoise;
-	}
-
 	static bool IsCave(int x, int y, int z)
 	{
 		float threshold = 0.004f;
 
-		float density1 = Terrain::GetCaveDensity(x, y, z, 3.0f, 256.0f, 256.0f, 256.0f);
+		float density1 = PerlinFbm(x / 256.0f, y / 256.0f, z / 256.0f, 2.0f, 4);
 		if (density1 * density1 > threshold)
 			return false; // ealry return
 
-		float density2 = Terrain::GetCaveDensity(x, y, z, 123.0f, 512.0f, 256.0f, 512.0f);
+		float density2 =
+			PerlinFbm(x / 512.0f + 123.0f, y / 256.0f + 123.0f, z / 512.0f + 123.0f, 2.0f, 4);
 		if (density2 * density2 > threshold)
 			return false;
 
@@ -322,6 +315,29 @@ namespace Terrain {
 		hNoise = std::clamp(hNoise * 1.5f, -1.0f, 1.0f);
 
 		return (hNoise + 1.0f) * 0.5f;
+	}
+
+	static float GetDistribution(int x, int z)
+	{
+		float scale = 24.0f;
+		float seed = 773.0f;
+
+		float dNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 4);
+		dNoise = std::clamp(dNoise * 1.5f, -1.0f, 1.0f);
+
+		return (dNoise + 1.0f) * 0.5f;
+	}
+
+	static float GetDensity(int x, int y, int z)
+	{
+		float scale = 16.0f;
+		float seed = 331.0f;
+
+		float dNoise = PerlinFbm(x / scale + seed, y / scale + seed, z / scale + seed, 2.0f, 2);
+
+		dNoise = std::clamp(dNoise * 1.5f, -1.0f, 1.0f);
+
+		return (dNoise + 1.0f) * 0.5f;
 	}
 
 	static BIOME_TYPE GetBiomeType(float elevation, float temperature, float humidity)
@@ -358,7 +374,7 @@ namespace Terrain {
 			}
 			else if (humidity < 0.75f) {
 				return BIOME_FOREST;
-			} 
+			}
 			else {
 				return BIOME_SWAMP;
 			}
@@ -378,14 +394,75 @@ namespace Terrain {
 		return BIOME_PLAINS;
 	}
 
-	static BLOCK_TYPE GetBlockTypeByBiome(BIOME_TYPE biomeType)
-	{ 
+	static BLOCK_TYPE GetBlockTypeForInner(int x, int y, int z, float distribution)
+	{
+		BLOCK_TYPE blockType;
+		
+		float density = GetDensity(x, y, z);
+		if (density <= 0.3f) {
+			blockType = BLOCK_DIRT;
+		}
+		else if (density <= 0.75f) {
+			blockType = BLOCK_STONE;
+		}
+		else if (density <= 0.88f) {
+			blockType = BLOCK_ANDESITE;
+		}
+		else {
+			if (distribution <= 0.4f) {
+				blockType = BLOCK_COAL_ORE;
+			}
+			else if (distribution <= 0.6f) {
+				blockType = BLOCK_COPPER_ORE;
+			}
+			else if (distribution <= 0.7f) {
+				blockType = BLOCK_IRON_ORE;
+			}
+			else if (distribution <= 0.8f) {
+				blockType = BLOCK_REDSTONE_ORE;
+			}
+			else if (distribution <= 0.9f) {
+				blockType = BLOCK_GOLD_ORE;
+			}
+			else {
+				blockType = BLOCK_DIAMOND_ORE;
+			}
+		}
+
+		return blockType;
+	}
+
+	static BLOCK_TYPE GetBlockTypeForBiome(BIOME_TYPE biomeType, int y, float h, float d)
+	{
+		int baseHeight = (int)floor(h);
+
 		switch (biomeType) {
+
 		case BIOME_OCEAN:
-			return BLOCK_A; 
+			if (d <= 0.42f) {
+				return BLOCK_SAND;
+			}
+			else if (d <= 0.66f) {
+				return BLOCK_DIRT;
+			}
+			else if (d <= 0.83f) {
+				return BLOCK_GRAVEL;
+			}
+			else {
+				return BLOCK_CLAY;
+			}
+			break;
 
 		case BIOME_BEACH:
-			return BLOCK_B;
+			if (d <= 0.66f) {
+				return BLOCK_SAND;
+			}
+			else if (d <= 0.83f) {
+				return BLOCK_SANDSTONE;
+			}
+			else {
+				return BLOCK_GRAVEL;
+			}
 
 		case BIOME_TUNDRA:
 			return BLOCK_C;
@@ -423,27 +500,26 @@ namespace Terrain {
 	}
 
 	static BLOCK_TYPE GetBlockType(int x, int y, int z, float elevation, float temperature,
-		float humidity, float continentalness, float erosion, float peaksValley)
+		float humidity, float continentalness, float erosion, float peaksValley, float distribution)
 	{
 		if (y == MIN_HEIGHT_LEVEL)
 			return BLOCK_BEDROCK;
 
 		BLOCK_TYPE blockType = (y <= WATER_HEIGHT_LEVEL) ? BLOCK_WATER : BLOCK_AIR;
 
-		if (y < elevation && !IsCave(x, y, z)) {
+		if (y <= elevation && !IsCave(x, y, z)) {
 			int biomeLayer =
-				1 + (int)(4.0f * (1.0f - erosion) * powf(((-peaksValley + 1.0f) * 0.5f), 0.5f));
+				1 + (int)(6.0f * (1.0f - erosion) * powf(((-peaksValley + 1.0f) * 0.5f), 0.5f));
 
 			if (y <= elevation - biomeLayer) {
-				blockType = BLOCK_STONE;
-				// 3D noise density
+				blockType = GetBlockTypeForInner(x, y, z, distribution);
 			}
 			else {
 				// Biome Block
 				float r = 32.0f * peaksValley * powf((1.0f - erosion), 1.25f);
 
 				BIOME_TYPE biomeType = GetBiomeType(elevation - r, temperature, humidity);
-				blockType = GetBlockTypeByBiome(biomeType);
+				blockType = GetBlockTypeForBiome(biomeType, y, elevation, distribution);
 			}
 		}
 
@@ -487,6 +563,41 @@ namespace Terrain {
 
 		case BLOCK_SNOW:
 			return TEXTURE_SNOW;
+
+		case BLOCK_GRAVEL:
+			return TEXTURE_GRAVEL;
+
+		case BLOCK_SANDSTONE:
+			if (face == DIR::TOP)
+				return TEXTURE_SANDSTONE_TOP;
+			else if (face == DIR::BOTTOM)
+				return TEXTURE_SANDSTONE_BOTTOM;
+			else
+				return TEXTURE_SANDSTONE_SIDE;
+
+		case BLOCK_CLAY:
+			return TEXTURE_CLAY;
+
+		case BLOCK_ANDESITE:
+			return TEXTURE_ANDESITE;
+
+		case BLOCK_COAL_ORE:
+			return TEXTURE_COAL_ORE;
+
+		case BLOCK_GOLD_ORE:
+			return TEXTURE_GOLD_ORE;
+
+		case BLOCK_REDSTONE_ORE:
+			return TEXTURE_REDSTONE_ORE;
+
+		case BLOCK_DIAMOND_ORE:
+			return TEXTURE_DIAMOND_ORE;
+
+		case BLOCK_COPPER_ORE:
+			return TEXTURE_COPPER_ORE;
+
+		case BLOCK_IRON_ORE:
+			return TEXTURE_IRON_ORE;
 
 		// TESTING
 		case BLOCK_A:
