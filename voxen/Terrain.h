@@ -4,9 +4,69 @@
 
 #include <directxtk/SimpleMath.h>
 
+#include <map>
+#include <queue>
+#include <mutex>
+
 using namespace DirectX::SimpleMath;
 
 namespace Terrain {
+
+	namespace {
+
+		class NoiseCache {
+		private:
+			static const size_t CAPACITY = 1024 * 1024;
+
+			std::map<std::pair<int, int>, float> m_map;
+			std::queue<std::pair<int, int>> m_queue;
+			std::mutex m_mutex;
+
+		public:
+			NoiseCache() {}
+			~NoiseCache() {}
+
+			bool IsIn(const std::pair<int, int>& key) { 
+				std::lock_guard<std::mutex> lock(m_mutex);
+
+				return (m_map.find(key) != m_map.end()); 
+			}
+
+			void Set(const std::pair<int, int>& key, float value)
+			{
+				if (IsIn(key))
+					return;
+
+				std::lock_guard<std::mutex> lock(m_mutex);
+				if (m_map.size() >= CAPACITY) {
+					std::pair<int, int> oldKey = m_queue.front();
+					m_queue.pop();
+
+					m_map.erase(oldKey);
+				}
+
+				m_queue.push(key);
+				m_map[key] = value;
+			}
+
+			float Get(const std::pair<int, int>& key)
+			{
+				if (!IsIn(key)) {
+					return FLT_MIN;
+				}
+
+				std::lock_guard<std::mutex> lock(m_mutex);
+				return m_map[key];
+			}
+		};
+
+		NoiseCache m_cacheContinentalness;
+		NoiseCache m_cacheErosion;
+		NoiseCache m_cachePeaksValley;
+		NoiseCache m_cacheTemperature;
+		NoiseCache m_cacheHumidity;
+		NoiseCache m_cacheDistribution;
+	}
 
 	static const int MAX_HEIGHT_LEVEL = 256;
 	static const int MIN_HEIGHT_LEVEL = 0;
@@ -92,14 +152,14 @@ namespace Terrain {
 		float n5 = Hash(x1, y0, z1).Dot(p - Vector3((float)x1, (float)y0, (float)z1));
 		float n6 = Hash(x1, y1, z0).Dot(p - Vector3((float)x1, (float)y1, (float)z0));
 		float n7 = Hash(x1, y1, z1).Dot(p - Vector3((float)x1, (float)y1, (float)z1));
-
+		
 		float i0 = Utils::CubicLerp(n0, n1, p.z - z0);
 		float i1 = Utils::CubicLerp(n2, n3, p.z - z0);
 		float i2 = Utils::CubicLerp(i0, i1, p.y - y0);
 		float i3 = Utils::CubicLerp(n4, n5, p.z - z0);
 		float i4 = Utils::CubicLerp(n6, n7, p.z - z0);
 		float i5 = Utils::CubicLerp(i3, i4, p.y - y0);
-
+		
 		return Utils::CubicLerp(i2, i5, p.x - x0);
 	}
 
@@ -165,19 +225,6 @@ namespace Terrain {
 		}
 	}
 
-	static float GetContinentalness(int x, int z)
-	{
-		float scale = 1024.0f;
-
-		float cNoise = PerlinFbm(x / scale, z / scale, 2.0f, 6);
-		float cValue = SplineContinentalness(cNoise);
-
-		if (cValue <= 0.1f)
-			return cValue / 0.1f - 1.0f; // [-1.0f, 0.0f]
-		else
-			return (cValue - 0.1f) / 0.9f; // [0.0f, 1.0f]
-	}
-
 	static float SplineErosion(float value)
 	{
 		value = std::clamp(value * 1.5f, -1.0f, 1.0f);
@@ -216,17 +263,6 @@ namespace Terrain {
 		}
 	}
 
-	static float GetErosion(int x, int z)
-	{
-		float scale = 1024.0f;
-		float seed = 123.0f;
-
-		float eNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
-		float eValue = SplineErosion(eNoise);
-
-		return eValue;
-	}
-
 	static float SplinePeaksValley(float value)
 	{
 		value = std::clamp(abs(value * 1.5f), 0.0f, 1.0f);
@@ -261,15 +297,58 @@ namespace Terrain {
 		}
 	}
 
+	static float GetContinentalness(int x, int z)
+	{
+		if (m_cacheContinentalness.IsIn(std::make_pair(x, z))) {
+			return m_cacheContinentalness.Get(std::make_pair(x, z));
+		}
+
+		float scale = 1024.0f;
+		
+		float cNoise = PerlinFbm(x / scale, z / scale, 2.0f, 6);
+		float cValue = SplineContinentalness(cNoise);
+
+		if (cValue <= 0.1f)
+			cValue = cValue / 0.1f - 1.0f; // [-1.0f, 0.0f]
+		else
+			cValue = (cValue - 0.1f) / 0.9f; // [0.0f, 1.0f]
+		
+		m_cacheContinentalness.Set(std::make_pair(x, z), cValue);
+		return cValue;
+	}
+
+	static float GetErosion(int x, int z)
+	{
+		if (m_cacheErosion.IsIn(std::make_pair(x, z))) {
+			return m_cacheErosion.Get(std::make_pair(x, z));
+		}
+
+		float scale = 1024.0f;
+		float seed = 123.0f;
+
+		float eNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
+		float eValue = SplineErosion(eNoise);
+
+		m_cacheErosion.Set(std::make_pair(x, z), eValue);
+		return eValue;
+	}
+
 	static float GetPeaksValley(int x, int z)
 	{
+		if (m_cachePeaksValley.IsIn(std::make_pair(x, z))) {
+			return m_cachePeaksValley.Get(std::make_pair(x, z));
+		}
+
 		float scale = 512.0f;
 		float seed = 4.0f;
 
 		float pvNoise = PerlinFbm(x / scale + seed, z / scale + seed, 1.5f, 6);
 		float pvValue = SplinePeaksValley(pvNoise);
 
-		return (pvValue - 0.5f) * 2.0f;
+		pvValue = (pvValue - 0.5f) * 2.0f;
+
+		m_cachePeaksValley.Set(std::make_pair(x, z), pvValue);
+		return pvValue;
 	}
 
 	static float GetElevation(float c, float e, float pv)
@@ -297,35 +376,56 @@ namespace Terrain {
 
 	static float GetTemperature(int x, int z)
 	{
+		if (m_cacheTemperature.IsIn(std::make_pair(x, z))) {
+			return m_cacheTemperature.Get(std::make_pair(x, z));
+		}
+
 		float scale = 2048.0f;
 		float seed = 157.0f;
 
 		float tNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
 		tNoise = std::clamp(tNoise * 1.5f, -1.0f, 1.0f);
 
-		return (tNoise + 1.0f) * 0.5f;
+		float tValue = (tNoise + 1.0f) * 0.5f;
+
+		m_cacheTemperature.Set(std::make_pair(x, z), tValue);
+		return tValue;
 	}
 
 	static float GetHumidity(int x, int z)
 	{
-		float scale = 2048.0f;
+		if (m_cacheHumidity.IsIn(std::make_pair(x, z))) {
+			return m_cacheHumidity.Get(std::make_pair(x, z));
+		}
+
+		float scale = 2024.0f;
 		float seed = 653.0f;
 
 		float hNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
 		hNoise = std::clamp(hNoise * 1.5f, -1.0f, 1.0f);
 
-		return (hNoise + 1.0f) * 0.5f;
+		float hValue = (hNoise + 1.0f) * 0.5f;
+
+		m_cacheHumidity.Set(std::make_pair(x, z), hValue);
+		return hValue;
 	}
 
 	static float GetDistribution(int x, int z)
 	{
+		if (m_cacheDistribution.IsIn(std::make_pair(x, z))) {
+			return m_cacheDistribution.Get(std::make_pair(x, z));
+		}
+
 		float scale = 24.0f;
 		float seed = 773.0f;
 
 		float dNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 4);
 		dNoise = std::clamp(dNoise * 1.5f, -1.0f, 1.0f);
 
-		return (dNoise + 1.0f) * 0.5f;
+		float dValue = (dNoise + 1.0f) * 0.5f;
+
+		m_cacheDistribution.Set(std::make_pair(x, z), dValue);
+		return dValue;
 	}
 
 	static float GetDensity(int x, int y, int z)
@@ -342,20 +442,18 @@ namespace Terrain {
 
 	static BIOME_TYPE GetBiomeType(float elevation, float temperature, float humidity)
 	{
-		// OCEAN과 BEACH 바이옴 결정
 		if (elevation < 64.0f) {
-			return BIOME_OCEAN; // 해수면 이하: 바다
+			return BIOME_OCEAN;
 		}
 		else if (elevation < 68.0f) {
-			return BIOME_BEACH; // 해안선: 해변
+			return BIOME_BEACH;
 		}
 
-		// 추운 지역
 		if (temperature < 0.25f) {
-			return BIOME_TUNDRA; // 추운 건조 지역
+			return BIOME_TUNDRA;
 		}
 
-		if (humidity < 0.25f) {
+		if (humidity < 0.33f) {
 			if (temperature < 0.625f) {
 				return BIOME_PLAINS;
 			}
@@ -364,15 +462,18 @@ namespace Terrain {
 			}
 		}
 
+		if (temperature < 0.3125f) {
+			return BIOME_SNOWY_TAIGA;
+		}
 		if (temperature < 0.375f) {
 			return BIOME_TAIGA;
 		}
 
 		if (temperature < 0.6875f) {
-			if (humidity < 0.5f) {
+			if (humidity < 0.55f) {
 				return BIOME_SHRUBLAND;
 			}
-			else if (humidity < 0.75f) {
+			else if (humidity < 0.77f) {
 				return BIOME_FOREST;
 			}
 			else {
@@ -380,10 +481,10 @@ namespace Terrain {
 			}
 		}
 		else {
-			if (humidity < 0.5f) {
+			if (humidity < 0.55f) {
 				return BIOME_SAVANA;
 			}
-			else if (humidity < 0.75f) {
+			else if (humidity < 0.77f) {
 				return BIOME_SEASONFOREST;
 			}
 			else {
@@ -397,7 +498,7 @@ namespace Terrain {
 	static BLOCK_TYPE GetBlockTypeForInner(int x, int y, int z, float distribution)
 	{
 		BLOCK_TYPE blockType;
-		
+
 		float density = GetDensity(x, y, z);
 		if (density <= 0.3f) {
 			blockType = BLOCK_DIRT;
@@ -454,45 +555,111 @@ namespace Terrain {
 			break;
 
 		case BIOME_BEACH:
+			if (d <= 0.6f) {
+				return BLOCK_SAND;
+			}
+			else if (d <= 0.75f) {
+				return BLOCK_SANDSTONE;
+			}
+			else if (d <= 0.90f) {
+				return BLOCK_GRAVEL;
+			}
+			else {
+				return BLOCK_CLAY;
+			}
+
+		case BIOME_DESERT:
 			if (d <= 0.66f) {
 				return BLOCK_SAND;
 			}
-			else if (d <= 0.83f) {
+			else {
 				return BLOCK_SANDSTONE;
 			}
+
+		case BIOME_TAIGA:
+			if (y == baseHeight) { // top
+				if (d <= 0.5f) {
+					return BLOCK_GRASS;
+				}
+				else if (d <= 0.85f) {
+					return BLOCK_PODZOL;
+				}
+				else {
+					return BLOCK_COARSE;
+				}
+			}
 			else {
-				return BLOCK_GRAVEL;
+				if (d <= 0.6f) {
+					return BLOCK_COARSE;
+				}
+				else {
+					return BLOCK_DIRT;
+				}
+			}
+
+		case BIOME_SNOWY_TAIGA:
+			if (y == baseHeight) { // top
+				if (d <= 0.6f) {
+					return BLOCK_SNOW_GRASS;
+				}
+				else if (d <= 0.88f) {
+					return BLOCK_GRASS;
+				}
+				else {
+					return BLOCK_COARSE;
+				}
+			}
+			else {
+				if (d <= 0.6f) {
+					return BLOCK_COARSE;
+				}
+				else {
+					return BLOCK_DIRT;
+				}
 			}
 
 		case BIOME_TUNDRA:
-			return BLOCK_C;
-
-		case BIOME_TAIGA:
-			return BLOCK_D;
-
-		case BIOME_PLAINS:
-			return BLOCK_E;
+			if (y == baseHeight) {
+				if (d <= 0.2f) {
+					return BLOCK_ICE;
+				}
+				else if (d <= 0.6f) {
+					return BLOCK_SNOW;
+				}
+				else {
+					return BLOCK_SNOW_GRASS;
+				}
+			}
+			else if (y == baseHeight - 1) {
+				if (d <= 0.6f) {
+					return BLOCK_SNOW_GRASS;
+				}
+				else {
+					return BLOCK_DIRT;
+				}
+			}
+			else {
+				if (d <= 0.5f) {
+					return BLOCK_COARSE;
+				}
+				else {
+					return BLOCK_DIRT;
+				}
+			}
 
 		case BIOME_SWAMP:
-			return BLOCK_F;
-
+		case BIOME_PLAINS:
 		case BIOME_FOREST:
-			return BLOCK_G;
-
 		case BIOME_SHRUBLAND:
-			return BLOCK_H;
-
-		case BIOME_DESERT:
-			return BLOCK_I;
-
 		case BIOME_RAINFOREST:
-			return BLOCK_J;
-
 		case BIOME_SEASONFOREST:
-			return BLOCK_K;
-
 		case BIOME_SAVANA:
-			return BLOCK_L;
+			if (y == baseHeight) {
+				return BLOCK_GRASS;
+			}
+			else {
+				return BLOCK_DIRT;
+			}
 
 		default:
 			return BLOCK_BEDROCK;
@@ -505,7 +672,11 @@ namespace Terrain {
 		if (y == MIN_HEIGHT_LEVEL)
 			return BLOCK_BEDROCK;
 
-		BLOCK_TYPE blockType = (y <= WATER_HEIGHT_LEVEL) ? BLOCK_WATER : BLOCK_AIR;
+		BLOCK_TYPE blockType = BLOCK_AIR;
+		if (y <= WATER_HEIGHT_LEVEL)
+			blockType = BLOCK_WATER;
+		if (y == WATER_HEIGHT_LEVEL && temperature < 0.25f)
+			blockType = BLOCK_ICE;
 
 		if (y <= elevation && !IsCave(x, y, z)) {
 			int biomeLayer =
@@ -598,6 +769,20 @@ namespace Terrain {
 
 		case BLOCK_IRON_ORE:
 			return TEXTURE_IRON_ORE;
+
+		case BLOCK_COARSE:
+			return TEXTURE_COARSE;
+
+		case BLOCK_PODZOL:
+			if (face == DIR::TOP)
+				return TEXTURE_PODZOL_TOP;
+			else if (face == DIR::BOTTOM)
+				return TEXTURE_DIRT;
+			else
+				return TEXTURE_PODZOL_SIDE;
+
+		case BLOCK_ICE:
+			return TEXTURE_ICE;
 
 		// TESTING
 		case BLOCK_A:

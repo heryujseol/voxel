@@ -202,10 +202,12 @@ void App::Update(float dt)
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater());
+
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
 	
 	m_worldMap.Update(m_camera.GetPosition());
 
+	
 	if (m_keyToggled['F']) {
 		acc += DAY_CYCLE_TIME_SPEED * dt;
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
@@ -361,7 +363,7 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(0.0f, 128.0f, -196.0f)))
+	if (!m_camera.Initialize(Vector3(-500.0f, 128.0f, 2800.0f)))
 		return false;
 
 	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))

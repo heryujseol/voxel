@@ -5,10 +5,16 @@ Texture2D grassColorMap : register(t1);
 Texture2D foliageColorMap : register(t2);
 Texture2D mirrorDepthTex : register(t3);
 
+/*
+1. 똑같은 함수 그대로 GPU에 복사해서 사용한다
+2. 클램핑된 좌표로 계산된 t, h 데이터를 들고온다 ***
+ - structure buffer
+3. 고급 기법 뭔가 있겠지
+*/
 struct psInput
 {
     float4 posProj : SV_POSITION;
-    sample float3 posWorld : POSITION;
+    sample float3 posWorld : POSITION; // x = 32.1 z = 34.5 -> x = 32, z = 34
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint texIndex : INDEX;
@@ -69,7 +75,7 @@ psOutput
     float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
     if (useGrassColor(input.texIndex))
     {
-        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(0.5, 0.75), 0.0).rgb;
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(1.0, 1.0), 0.0).rgb;
         albedo.rgb *= grassColor;
     }
     if (useOverlay(input.texIndex))

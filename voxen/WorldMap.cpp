@@ -210,6 +210,9 @@ Vector3 WorldMap::GetMapColorByBiome(BIOME_TYPE biomeType)
 	case BIOME_SAVANA:
 		return Vector3(182, 173, 97);
 
+	case BIOME_SNOWY_TAIGA:
+		return Vector3(200, 255, 239);
+
 	default:
 		return Vector3(255, 0, 0);
 	}

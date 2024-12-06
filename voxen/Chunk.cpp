@@ -85,7 +85,7 @@ void Chunk::InitChunkData()
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int worldX = (int)m_offsetPosition.x + x - 1;
 			int worldZ = (int)m_offsetPosition.z + z - 1;
-
+			
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
@@ -114,7 +114,7 @@ void Chunk::InitInstanceInfoData()
 		for (int z = 0; z < CHUNK_SIZE; ++z) {
 			int worldX = (int)m_offsetPosition.x + x - 1;
 			int worldZ = (int)m_offsetPosition.z + z - 1;
-
+			/*
 			float noise = Terrain::PerlinFbm(worldX / 8.0f, worldZ / 8.0f, 2.0f, 1);
 
 			for (int y = 0; y < CHUNK_SIZE; ++y) {
@@ -134,6 +134,7 @@ void Chunk::InitInstanceInfoData()
 					m_instanceMap[std::make_tuple(x, y, z)] = instance;
 				}
 			}
+			*/
 		}
 	}
 }
