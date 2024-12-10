@@ -380,7 +380,7 @@ namespace Terrain {
 			return m_cacheTemperature.Get(std::make_pair(x, z));
 		}
 
-		float scale = 2048.0f;
+		float scale = 1024.0f;
 		float seed = 157.0f;
 
 		float tNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);
@@ -398,7 +398,7 @@ namespace Terrain {
 			return m_cacheHumidity.Get(std::make_pair(x, z));
 		}
 
-		float scale = 2024.0f;
+		float scale = 2048.0f;
 		float seed = 653.0f;
 
 		float hNoise = PerlinFbm(x / scale + seed, z / scale + seed, 2.0f, 6);

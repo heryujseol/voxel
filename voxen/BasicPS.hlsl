@@ -6,16 +6,10 @@ Texture2D foliageColorMap : register(t2);
 Texture2D climateNoiseMap : register(t3);
 Texture2D mirrorDepthTex : register(t4);
 
-/*
-1. 똑같은 함수 그대로 GPU에 복사해서 사용한다
-2. 클램핑된 좌표로 계산된 t, h 데이터를 들고온다 ***
- - structure buffer
-3. 고급 기법 뭔가 있겠지
-*/
 struct psInput
 {
     float4 posProj : SV_POSITION;
-    sample float3 posWorld : POSITION; // x = 32.1 z = 34.5 -> x = 32, z = 34
+    sample float3 posWorld : POSITION;
     sample float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
     uint texIndex : INDEX;
@@ -29,14 +23,60 @@ struct psOutput
     uint coverage : SV_Target3;
 };
 
+// TODO : 특이한 TEXTURE 정리 -> grass, foliage, side overlay
 bool useGrassColor(uint texIndex)
 {
-    return texIndex <= 2 || texIndex == 128;
+    return texIndex <= 2;
 }
 
-bool useOverlay(uint texIndex)
+bool useDirtOverlay(uint texIndex)
 {
     return texIndex == 2;
+}
+
+bool useFoliageColor(uint texIndex)
+{
+    // TODO
+    return texIndex == 128;
+}
+
+float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
+{
+    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, texIndex));
+    
+    if (useGrassColor(texIndex))
+    {
+        float3 faceBiasPos = -normal * 1e-4; 
+        // normal vector의 반대방향으로 shrink
+        // bias를 사용하지 않으면 depthFighting같은 효과가 나타남
+        // 1.0000001, 0.99999999가 서로 완전 다른 결과이기 때문
+        float2 diffOffsetPos = floor(worldPos.xz + faceBiasPos.xz) - floor(eyePos.xz);
+        
+        float texelSize = 1.0 / (17.0 * 32.0); // TODO
+        float2 climateTexcoord = float2(0.5 + diffOffsetPos.x * texelSize, 0.5 - diffOffsetPos.y * texelSize);
+        climateTexcoord += float2(texelSize * 0.5, texelSize * 0.5);
+        // texelSize * 0.5 만큼 더해주는 이유
+        // 텍스쳐가 4x4의 형태에서 텍스쳐 좌표가 0.5, 0.5라면 (2, 2)의 중간에서 샘플링해야 함
+        // 그렇지 않으면 diffOffsetPos의 연산 오차로 인해서 조금만 변해도 다른 텍셀을 샘플링하게 됨
+        
+        float2 th = climateNoiseMap.SampleLevel(pointClampSS, climateTexcoord, 0.0);
+        
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(1.0 - th.x, 1.0 - (th.x * th.y)), 0.0).rgb;
+        albedo.rgb *= grassColor;
+    }
+    
+    if (useDirtOverlay(texIndex))
+    {
+        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, 3));
+        albedo = lerp(dirt, albedo, albedo.a);
+    }
+    
+    if (useFoliageColor(texIndex))
+    {
+        // TODO
+    }
+    
+    return albedo;
 }
 
 psOutput
@@ -73,20 +113,7 @@ psOutput
     
     output.coverage = coverage;
     
-    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
-    if (useGrassColor(input.texIndex))
-    {
-        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(1.0, 1.0), 0.0).rgb;
-        albedo.rgb *= grassColor;
-    }
-    if (useOverlay(input.texIndex))
-    {
-        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 3));
-        albedo = lerp(dirt, albedo, albedo.a);
-    }
-    
-    
-    output.albedo = float4(albedo);
+    output.albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
     return output;
 }
@@ -105,17 +132,7 @@ float4 mainMirror(psInput input) : SV_TARGET
     if (pixelDepth <= planeDepth) // 거울보다 가까운 미러월드는 필요 없음
         discard;
     
-    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
-    if (useGrassColor(input.texIndex))
-    {
-        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(0.5, 0.75), 0.0).rgb;
-        albedo.rgb *= grassColor;
-    }
-    if (useOverlay(input.texIndex))
-    {
-        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 3));
-        albedo = lerp(dirt, albedo, albedo.a);
-    }
+    float4 albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
     float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
     
