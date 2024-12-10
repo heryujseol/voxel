@@ -194,7 +194,7 @@
     <FxCompile Include="InstanceShadowPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="WorldMapPS.hlsl">
+    <FxCompile Include="BiomeMapPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

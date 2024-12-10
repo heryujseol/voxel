@@ -10,30 +10,40 @@ using namespace DirectX::SimpleMath;
 class WorldMap {
 
 public:
-	static const UINT WORLD_MAP_PIXEL_SIZE = sizeof(uint8_t) * 4;
 
-	static const UINT WORLD_MAP_BUFFER_SIZE = 512;
-	static const UINT WORLD_MAP_UI_SIZE = 720;
+	static const UINT BIOME_MAP_PIXEL_SIZE = sizeof(RGBA_UINT);
+	static const UINT BIOME_MAP_UI_SIZE = 720;
+	static const UINT BIOME_MAP_BUFFER_SIZE = 512;
+	static const UINT BIOME_MAP_WORLD_SIZE_PER_PIXEL =
+		(ChunkManager::CHUNK_COUNT * Chunk::CHUNK_SIZE * 2) / BIOME_MAP_BUFFER_SIZE;
+	static const UINT BIOME_MAP_WORLD_SIZE = BIOME_MAP_BUFFER_SIZE * BIOME_MAP_WORLD_SIZE_PER_PIXEL;
 
-	static const UINT WORLD_SIZE_PER_PIXEL = (ChunkManager::CHUNK_COUNT * Chunk::CHUNK_SIZE * 2) / WORLD_MAP_BUFFER_SIZE;
-	static const UINT WORLD_SIZE = WORLD_MAP_BUFFER_SIZE * WORLD_SIZE_PER_PIXEL;
-
+	static const UINT CLIMATE_MAP_BUFFER_SIZE = ChunkManager::CHUNK_COUNT * Chunk::CHUNK_SIZE;
+	static const UINT CLIMATE_MAP_WORLD_SIZE_PER_PIXEL = 1;
+	static const UINT CLIMATE_MAP_WORLD_SIZE = CLIMATE_MAP_BUFFER_SIZE * CLIMATE_MAP_WORLD_SIZE_PER_PIXEL;
 
 	WorldMap();
 	~WorldMap();
 
 	bool Initialize(Vector3 cameraPosition);
 	void Update(Vector3 cameraPosition);
-	void Render();
+
+	void RenderBiomeMap();
+
 
 private:
-	std::vector<uint8_t> m_mapData;
+	std::vector<RGBA_UINT> m_biomeMapData;
+	Vector3 m_biomeMapOffsetPosition;
 
-	Vector3 m_offsetPosition;
+	std::vector<CLIMATE> m_climateMapData;
+	Vector3 m_climateMapOffsetPosition;
 
-	bool UpdateBuffer();
-	void ShiftMapData(int dx, int dz);
-	void UpdateMapData(int dx, int dz);
-	Vector3 GenerateWorldMapColor(int x, int z);
-	Vector3 GetMapColorByBiome(BIOME_TYPE biomeType);
+	void ShiftBiomeMapData(int dx, int dz);
+	void UpdateBiomeMapData(int dx, int dz);
+	RGBA_UINT GetBiomeMapColor(int x, int z);
+	RGBA_UINT GetColorByBiome(BIOME_TYPE biomeType);
+
+	void ShiftClimateMapData(int dx, int dz);
+	void UpdateClimateMapData(int dx, int dz);
+	CLIMATE GetClimateNoise(int x, int z);
 };

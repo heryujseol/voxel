@@ -122,6 +122,18 @@ enum INSTANCE_TYPE : uint8_t {
 	INSTANCE_NONE = 3,
 };
 
+struct RGBA_UINT {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t a;
+};
+
+struct CLIMATE {
+	float t;
+	float h;
+};
+
 struct VoxelVertex {
 	uint32_t data;
 };

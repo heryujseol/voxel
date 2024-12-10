@@ -34,9 +34,9 @@ float4 getWorldPointColor(float2 texcoord, float size)
 
 float4 main(psInput input) : SV_TARGET
 {
-    float4 worldMap = samplingTexture.SampleLevel(linearWrapSS, input.texcoord, 0.0);
+    float4 biomeMap = samplingTexture.SampleLevel(linearWrapSS, input.texcoord, 0.0);
     
     float4 worldPointColor = getWorldPointColor(input.texcoord, 0.0125);
     
-    return lerp(worldMap, worldPointColor, worldPointColor.a);
+    return lerp(biomeMap, worldPointColor, worldPointColor.a);
 }

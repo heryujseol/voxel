@@ -3,7 +3,8 @@
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 Texture2D foliageColorMap : register(t2);
-Texture2D mirrorDepthTex : register(t3);
+Texture2D climateNoiseMap : register(t3);
+Texture2D mirrorDepthTex : register(t4);
 
 /*
 1. 똑같은 함수 그대로 GPU에 복사해서 사용한다

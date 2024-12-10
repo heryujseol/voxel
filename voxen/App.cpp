@@ -284,10 +284,10 @@ void App::Render()
 		m_postEffect.Bloom();
 	}
 
-	// 5. World Map
+	// 5. Biome Map
 	{
 		if (m_keyToggled['M'])
-			m_worldMap.Render();
+			m_worldMap.RenderBiomeMap();
 	}
 }
 
@@ -418,6 +418,7 @@ void App::FillGBuffer()
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::climateMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
@@ -606,6 +607,7 @@ void App::RenderMirrorWorld()
 		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
+		ppSRVs.push_back(Graphics::climateMapSRV.Get());
 		ppSRVs.push_back(Graphics::mirrorDepthSRV.Get());
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 		ChunkManager::GetInstance()->RenderMirrorWorld();

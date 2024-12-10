@@ -2,99 +2,116 @@
 #include "Graphics.h"
 #include "SimpleQuadRenderer.h"
 #include "Terrain.h"
+#include "DXUtils.h"
 
-WorldMap::WorldMap()
-	: m_mapData(WORLD_MAP_BUFFER_SIZE * WORLD_MAP_BUFFER_SIZE * WORLD_MAP_PIXEL_SIZE, 0),
-	  m_offsetPosition(0.0f)
-{
-}
+WorldMap::WorldMap() {}
 
 WorldMap::~WorldMap() {}
 
 bool WorldMap::Initialize(Vector3 cameraPosition)
 {
-	m_offsetPosition = Utils::CalcOffsetPos(cameraPosition, WORLD_SIZE_PER_PIXEL);
-	for (int z = 0; z < WORLD_MAP_BUFFER_SIZE; ++z) {
-		for (int x = 0; x < WORLD_MAP_BUFFER_SIZE; ++x) {
-			Vector3 color = GenerateWorldMapColor(x, z);
+	// biome map
+	{
+		m_biomeMapData.resize(BIOME_MAP_BUFFER_SIZE * BIOME_MAP_BUFFER_SIZE);
+		m_biomeMapOffsetPosition =
+			Utils::CalcOffsetPos(cameraPosition, BIOME_MAP_WORLD_SIZE_PER_PIXEL);
+		for (int z = 0; z < BIOME_MAP_BUFFER_SIZE; ++z) {
+			for (int x = 0; x < BIOME_MAP_BUFFER_SIZE; ++x) {
+				m_biomeMapData[x + z * BIOME_MAP_BUFFER_SIZE] = GetBiomeMapColor(x, z);
+			}
+		}
 
-			int xz = (x + z * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
-			m_mapData[xz + 0] = (UINT)color.x;
-			m_mapData[xz + 1] = (UINT)color.y;
-			m_mapData[xz + 2] = (UINT)color.z;
-			m_mapData[xz + 3] = 255;
+		if (!DXUtils::UpdateTexture2DBuffer(Graphics::biomeMapBuffer, m_biomeMapData,
+				BIOME_MAP_BUFFER_SIZE, BIOME_MAP_BUFFER_SIZE)) {
+			return false;
 		}
 	}
 
-	if (!UpdateBuffer()) {
-		return false;
-	}
+	// climate map
+	{
+		m_climateMapData.resize(CLIMATE_MAP_BUFFER_SIZE * CLIMATE_MAP_BUFFER_SIZE);
+		m_climateMapOffsetPosition =
+			Utils::CalcOffsetPos(cameraPosition, CLIMATE_MAP_WORLD_SIZE_PER_PIXEL);
+		for (int z = 0; z < CLIMATE_MAP_BUFFER_SIZE; ++z) {
+			for (int x = 0; x < CLIMATE_MAP_BUFFER_SIZE; ++x) {
+				m_climateMapData[x + z * CLIMATE_MAP_BUFFER_SIZE] = GetClimateNoise(x, z);
+			}
+		}
 
+		if (!DXUtils::UpdateTexture2DBuffer(Graphics::climateMapBuffer, m_climateMapData,
+				CLIMATE_MAP_BUFFER_SIZE, CLIMATE_MAP_BUFFER_SIZE)) {
+			return false;
+		}
+	}
 	return true;
 }
 
 void WorldMap::Update(Vector3 cameraPosition)
 {
-	Vector3 newOffsetPosition = Utils::CalcOffsetPos(cameraPosition, WORLD_SIZE_PER_PIXEL);
-	Vector3 offsetDiff = m_offsetPosition - newOffsetPosition;
-	if (offsetDiff.Length() > 0) {
-		m_offsetPosition = newOffsetPosition;
+	// biome map
+	{
+		Vector3 newOffsetPosition =
+			Utils::CalcOffsetPos(cameraPosition, BIOME_MAP_WORLD_SIZE_PER_PIXEL);
+		Vector3 offsetDiff = m_biomeMapOffsetPosition - newOffsetPosition;
+		if (offsetDiff.Length() > 0) {
+			m_biomeMapOffsetPosition = newOffsetPosition;
 
-		int dx = Utils::Signf(offsetDiff.x);
-		int dz = -Utils::Signf(offsetDiff.z);
+			int dx = Utils::Signf(offsetDiff.x);
+			int dz = -Utils::Signf(offsetDiff.z);
 
-		ShiftMapData(dx, dz);
+			ShiftBiomeMapData(dx, dz);
 
-		UpdateMapData(dx, dz);
+			UpdateBiomeMapData(dx, dz);
 
-		UpdateBuffer();
+			DXUtils::UpdateTexture2DBuffer(Graphics::biomeMapBuffer, m_biomeMapData,
+				BIOME_MAP_BUFFER_SIZE, BIOME_MAP_BUFFER_SIZE);
+		}
+	}
+
+	// climate map
+	{
+		Vector3 newOffsetPosition =
+			Utils::CalcOffsetPos(cameraPosition, CLIMATE_MAP_WORLD_SIZE_PER_PIXEL);
+		Vector3 offsetDiff = m_climateMapOffsetPosition - newOffsetPosition;
+		if (offsetDiff.Length() > 0) {
+			m_climateMapOffsetPosition = newOffsetPosition;
+
+			int dx = Utils::Signf(offsetDiff.x);
+			int dz = -Utils::Signf(offsetDiff.z);
+
+			ShiftClimateMapData(dx, dz);
+
+			UpdateClimateMapData(dx, dz);
+
+			DXUtils::UpdateTexture2DBuffer(Graphics::climateMapBuffer, m_climateMapData,
+				CLIMATE_MAP_BUFFER_SIZE, CLIMATE_MAP_BUFFER_SIZE);
+		}
 	}
 }
 
-void WorldMap::Render()
+void WorldMap::RenderBiomeMap()
 {
 	Graphics::context->RSSetViewports(1, &Graphics::worldMapViewport);
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::worldMapSRV.Get());
+	ppSRVs.push_back(Graphics::biomeMapSRV.Get());
 	ppSRVs.push_back(Graphics::worldPointSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
-	Graphics::SetPipelineStates(Graphics::worldMapPSO);
+	Graphics::SetPipelineStates(Graphics::biomeMapPSO);
 	SimpleQuadRenderer::GetInstance()->Render();
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }
 
-bool WorldMap::UpdateBuffer()
+void WorldMap::ShiftBiomeMapData(int dx, int dz)
 {
-	D3D11_MAPPED_SUBRESOURCE ms;
-	HRESULT ret =
-		Graphics::context->Map(Graphics::worldMapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-	if (FAILED(ret)) {
-		std::cout << "failed to update world map buffer" << std::endl;
-		return false;
-	}
-
-	uint8_t* pData = (uint8_t*)ms.pData;
-	for (UINT h = 0; h < WORLD_MAP_BUFFER_SIZE; ++h) {
-		memcpy(&pData[h * ms.RowPitch],
-			&m_mapData[h * WORLD_MAP_BUFFER_SIZE * WORLD_MAP_PIXEL_SIZE],
-			WORLD_MAP_BUFFER_SIZE * WORLD_MAP_PIXEL_SIZE);
-	}
-	Graphics::context->Unmap(Graphics::worldMapBuffer.Get(), NULL);
-
-	return true;
-}
-
-void WorldMap::ShiftMapData(int dx, int dz)
-{
-	int startX = (dx <= 0) ? 0 : WORLD_MAP_BUFFER_SIZE - 1;
-	int endX = (dx <= 0) ? WORLD_MAP_BUFFER_SIZE : -1;
+	int startX = (dx <= 0) ? 0 : BIOME_MAP_BUFFER_SIZE - 1;
+	int endX = (dx <= 0) ? BIOME_MAP_BUFFER_SIZE : -1;
 	int stepX = (dx <= 0) ? 1 : -1;
 
-	int startZ = (dz <= 0) ? 0 : WORLD_MAP_BUFFER_SIZE - 1;
-	int endZ = (dz <= 0) ? WORLD_MAP_BUFFER_SIZE : -1;
+	int startZ = (dz <= 0) ? 0 : BIOME_MAP_BUFFER_SIZE - 1;
+	int endZ = (dz <= 0) ? BIOME_MAP_BUFFER_SIZE : -1;
 	int stepZ = (dz <= 0) ? 1 : -1;
 
 	for (int z = startZ; z != endZ; z += stepZ) {
@@ -102,53 +119,38 @@ void WorldMap::ShiftMapData(int dx, int dz)
 			int nx = x + dx;
 			int nz = z + dz;
 
-			if (nx < 0 || nx >= WORLD_MAP_BUFFER_SIZE || nz < 0 || nz >= WORLD_MAP_BUFFER_SIZE)
+			if (nx < 0 || nx >= BIOME_MAP_BUFFER_SIZE || nz < 0 || nz >= BIOME_MAP_BUFFER_SIZE)
 				continue;
 
-			int xz = (x + z * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
-			int nxz = (nx + nz * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
-
-			m_mapData[nxz + 0] = m_mapData[xz + 0];
-			m_mapData[nxz + 1] = m_mapData[xz + 1];
-			m_mapData[nxz + 2] = m_mapData[xz + 2];
-			m_mapData[nxz + 3] = m_mapData[xz + 3];
+			m_biomeMapData[nx + nz * BIOME_MAP_BUFFER_SIZE] =
+				m_biomeMapData[x + z * BIOME_MAP_BUFFER_SIZE];
 		}
 	}
 }
 
-void WorldMap::UpdateMapData(int dx, int dz)
+void WorldMap::UpdateBiomeMapData(int dx, int dz)
 {
 	if (dx != 0) {
-		int x = (dx < 0) ? WORLD_MAP_BUFFER_SIZE - 1 : 0;
-		for (int z = 0; z < WORLD_MAP_BUFFER_SIZE; ++z) {
-			Vector3 color = GenerateWorldMapColor(x, z);
-
-			int xz = (x + z * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
-			m_mapData[xz + 0] = (UINT)color.x;
-			m_mapData[xz + 1] = (UINT)color.y;
-			m_mapData[xz + 2] = (UINT)color.z;
-			m_mapData[xz + 3] = 255;
+		int x = (dx < 0) ? BIOME_MAP_BUFFER_SIZE - 1 : 0;
+		for (int z = 0; z < BIOME_MAP_BUFFER_SIZE; ++z) {
+			m_biomeMapData[x + z * BIOME_MAP_BUFFER_SIZE] = GetBiomeMapColor(x, z);
 		}
 	}
 
 	if (dz != 0) {
-		int z = (dz < 0) ? WORLD_MAP_BUFFER_SIZE - 1 : 0;
-		for (int x = 0; x < WORLD_MAP_BUFFER_SIZE; ++x) {
-			Vector3 color = GenerateWorldMapColor(x, z);
-
-			int xz = (x + z * WORLD_MAP_BUFFER_SIZE) * WORLD_MAP_PIXEL_SIZE;
-			m_mapData[xz + 0] = (UINT)color.x;
-			m_mapData[xz + 1] = (UINT)color.y;
-			m_mapData[xz + 2] = (UINT)color.z;
-			m_mapData[xz + 3] = 255;
+		int z = (dz < 0) ? BIOME_MAP_BUFFER_SIZE - 1 : 0;
+		for (int x = 0; x < BIOME_MAP_BUFFER_SIZE; ++x) {
+			m_biomeMapData[x + z * BIOME_MAP_BUFFER_SIZE] = GetBiomeMapColor(x, z);
 		}
 	}
 }
 
-Vector3 WorldMap::GenerateWorldMapColor(int x, int z)
+RGBA_UINT WorldMap::GetBiomeMapColor(int x, int z)
 {
-	int worldX = (int)m_offsetPosition.x - (WORLD_SIZE / 2) + WORLD_SIZE_PER_PIXEL * x;
-	int worldZ = (int)m_offsetPosition.z + (WORLD_SIZE / 2) - WORLD_SIZE_PER_PIXEL * z;
+	int worldX = (int)m_biomeMapOffsetPosition.x - (BIOME_MAP_WORLD_SIZE / 2) +
+				 BIOME_MAP_WORLD_SIZE_PER_PIXEL * x;
+	int worldZ = (int)m_biomeMapOffsetPosition.z + (BIOME_MAP_WORLD_SIZE / 2) -
+				 BIOME_MAP_WORLD_SIZE_PER_PIXEL * z;
 
 	float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 	float erosion = Terrain::GetErosion(worldX, worldZ);
@@ -159,61 +161,113 @@ Vector3 WorldMap::GenerateWorldMapColor(int x, int z)
 	float humidity = Terrain::GetHumidity(worldX, worldZ);
 
 	if (elevation < 64.0f) {
-		return Vector3(91, 89, 255);
+		return RGBA_UINT(91, 89, 255, 255);
 	}
 
 	float r = 32.0f * peaksValley * powf((1.0f - erosion), 1.25f);
 	BIOME_TYPE biomeType = Terrain::GetBiomeType(elevation - r, temperature, humidity);
 
-	Vector3 color = GetMapColorByBiome(biomeType);
-
-	return color;
+	return GetColorByBiome(biomeType);
 }
 
-Vector3 WorldMap::GetMapColorByBiome(BIOME_TYPE biomeType)
-{ 
+RGBA_UINT WorldMap::GetColorByBiome(BIOME_TYPE biomeType)
+{
 	switch (biomeType) {
 
 	case BIOME_OCEAN:
-		return Vector3(0, 0, 255);
+		return RGBA_UINT(0, 0, 255, 255);
 
 	case BIOME_BEACH:
-		return Vector3(255, 223, 128);
+		return RGBA_UINT(255, 223, 128, 255);
 
 	case BIOME_TUNDRA:
-		return Vector3(235, 235, 235);
+		return RGBA_UINT(235, 235, 235, 255);
 
 	case BIOME_TAIGA:
-		return Vector3(59, 94, 84);
+		return RGBA_UINT(59, 94, 84, 255);
 
 	case BIOME_PLAINS:
-		return Vector3(128, 160, 91);
+		return RGBA_UINT(128, 160, 91, 255);
 
 	case BIOME_SWAMP:
-		return Vector3(20, 249, 183);
+		return RGBA_UINT(20, 249, 183, 255);
 
 	case BIOME_FOREST:
-		return Vector3(59, 123, 78);
+		return RGBA_UINT(59, 123, 78, 255);
 
 	case BIOME_SHRUBLAND:
-		return Vector3(163, 184, 99);
+		return RGBA_UINT(163, 184, 99, 255);
 
 	case BIOME_DESERT:
-		return Vector3(214, 131, 31);
+		return RGBA_UINT(214, 131, 31, 255);
 
 	case BIOME_RAINFOREST:
-		return Vector3(93, 130, 21);
+		return RGBA_UINT(93, 130, 21, 255);
 
 	case BIOME_SEASONFOREST:
-		return Vector3(98, 161, 117);
+		return RGBA_UINT(98, 161, 117, 255);
 
 	case BIOME_SAVANA:
-		return Vector3(182, 173, 97);
+		return RGBA_UINT(182, 173, 97, 255);
 
 	case BIOME_SNOWY_TAIGA:
-		return Vector3(200, 255, 239);
+		return RGBA_UINT(200, 255, 239, 255);
 
 	default:
-		return Vector3(255, 0, 0);
+		return RGBA_UINT(255, 0, 0, 255);
 	}
+}
+
+void WorldMap::ShiftClimateMapData(int dx, int dz)
+{
+	int startX = (dx <= 0) ? 0 : CLIMATE_MAP_BUFFER_SIZE - 1;
+	int endX = (dx <= 0) ? CLIMATE_MAP_BUFFER_SIZE : -1;
+	int stepX = (dx <= 0) ? 1 : -1;
+
+	int startZ = (dz <= 0) ? 0 : CLIMATE_MAP_BUFFER_SIZE - 1;
+	int endZ = (dz <= 0) ? CLIMATE_MAP_BUFFER_SIZE : -1;
+	int stepZ = (dz <= 0) ? 1 : -1;
+
+	for (int z = startZ; z != endZ; z += stepZ) {
+		for (int x = startX; x != endX; x += stepX) {
+			int nx = x + dx;
+			int nz = z + dz;
+
+			if (nx < 0 || nx >= CLIMATE_MAP_BUFFER_SIZE || nz < 0 || nz >= CLIMATE_MAP_BUFFER_SIZE)
+				continue;
+
+			m_climateMapData[nx + nz * CLIMATE_MAP_BUFFER_SIZE] =
+				m_climateMapData[x + z * CLIMATE_MAP_BUFFER_SIZE];
+		}
+	}
+}
+
+void WorldMap::UpdateClimateMapData(int dx, int dz)
+{
+	if (dx != 0) {
+		int x = (dx < 0) ? CLIMATE_MAP_BUFFER_SIZE - 1 : 0;
+		for (int z = 0; z < CLIMATE_MAP_BUFFER_SIZE; ++z) {
+			m_climateMapData[x + z * CLIMATE_MAP_BUFFER_SIZE] = GetClimateNoise(x, z);
+		}
+	}
+
+	if (dz != 0) {
+		int z = (dz < 0) ? CLIMATE_MAP_BUFFER_SIZE - 1 : 0;
+		for (int x = 0; x < CLIMATE_MAP_BUFFER_SIZE; ++x) {
+			m_climateMapData[x + z * CLIMATE_MAP_BUFFER_SIZE] = GetClimateNoise(x, z);
+		}
+	}
+}
+
+CLIMATE WorldMap::GetClimateNoise(int x, int z)
+{
+	int worldX = (int)m_climateMapOffsetPosition.x - (CLIMATE_MAP_WORLD_SIZE / 2) +
+				 CLIMATE_MAP_WORLD_SIZE_PER_PIXEL * x;
+	int worldZ = (int)m_climateMapOffsetPosition.z + (CLIMATE_MAP_WORLD_SIZE / 2) -
+				 CLIMATE_MAP_WORLD_SIZE_PER_PIXEL * z;
+
+	float temperature = Terrain::GetTemperature(worldX, worldZ);
+	float humidity = Terrain::GetHumidity(worldX, worldZ);
+
+	return CLIMATE(temperature, humidity);
 }

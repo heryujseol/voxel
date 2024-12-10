@@ -140,25 +140,59 @@ namespace DXUtils {
 	}
 
 	template <typename T>
-	static void UpdateBuffer(ComPtr<ID3D11Buffer>& buffer, const std::vector<T>& dataSet)
+	static bool UpdateBuffer(ComPtr<ID3D11Buffer>& buffer, const std::vector<T>& dataSet)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
 
-		Graphics::context->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		HRESULT ret = Graphics::context->Map(buffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		if (FAILED(ret)) {
+			std::cout << "failed to update buffer" << std::endl;
+			return false;
+		}
+
 		memcpy(ms.pData, dataSet.data(), sizeof(T) * dataSet.size());
 		Graphics::context->Unmap(buffer.Get(), 0);
+
+		return true;
 	}
 
-
 	template <typename ConstantData>
-	static void UpdateConstantBuffer(
+	static bool UpdateConstantBuffer(
 		ComPtr<ID3D11Buffer>& constantBuffer, const ConstantData& constantData)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
+		
+		HRESULT ret = Graphics::context->Map(constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		if (FAILED(ret)) {
+			std::cout << "failed to update constant buffer" << std::endl;
+			return false;
+		}
 
-		Graphics::context->Map(constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
 		memcpy(ms.pData, &constantData, sizeof(ConstantData));
 		Graphics::context->Unmap(constantBuffer.Get(), 0);
+
+		return true;
+	}
+
+	template <typename PIXEL>
+	static bool UpdateTexture2DBuffer(
+		ComPtr<ID3D11Texture2D> texture, const std::vector<PIXEL>& dataSet, UINT rowSize, UINT colSize)
+	{
+		D3D11_MAPPED_SUBRESOURCE ms;
+
+		HRESULT ret = Graphics::context->Map(texture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		if (FAILED(ret)) {
+			std::cout << "failed to update Texture2D Buffer" << std::endl;
+			return false;
+		}
+
+		uint8_t* pData = (uint8_t*)ms.pData;
+		for (UINT h = 0; h < colSize; ++h) {
+			memcpy(&pData[h * ms.RowPitch], &dataSet[h * rowSize], rowSize * sizeof(PIXEL));
+		}
+		Graphics::context->Unmap(texture.Get(), NULL);
+
+		return true;
 	}
 
 

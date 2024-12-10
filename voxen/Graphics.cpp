@@ -58,7 +58,7 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> bloomUpPS;
 	ComPtr<ID3D11PixelShader> combineBloomPS;
 	ComPtr<ID3D11PixelShader> instanceShadowPS;
-	ComPtr<ID3D11PixelShader> worldMapPS;
+	ComPtr<ID3D11PixelShader> biomeMapPS;
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
@@ -175,8 +175,11 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
-	ComPtr<ID3D11Texture2D> worldMapBuffer;
-	ComPtr<ID3D11ShaderResourceView> worldMapSRV;
+	ComPtr<ID3D11Texture2D> biomeMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> biomeMapSRV;
+
+	ComPtr<ID3D11Texture2D> climateMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> climateMapSRV;
 
 	ComPtr<ID3D11Texture2D> worldPointBuffer;
 	ComPtr<ID3D11ShaderResourceView> worldPointSRV;
@@ -242,7 +245,7 @@ namespace Graphics {
 	GraphicsPSO bloomDownPSO;
 	GraphicsPSO bloomUpPSO;
 	GraphicsPSO combineBloomPSO;
-	GraphicsPSO worldMapPSO;
+	GraphicsPSO biomeMapPSO;
 }
 
 
@@ -717,18 +720,18 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	// world map ui
+	// biome map
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateDynamicTexture(worldMapBuffer, WorldMap::WORLD_MAP_BUFFER_SIZE,
-			WorldMap::WORLD_MAP_BUFFER_SIZE, false, format, bindFlag)) {
-		std::cout << "failed create world map ui buffer" << std::endl;
+	if (!DXUtils::CreateDynamicTexture(biomeMapBuffer, WorldMap::BIOME_MAP_BUFFER_SIZE,
+			WorldMap::BIOME_MAP_BUFFER_SIZE, false, format, bindFlag)) {
+		std::cout << "failed create biome map buffer" << std::endl;
 		return false;
 	}
 	ret =
-		device->CreateShaderResourceView(worldMapBuffer.Get(), nullptr, worldMapSRV.GetAddressOf());
+		device->CreateShaderResourceView(biomeMapBuffer.Get(), nullptr, biomeMapSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create world map srv" << std::endl;
+		std::cout << "failed create biome map srv" << std::endl;
 		return false;
 	}
 
@@ -736,6 +739,21 @@ bool Graphics::InitShaderResourceBuffers()
 	if (!DXUtils::CreateTexture2DFromFile(
 			worldPointBuffer, worldPointSRV, "../assets/point.png", format)) {
 		std::cout << "failed create texture from world point" << std::endl;
+		return false;
+	}
+
+	// climate map
+	format = DXGI_FORMAT_R32G32_FLOAT;
+	bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateDynamicTexture(climateMapBuffer, WorldMap::CLIMATE_MAP_BUFFER_SIZE,
+			WorldMap::CLIMATE_MAP_BUFFER_SIZE, false, format, bindFlag)) {
+		std::cout << "failed create climate map buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(
+		climateMapBuffer.Get(), nullptr, climateMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create climate map srv" << std::endl;
 		return false;
 	}
 
@@ -1043,9 +1061,9 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// worldMapPS
-	if (!DXUtils::CreatePixelShader(L"WorldMapPS.hlsl", worldMapPS)) {
-		std::cout << "failed create world map ps" << std::endl;
+	// biomeMapPS
+	if (!DXUtils::CreatePixelShader(L"BiomeMapPS.hlsl", biomeMapPS)) {
+		std::cout << "failed create biome map ps" << std::endl;
 		return false;
 	}
 
@@ -1297,10 +1315,10 @@ void Graphics::InitViewports()
 		Graphics::mirrorWorldViewPort, 0, 0, App::MIRROR_WIDTH, App::MIRROR_HEIGHT);
 
 	// worldMapViewport
-	UINT worldMapTopX = (App::WIDTH / 2) - (WorldMap::WORLD_MAP_UI_SIZE / 2);
-	UINT worldMapTopY = (App::HEIGHT / 2) - (WorldMap::WORLD_MAP_UI_SIZE / 2);
+	UINT worldMapTopX = (App::WIDTH / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
+	UINT worldMapTopY = (App::HEIGHT / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
 	DXUtils::UpdateViewport(Graphics::worldMapViewport, worldMapTopX, worldMapTopY,
-		WorldMap::WORLD_MAP_UI_SIZE, WorldMap::WORLD_MAP_UI_SIZE);
+		WorldMap::BIOME_MAP_UI_SIZE, WorldMap::BIOME_MAP_UI_SIZE);
 
 	// shadowViewports
 	for (int i = 0; i < Light::CASCADE_NUM; ++i) {
@@ -1456,9 +1474,9 @@ void Graphics::InitGraphicsPSO()
 	combineBloomPSO = samplingPSO;
 	combineBloomPSO.pixelShader = combineBloomPS;
 
-	// worldMapPSO
-	worldMapPSO = samplingPSO;
-	worldMapPSO.pixelShader = worldMapPS;
+	// biomeMapPSO
+	biomeMapPSO = samplingPSO;
+	biomeMapPSO.pixelShader = biomeMapPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

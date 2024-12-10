@@ -89,11 +89,10 @@ void Chunk::InitChunkData()
 			float continentalness = Terrain::GetContinentalness(worldX, worldZ);
 			float erosion = Terrain::GetErosion(worldX, worldZ);
 			float peaksValley = Terrain::GetPeaksValley(worldX, worldZ);
-
 			float elevation = Terrain::GetElevation(continentalness, erosion, peaksValley);
+
 			float temperature = Terrain::GetTemperature(worldX, worldZ);
 			float humidity = Terrain::GetHumidity(worldX, worldZ);
-
 			float distribution = Terrain::GetDistribution(worldX, worldZ);
 
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
