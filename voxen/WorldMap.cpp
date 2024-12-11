@@ -205,7 +205,7 @@ RGBA_UINT WorldMap::GetColorByBiome(BIOME_TYPE biomeType)
 		return RGBA_UINT(93, 130, 21, 255);
 
 	case BIOME_SEASONFOREST:
-		return RGBA_UINT(98, 161, 117, 255);
+		return RGBA_UINT(255, 192, 247, 255);
 
 	case BIOME_SAVANA:
 		return RGBA_UINT(182, 173, 97, 255);

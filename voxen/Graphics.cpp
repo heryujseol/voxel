@@ -684,7 +684,7 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	if (!DXUtils::CreateTexture2DFromFile(
-			grassColorMapBuffer, grassColorMapSRV, "../assets/grass.png", format)) {
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass2_blur.png", format)) {
 		std::cout << "failed create texture from grass file" << std::endl;
 		return false;
 	}

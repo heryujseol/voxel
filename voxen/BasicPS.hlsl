@@ -61,7 +61,7 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
         
         float2 th = climateNoiseMap.SampleLevel(pointClampSS, climateTexcoord, 0.0);
         
-        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(1.0 - th.x, 1.0 - (th.x * th.y)), 0.0).rgb;
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(th.x, 1.0-th.y), 0.0).rgb;
         albedo.rgb *= grassColor;
     }
     
