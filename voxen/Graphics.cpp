@@ -690,7 +690,7 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	if (!DXUtils::CreateTexture2DFromFile(
-			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage.png", format)) {
+			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage2_blur.png", format)) {
 		std::cout << "failed create texture from foliage file" << std::endl;
 		return false;
 	}
