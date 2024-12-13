@@ -4,6 +4,7 @@
 #include <wrl.h>
 
 #include "GraphicsPSO.h"
+#include "Light.h"
 
 using namespace Microsoft::WRL;
 
@@ -29,10 +30,12 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
 	extern ComPtr<ID3D11VertexShader> basicShadowVS;
+	extern ComPtr<ID3D11VertexShader> instanceShadowVS;
 
 
 	// Geometry Shader
 	extern ComPtr<ID3D11GeometryShader> basicShadowGS;
+	extern ComPtr<ID3D11GeometryShader> instanceShadowGS;
 
 
 	// Pixel Shader
@@ -58,6 +61,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> bloomDownPS;
 	extern ComPtr<ID3D11PixelShader> bloomUpPS;
 	extern ComPtr<ID3D11PixelShader> combineBloomPS;
+	extern ComPtr<ID3D11PixelShader> instanceShadowPS;
+	extern ComPtr<ID3D11PixelShader> biomeMapPS;
 
 
 	// Rasterizer State
@@ -162,6 +167,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
+	extern ComPtr<ID3D11Texture2D> foliageColorMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> foliageColorMapSRV;
+
 	extern ComPtr<ID3D11Texture2D> sunBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> sunSRV;
 
@@ -170,11 +178,23 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
-	
+
+	extern ComPtr<ID3D11Texture2D> biomeMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> biomeMapSRV;
+
+	extern ComPtr<ID3D11Texture2D> climateMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> climateMapSRV;
+
+	extern ComPtr<ID3D11Texture2D> worldPointBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> worldPointSRV;
+		
+
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT mirrorWorldViewPort;
 	extern D3D11_VIEWPORT bloomViewport;
+	extern D3D11_VIEWPORT worldMapViewport;
+	extern D3D11_VIEWPORT shadowViewPorts[Light::CASCADE_NUM];
 
 
 	// device, context, swapChain
@@ -197,6 +217,7 @@ namespace Graphics {
 	extern bool InitSamplerStates();
 	extern bool InitDepthStencilStates();
 	extern bool InitBlendStates();
+	extern void InitViewports();
 
 
 	// PSO
@@ -219,6 +240,7 @@ namespace Graphics {
 	extern GraphicsPSO basicDepthPSO;
 	extern GraphicsPSO instanceDepthPSO;
 	extern GraphicsPSO basicShadowPSO;
+	extern GraphicsPSO instanceShadowPSO; 
 	extern GraphicsPSO ssaoPSO;
 	extern GraphicsPSO ssaoEdgePSO;
 	extern GraphicsPSO edgeMaskingPSO;
@@ -227,4 +249,5 @@ namespace Graphics {
 	extern GraphicsPSO bloomDownPSO;
 	extern GraphicsPSO bloomUpPSO;
 	extern GraphicsPSO combineBloomPSO;
+	extern GraphicsPSO biomeMapPSO;
 }

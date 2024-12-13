@@ -1,7 +1,6 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 #include "App.h"
-#include "Terrain.h"
 
 #include <iostream>
 
@@ -27,10 +26,12 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> basicShadowVS;
+	ComPtr<ID3D11VertexShader> instanceShadowVS;
 
 
 	// Geometry Shader
 	ComPtr<ID3D11GeometryShader> basicShadowGS;
+	ComPtr<ID3D11GeometryShader> instanceShadowGS;
 
 
 	// Pixel Shader
@@ -56,7 +57,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> bloomDownPS;
 	ComPtr<ID3D11PixelShader> bloomUpPS;
 	ComPtr<ID3D11PixelShader> combineBloomPS;
-
+	ComPtr<ID3D11PixelShader> instanceShadowPS;
+	ComPtr<ID3D11PixelShader> biomeMapPS;
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
@@ -154,12 +156,15 @@ namespace Graphics {
 	ComPtr<ID3D11ShaderResourceView> shadowSRV;
 
 
-	// Shadow Resource Buffer
+	// Shader Resource Buffer
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
 	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
+
+	ComPtr<ID3D11Texture2D> foliageColorMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> foliageColorMapSRV;
 
 	ComPtr<ID3D11Texture2D> sunBuffer;
 	ComPtr<ID3D11ShaderResourceView> sunSRV;
@@ -170,11 +175,22 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> copyForwardRenderBuffer;
 	ComPtr<ID3D11ShaderResourceView> copyForwardSRV;
 
+	ComPtr<ID3D11Texture2D> biomeMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> biomeMapSRV;
+
+	ComPtr<ID3D11Texture2D> climateMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> climateMapSRV;
+
+	ComPtr<ID3D11Texture2D> worldPointBuffer;
+	ComPtr<ID3D11ShaderResourceView> worldPointSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
 	D3D11_VIEWPORT mirrorWorldViewPort;
 	D3D11_VIEWPORT bloomViewport;
+	D3D11_VIEWPORT worldMapViewport;
+	D3D11_VIEWPORT shadowViewPorts[Light::CASCADE_NUM];
 
 
 	// device, context, swapChain
@@ -197,6 +213,7 @@ namespace Graphics {
 	bool InitSamplerStates();
 	bool InitDepthStencilStates();
 	bool InitBlendStates();
+	void InitViewports();
 
 
 	// PSO
@@ -219,6 +236,7 @@ namespace Graphics {
 	GraphicsPSO basicDepthPSO;
 	GraphicsPSO instanceDepthPSO;
 	GraphicsPSO basicShadowPSO;
+	GraphicsPSO instanceShadowPSO;
 	GraphicsPSO ssaoPSO;
 	GraphicsPSO ssaoEdgePSO;
 	GraphicsPSO edgeMaskingPSO;
@@ -227,6 +245,7 @@ namespace Graphics {
 	GraphicsPSO bloomDownPSO;
 	GraphicsPSO bloomUpPSO;
 	GraphicsPSO combineBloomPSO;
+	GraphicsPSO biomeMapPSO;
 }
 
 
@@ -659,16 +678,22 @@ bool Graphics::InitShaderResourceBuffers()
 	// Asset Files
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png", format)) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas2.png", format)) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
 
-	/*if (!DXUtils::CreateTextureFromFile(
-			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png", format)) {
-		std::cout << "failed create texture from grass color map file" << std::endl;
+	if (!DXUtils::CreateTexture2DFromFile(
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass2_blur.png", format)) {
+		std::cout << "failed create texture from grass file" << std::endl;
 		return false;
-	}*/
+	}
+
+	if (!DXUtils::CreateTexture2DFromFile(
+			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage.png", format)) {
+		std::cout << "failed create texture from foliage file" << std::endl;
+		return false;
+	}
 
 	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png", format)) {
 		std::cout << "failed create texture from sun file" << std::endl;
@@ -692,6 +717,43 @@ bool Graphics::InitShaderResourceBuffers()
 		copyForwardRenderBuffer.Get(), nullptr, copyForwardSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create copy forward srv" << std::endl;
+		return false;
+	}
+
+	// biome map
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateDynamicTexture(biomeMapBuffer, WorldMap::BIOME_MAP_BUFFER_SIZE,
+			WorldMap::BIOME_MAP_BUFFER_SIZE, false, format, bindFlag)) {
+		std::cout << "failed create biome map buffer" << std::endl;
+		return false;
+	}
+	ret =
+		device->CreateShaderResourceView(biomeMapBuffer.Get(), nullptr, biomeMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create biome map srv" << std::endl;
+		return false;
+	}
+
+	// world point
+	if (!DXUtils::CreateTexture2DFromFile(
+			worldPointBuffer, worldPointSRV, "../assets/point.png", format)) {
+		std::cout << "failed create texture from world point" << std::endl;
+		return false;
+	}
+
+	// climate map
+	format = DXGI_FORMAT_R32G32_FLOAT;
+	bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateDynamicTexture(climateMapBuffer, WorldMap::CLIMATE_MAP_BUFFER_SIZE,
+			WorldMap::CLIMATE_MAP_BUFFER_SIZE, false, format, bindFlag)) {
+		std::cout << "failed create climate map buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateShaderResourceView(
+		climateMapBuffer.Get(), nullptr, climateMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create climate map srv" << std::endl;
 		return false;
 	}
 
@@ -721,12 +783,14 @@ bool Graphics::InitGraphicsState()
 	if (!InitBlendStates())
 		return false;
 
+	InitViewports();
+
 	return true;
 }
 
 bool Graphics::InitVertexShaderAndInputLayouts()
 {
-	// BasicVS & BasicIL
+	// Basic
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc = {
 		{ "DATA", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
@@ -737,9 +801,13 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Basic Shadow
+	std::vector<D3D_SHADER_MACRO> macros;
+	macros.push_back({ "USE_SHADOW", "1" });
+	macros.push_back({ NULL, NULL });
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"BasicShadowVS.hlsl", basicShadowVS, basicIL, elementDesc)) {
-		std::cout << "failed create basic vs" << std::endl;
+			L"BasicVS.hlsl", basicShadowVS, basicIL, elementDesc, macros.data())) {
+		std::cout << "failed create basic shadow vs" << std::endl;
 		return false;
 	}
 
@@ -784,7 +852,8 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		{ "WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-		{ "TYPE", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "INDEX", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
@@ -792,14 +861,33 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Instance Shadow
+	macros.clear();
+	macros.push_back({ "USE_SHADOW", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"InstanceVS.hlsl", instanceShadowVS, instanceIL, elementDesc6, macros.data())) {
+		std::cout << "failed create instance shadow vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
 bool Graphics::InitGeometryShaders()
-{ 
+{
 	// BasicShadowGS
-	if (!DXUtils::CreateGeometryShader(L"BasicShadowGS.hlsl", basicShadowGS)) {
+	if (!DXUtils::CreateGeometryShader(L"ShadowGS.hlsl", basicShadowGS)) {
 		std::cout << "failed create basic shadow gs" << std::endl;
+		return false;
+	}
+
+	// InstanceShadowGS
+	std::vector<D3D_SHADER_MACRO> macros;
+	macros.push_back({ "USE_INSTANCE", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreateGeometryShader(L"ShadowGS.hlsl", instanceShadowGS, macros.data())) {
+		std::cout << "failed create instance shadow gs" << std::endl;
 		return false;
 	}
 
@@ -964,6 +1052,18 @@ bool Graphics::InitPixelShaders()
 	// bloomUpPS
 	if (!DXUtils::CreatePixelShader(L"BloomUpPS.hlsl", bloomUpPS)) {
 		std::cout << "failed create bloom up ps" << std::endl;
+		return false;
+	}
+
+	// instanceShadowPS
+	if (!DXUtils::CreatePixelShader(L"InstanceShadowPS.hlsl", instanceShadowPS)) {
+		std::cout << "failed create instance shadow ps" << std::endl;
+		return false;
+	}
+
+	// biomeMapPS
+	if (!DXUtils::CreatePixelShader(L"BiomeMapPS.hlsl", biomeMapPS)) {
+		std::cout << "failed create biome map ps" << std::endl;
 		return false;
 	}
 
@@ -1205,6 +1305,28 @@ bool Graphics::InitBlendStates()
 	return true;
 }
 
+void Graphics::InitViewports()
+{
+	// basicViewport;
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, App::WIDTH, App::HEIGHT);
+
+	// mirrorWorldViewPort
+	DXUtils::UpdateViewport(
+		Graphics::mirrorWorldViewPort, 0, 0, App::MIRROR_WIDTH, App::MIRROR_HEIGHT);
+
+	// worldMapViewport
+	UINT worldMapTopX = (App::WIDTH / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
+	UINT worldMapTopY = (App::HEIGHT / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
+	DXUtils::UpdateViewport(Graphics::worldMapViewport, worldMapTopX, worldMapTopY,
+		WorldMap::BIOME_MAP_UI_SIZE, WorldMap::BIOME_MAP_UI_SIZE);
+
+	// shadowViewports
+	for (int i = 0; i < Light::CASCADE_NUM; ++i) {
+		DXUtils::UpdateViewport(shadowViewPorts[i], Light::CASCADE_SIZE * i, 0, Light::CASCADE_SIZE,
+			Light::CASCADE_SIZE);
+	}
+}
+
 void Graphics::InitGraphicsPSO()
 {
 	// basicPSO
@@ -1298,12 +1420,19 @@ void Graphics::InitGraphicsPSO()
 	waterFilterPSO = samplingPSO;
 	waterFilterPSO.pixelShader = waterFilterPS;
 
-	// basicshadowPSO
+	// basicShadowPSO
 	basicShadowPSO = basicPSO;
 	basicShadowPSO.rasterizerState = shadowRS;
 	basicShadowPSO.vertexShader = basicShadowVS;
 	basicShadowPSO.geometryShader = basicShadowGS;
 	basicShadowPSO.pixelShader = nullptr;
+
+	// instanceShadowPSO
+	instanceShadowPSO = instancePSO;
+	instanceShadowPSO.rasterizerState = shadowRS;
+	instanceShadowPSO.vertexShader = instanceShadowVS;
+	instanceShadowPSO.geometryShader = instanceShadowGS;
+	instanceShadowPSO.pixelShader = instanceShadowPS;
 
 	// ssaoPSO
 	ssaoPSO = samplingPSO;
@@ -1344,6 +1473,10 @@ void Graphics::InitGraphicsPSO()
 	// combineBloomPSO
 	combineBloomPSO = samplingPSO;
 	combineBloomPSO.pixelShader = combineBloomPS;
+
+	// biomeMapPSO
+	biomeMapPSO = samplingPSO;
+	biomeMapPSO.pixelShader = biomeMapPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

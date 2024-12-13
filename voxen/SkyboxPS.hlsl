@@ -25,6 +25,8 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 t
         float3 B = cross(N, T);
         float3x3 TBNMatrix = float3x3(T, B, N);
         
+        // TBN좌표 * 월드좌표기준정의된TBN직교행렬 -> 월드좌표
+        // 월드좌표 * 월드좌표기준정의된TBN직교행렬의역행렬 -> TBN좌표
         float3 vTBN = mul(p, transpose(TBNMatrix)); // 직교 행렬의 역행렬은 전치행렬
         
         texcoord.x = 0.5 + vTBN.x * (0.5 / size);

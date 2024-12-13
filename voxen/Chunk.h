@@ -3,6 +3,7 @@
 #include "Block.h"
 #include "Instance.h"
 #include "Structure.h"
+#include "Terrain.h"
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -75,7 +76,7 @@ public:
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 
-	uint8_t GetBlockTypeByPosition(Vector3 pos);
+	BLOCK_TYPE GetBlockTypeByPosition(Vector3 pos);
 
 private:
 	void InitChunkData();
@@ -83,10 +84,9 @@ private:
 	void InitWorldVerticesData(ChunkInitMemory* memory);
 
 	void MakeFaceSliceColumnBit(uint64_t cullColBit[Chunk::CHUNK_SIZE_P2 * 6],
-		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6]);
-	void GreedyMeshing(uint64_t faceColBit[Chunk::CHUNK_SIZE2 * 6],
-		std::vector<VoxelVertex>& vertices,
-		std::vector<uint32_t>& indices, uint8_t type);
+		std::unordered_map<BLOCK_TYPE, std::vector<uint64_t>>& sliceColBit);
+	void GreedyMeshing(std::vector<uint64_t>& faceColBit, std::vector<VoxelVertex>& vertices,
+		std::vector<uint32_t>& indices, BLOCK_TYPE types);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 	std::map<std::tuple<int, int, int>, Instance> m_instanceMap;
@@ -96,7 +96,7 @@ private:
 	bool m_isUpdateRequired;
 	Vector3 m_offsetPosition;
 	Vector3 m_position;
-	
+
 	std::vector<VoxelVertex> m_lowLodVertices;
 	std::vector<uint32_t> m_lowLodIndices;
 
@@ -121,15 +121,9 @@ struct ChunkInitMemory {
 	uint64_t tpCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
 	uint64_t saCullColBit[Chunk::CHUNK_SIZE_P2 * 6];
 
-	uint64_t llSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
-	uint64_t opSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
-	uint64_t tpSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
-	uint64_t saSliceColBit[Block::BLOCK_TYPE_COUNT][Chunk::CHUNK_SIZE2 * 6];
-
 	ChunkInitMemory()
 		: llColBit{ 0 }, opColBit{ 0 }, llCullColBit{ 0 }, opCullColBit{ 0 }, tpCullColBit{ 0 },
-		  saCullColBit{ 0 }, llSliceColBit{ 0 }, opSliceColBit{ 0 }, tpSliceColBit{ 0 },
-		  saSliceColBit{ 0 }
+		  saCullColBit{ 0 }
 	{
 	}
 
@@ -142,12 +136,5 @@ struct ChunkInitMemory {
 		std::fill(std::begin(opCullColBit), std::end(opCullColBit), 0);
 		std::fill(std::begin(tpCullColBit), std::end(tpCullColBit), 0);
 		std::fill(std::begin(saCullColBit), std::end(saCullColBit), 0);
-
-		for (int i = 0; i < Block::BLOCK_TYPE_COUNT; ++i) {
-			std::fill(std::begin(llSliceColBit[i]), std::end(llSliceColBit[i]), 0);
-			std::fill(std::begin(opSliceColBit[i]), std::end(opSliceColBit[i]), 0);
-			std::fill(std::begin(tpSliceColBit[i]), std::end(tpSliceColBit[i]), 0);
-			std::fill(std::begin(saSliceColBit[i]), std::end(saSliceColBit[i]), 0);
-		}
 	}
 };

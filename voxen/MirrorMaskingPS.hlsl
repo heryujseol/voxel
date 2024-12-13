@@ -8,7 +8,7 @@ struct psInput
     float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 };
 
 float main(psInput input) : SV_Target0

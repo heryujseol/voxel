@@ -2,6 +2,7 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 #include "Terrain.h"
+#include "SimpleQuadRenderer.h"
 
 #include <iostream>
 #include <imgui.h>
@@ -25,7 +26,7 @@ App::App()
 	  m_keyPressed{
 		  false,
 	  },
-	  m_keyToggle{
+	  m_keyToggled{
 		  false,
 	  }
 {
@@ -57,7 +58,7 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		m_keyPressed[UINT(wParam)] = true;
-		m_keyToggle[UINT(wParam)] = !m_keyToggle[UINT(wParam)];
+		m_keyToggled[UINT(wParam)] = !m_keyToggled[UINT(wParam)];
 		break;
 
 	case WM_KEYUP:
@@ -108,22 +109,79 @@ void App::Run()
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
 
-			ImGui::Text("x : %.4f y : %.4f z : %.4f", m_camera.GetPosition().x,
-				m_camera.GetPosition().y, m_camera.GetPosition().z);
-			/*int flag = 0;
-			flag += ImGui::SliderFloat(
-				"Bias", &m_light.m_shadowConstantData.dummy2, -0.0100, 0.0100, "%.4f");
-			if (flag) {
-				DXUtils::UpdateConstantBuffer(
-					m_light.m_shadowConstantBuffer, m_light.m_shadowConstantData);
-			}*/
+			float worldX = m_camera.GetPosition().x;
+			float worldY = m_camera.GetPosition().y;
+			float worldZ = m_camera.GetPosition().z;
+			ImGui::Text("x : %.4f y : %.4f z : %.4f", worldX, worldY, worldZ);
 
-			ImGui::Text("c : %.2f e : %.2f pv : %.2f",
-				Terrain::GetContinentalness(m_camera.GetPosition().x, m_camera.GetPosition().z),
-				Terrain::GetErosion(m_camera.GetPosition().x, m_camera.GetPosition().z),
-				Terrain::GetPeaksValley(m_camera.GetPosition().x, m_camera.GetPosition().z));
+			float c = Terrain::GetContinentalness((int)worldX, (int)worldZ);
+			float e = Terrain::GetErosion((int)worldX, (int)worldZ);
+			float pv = Terrain::GetPeaksValley((int)worldX, (int)worldZ);
+			ImGui::Text("C : %.2f | E : %.2f | PV : %.2f", c, e, pv);
 
-			ImGui::SliderFloat("bias", &m_camera.m_constantData.dummy.y, 0.0f, 0.1f, "%.10f");
+			float b = Terrain::GetElevation(c, e, pv);
+			float t = Terrain::GetTemperature((int)worldX, (int)worldZ);
+			float h = Terrain::GetHumidity((int)worldX, (int)worldZ);
+			ImGui::Text("B : %.2f | T : %.2f | H : %.2f", b, t, h);
+
+			float r = 32.0f * pv * powf((1.0f - e), 1.25f);
+			BIOME_TYPE biomeType = Terrain::GetBiomeType(b - r, t, h);
+			const char* biomeString = nullptr;
+			switch (biomeType) {
+			case BIOME_TYPE::BIOME_OCEAN:
+				biomeString = "BIOME_OCEAN";
+				break;
+
+			case BIOME_TYPE::BIOME_BEACH:
+				biomeString = "BIOME_BEACH";
+				break;
+
+			case BIOME_TYPE::BIOME_TUNDRA:
+				biomeString = "BIOME_TUNDRA";
+				break;
+
+			case BIOME_TYPE::BIOME_TAIGA:
+				biomeString = "BIOME_TAIGA";
+				break;
+
+			case BIOME_TYPE::BIOME_PLAINS:
+				biomeString = "BIOME_PLAINS";
+				break;
+
+			case BIOME_TYPE::BIOME_SWAMP:
+				biomeString = "BIOME_SWAMP";
+				break;
+
+			case BIOME_TYPE::BIOME_FOREST:
+				biomeString = "BIOME_FOREST";
+				break;
+
+			case BIOME_TYPE::BIOME_SHRUBLAND:
+				biomeString = "BIOME_SHRUBLAND";
+				break;
+
+			case BIOME_TYPE::BIOME_DESERT:
+				biomeString = "BIOME_DESERT";
+				break;
+
+			case BIOME_TYPE::BIOME_RAINFOREST:
+				biomeString = "BIOME_RAINFOREST";
+				break;
+
+			case BIOME_TYPE::BIOME_SEASONFOREST:
+				biomeString = "BIOME_SEASONFOREST";
+				break;
+
+			case BIOME_TYPE::BIOME_SAVANA:
+				biomeString = "BIOME_SAVANA";
+				break;
+
+			default:
+				biomeString = "BIOME_NONE";
+				break;
+			}
+			ImGui::Text("BIOME: %s", biomeString);
+
 
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
@@ -141,13 +199,16 @@ void App::Run()
 void App::Update(float dt)
 {
 	static float acc = 0.0f;
-	if (!m_keyPressed['T'])
-		m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 
-	m_postEffect.Update(dt, m_camera.IsUnderWater(), m_light.GetRadianceWeight());
+	m_postEffect.Update(dt, m_camera.IsUnderWater());
+
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
+	
+	m_worldMap.Update(m_camera.GetPosition());
 
-	if (m_keyToggle['F']) {
+	
+	if (m_keyToggled['F']) {
 		acc += DAY_CYCLE_TIME_SPEED * dt;
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
 
@@ -164,9 +225,6 @@ void App::Update(float dt)
 
 void App::Render()
 {
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-
 	std::vector<ID3D11Buffer*> ppConstantBuffers;
 	ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
@@ -178,24 +236,24 @@ void App::Render()
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
-	
+
 	// 0. Shadow Map
 	{
-        RenderShadowMap();
-    }
+		RenderShadowMap();
+	}
 
-    // 1. Deferred Render Pass
-    {
-        FillGBuffer();
-        MaskMSAAEdge();
-        RenderSSAO();
-        ShadingBasic();
-    }
+	// 1. Deferred Render Pass
+	{
+		FillGBuffer();
+		MaskMSAAEdge();
+		RenderSSAO();
+		ShadingBasic();
+	}
 
-    // 2. No-MSAA to MSAA Texture
-    {
-        ConvertToMSAA();
-    }
+	// 2. No-MSAA to MSAA Texture
+	{
+		ConvertToMSAA();
+	}
 
 	// 3. Forward Render Pass MSAA
 	{
@@ -214,8 +272,8 @@ void App::Render()
 		}
 	}
 
-    // 4. Post Effect
-    {
+	// 4. Post Effect
+	{
 		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
 			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
@@ -224,7 +282,13 @@ void App::Render()
 		}
 
 		m_postEffect.Bloom();
-    }
+	}
+
+	// 5. Biome Map
+	{
+		if (m_keyToggled['M'])
+			m_worldMap.RenderBiomeMap();
+	}
 }
 
 bool App::InitWindow()
@@ -299,7 +363,7 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(0.0f, 128.0f, -128.0f)))
+	if (!m_camera.Initialize(Vector3(0.0f, 128.0f, 0.0f))) // snow Vector3(-500.0f, 128.0f, 2800.0f)
 		return false;
 
 	if (!ChunkManager::GetInstance()->Initialize(m_camera.GetChunkPosition()))
@@ -315,6 +379,9 @@ bool App::InitScene()
 		return false;
 
 	if (!m_postEffect.Initialize())
+		return false;
+
+	if (!m_worldMap.Initialize(m_camera.GetPosition()))
 		return false;
 
 	m_constantData.appWidth = WIDTH;
@@ -350,6 +417,8 @@ void App::FillGBuffer()
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
 	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::climateMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	ChunkManager::GetInstance()->RenderBasic(m_camera.GetPosition());
@@ -369,7 +438,7 @@ void App::MaskMSAAEdge()
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::edgeMaskingPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderSSAO()
@@ -394,10 +463,10 @@ void App::RenderSSAO()
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 		Graphics::SetPipelineStates(Graphics::ssaoPSO);
-		m_postEffect.Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 
 		Graphics::SetPipelineStates(Graphics::ssaoEdgePSO);
-		m_postEffect.Render();
+		SimpleQuadRenderer::GetInstance()->Render();
 	}
 
 	// blur
@@ -418,15 +487,15 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
-	
+
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 
 	Graphics::SetPipelineStates(Graphics::shadingBasicEdgePSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 
 	ID3D11ShaderResourceView* nullSRV[] = {
 		0,
@@ -441,7 +510,7 @@ void App::ConvertToMSAA()
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::basicSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::samplingPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderSkybox()
@@ -478,7 +547,7 @@ void App::RenderFogFilter()
 		0, 1, m_postEffect.m_fogFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::fogFilterPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderWaterFilter()
@@ -493,12 +562,11 @@ void App::RenderWaterFilter()
 		0, 1, m_postEffect.m_waterFilterConstantBuffer.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterFilterPSO);
-	m_postEffect.Render();
+	SimpleQuadRenderer::GetInstance()->Render();
 }
 
 void App::RenderMirrorWorld()
 {
-	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -538,6 +606,8 @@ void App::RenderMirrorWorld()
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
 		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
+		ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
+		ppSRVs.push_back(Graphics::climateMapSRV.Get());
 		ppSRVs.push_back(Graphics::mirrorDepthSRV.Get());
 		Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 		ChunkManager::GetInstance()->RenderMirrorWorld();
@@ -552,7 +622,6 @@ void App::RenderMirrorWorld()
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(7, 1, m_camera.m_constantBuffer.GetAddressOf());
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }
 
@@ -577,15 +646,27 @@ void App::RenderWaterPlane()
 
 void App::RenderShadowMap()
 {
-	Graphics::context->RSSetViewports(Light::CASCADE_NUM, m_light.m_shadowViewPorts);
+	Graphics::context->RSSetViewports(Light::CASCADE_NUM, Graphics::shadowViewPorts);
 
-	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::shadowDSV.Get());
+	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::shadowDSV.Get());
+
 	Graphics::context->ClearDepthStencilView(Graphics::shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_light.m_shadowConstantBuffer.GetAddressOf());
 
-	Graphics::SetPipelineStates(Graphics::basicShadowPSO);
-	ChunkManager::GetInstance()->RenderShadowMap();
+	// Basic Shadow Map
+	{
+		Graphics::SetPipelineStates(Graphics::basicShadowPSO);
+		ChunkManager::GetInstance()->RenderBasicShadowMap();
+	}
+
+	// Instance Shadow Map
+	{
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
+
+		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);
+		ChunkManager::GetInstance()->RenderInstance();
+	}
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 }

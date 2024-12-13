@@ -159,14 +159,14 @@ void Camera::SetIsUnderWater()
 	Chunk* c = ChunkManager::GetInstance()->GetChunkByPosition(x, y, z);
 	if (c != nullptr && c->IsLoaded()) {
 		Vector3 chunkOffset = m_eyePos - m_chunkPos;
-		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::WATER) {
+		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::BLOCK_WATER) {
 			m_isUnderWater = true;
 			return;
 		}
 
 		float bias = 0.15f;
 		chunkOffset.y -= bias;
-		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::WATER) {
+		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::BLOCK_WATER) {
 			m_isUnderWater = true;
 			return;
 		}

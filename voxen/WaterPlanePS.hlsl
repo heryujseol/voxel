@@ -11,7 +11,7 @@ struct psInput
     float3 posWorld : POSITION;
     float3 normal : NORMAL;
     sample float2 texcoord : TEXCOORD;
-    uint type : TYPE;
+    uint texIndex : INDEX;
 };
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
@@ -30,7 +30,7 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
         discard;
     
     // absorption color
-    float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, 0)).rgb;
+    float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex)).rgb;
     float3 ambientLighting = getAmbientLighting(1.0, textureColor, input.normal);
     
     float3 directLighting = getDirectLighting(input.normal, input.posWorld, textureColor, 0.0, 0.05, true);

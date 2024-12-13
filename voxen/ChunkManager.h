@@ -18,6 +18,7 @@ public:
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
+	static const int CHUNK_COUNT2 = CHUNK_COUNT * CHUNK_COUNT;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
 	static const int CHUNK_POOL_SIZE = CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
@@ -38,7 +39,7 @@ public:
 	void RenderBasic(Vector3 cameraPos);
 	void RenderMirrorWorld();
 	void RenderTransparency();
-	void RenderShadowMap();
+	void RenderBasicShadowMap();
 
 	Chunk* GetChunkByPosition(int x, int y, int z);
 	

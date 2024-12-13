@@ -120,8 +120,6 @@ void Light::Update(UINT dateTime, Camera& camera)
 	// shadow
 	{
 		float cascade[CASCADE_NUM + 1] = { 0.0f, 0.015f, 0.035f, 0.15f};
-		float topLX[CASCADE_NUM] = { 0.0f, 1024.0f, 2048.0f };
-		float viewportWidth[CASCADE_NUM] = { 1024.0f, 1024.0f, 1024.0f};
 		float diagonals[CASCADE_NUM] = { 30.0f, 88.0f, 337.0f };
 
 		Matrix cameraViewProjInverse =
@@ -175,7 +173,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 			lightViewCornerMax += borderOffset;
 			lightViewCornerMin -= borderOffset;
 			
-			float worldUnitsPerTexel = cascadeBound / viewportWidth[i];
+			float worldUnitsPerTexel = cascadeBound / (float)CASCADE_SIZE;
 
 			lightViewCornerMin /= worldUnitsPerTexel;
 			lightViewCornerMin = XMVectorFloor(lightViewCornerMin);
@@ -190,11 +188,8 @@ void Light::Update(UINT dateTime, Camera& camera)
 				lightViewCornerMax.z);
 
 			m_shadowConstantData.viewProj[i] = (lightViewMatrix * m_proj[i]).Transpose();
-			m_shadowConstantData.topLX[i] = topLX[i];
-			m_shadowConstantData.viewportWidth[i] = viewportWidth[i];
-
-			DXUtils::UpdateViewport(m_shadowViewPorts[i], m_shadowConstantData.topLX[i], 0.0f,
-				m_shadowConstantData.viewportWidth[i], m_shadowConstantData.viewportWidth[i]);
+			m_shadowConstantData.topLX[i] = (float)CASCADE_SIZE * i;
+			m_shadowConstantData.viewportWidth[i] = (float)CASCADE_SIZE;
 		}
 
 		DXUtils::UpdateConstantBuffer(m_shadowConstantBuffer, m_shadowConstantData);

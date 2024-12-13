@@ -112,7 +112,7 @@ namespace MeshGenerator {
 		texcoords.push_back(Vector2(1.0f, 0.0f));
 		texcoords.push_back(Vector2(1.0f, 1.0f));
 		texcoords.push_back(Vector2(0.0f, 1.0f));
-		
+
 		// ¿À¸¥ÂÊ '|'
 		positions.push_back(Vector3(0.25f, 0.5f, -0.5f));
 		positions.push_back(Vector3(0.25f, 0.5f, 0.5f));
@@ -194,54 +194,65 @@ namespace MeshGenerator {
 		indices.push_back(offset + 3);
 	}
 
-	static VoxelVertex SetVoxelVertex(int x, int y, int z, int face, int type)
+	static VoxelVertex SetVoxelVertex(
+		int x, int y, int z, int face, TEXTURE_INDEX textureIndex)
 	{
-		//|x:6||y:6||z:6||face:3||type:8|
-		return ((uint32_t)x << 23) | ((uint32_t)y << 17) | ((uint32_t)z << 11) |
-			   ((uint32_t)face << 8) | (uint32_t)(type);
+		VoxelVertex v{};
+
+		// |x:6||y:6||z:6||face:3||textureIndex:8|
+		v.data = ((uint32_t)x << 23) | ((uint32_t)y << 17) | ((uint32_t)z << 11) |
+				 ((uint32_t)face << 8) | (uint32_t)(textureIndex);
+
+		return v;
 	}
 
 	static void CreateQuadMesh(std::vector<VoxelVertex>& vertices, std::vector<uint32_t>& indices,
-		int x, int y, int z, int merged, int length, int face, int type)
+		int x, int y, int z, int merged, int length, int face, TEXTURE_INDEX textureIndex)
 	{
 		uint32_t originVertexSize = (uint32_t)vertices.size();
 
 		// order by vertexID for texcoord
-		if (face == 0) {															   // left
-			vertices.push_back(SetVoxelVertex(x, y + length, z + merged, face, type)); // 0, 0
-			vertices.push_back(SetVoxelVertex(x, y + length, z, face, type));		   // 1, 0
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));				   // 1, 1
-			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, type));		   // 0, 1
+		if (face == 0) { // left
+			vertices.push_back(
+				SetVoxelVertex(x, y + length, z + merged, face, textureIndex));		 // 0, 0
+			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex)); // 1, 0
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));			 // 1, 1
+			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, textureIndex)); // 0, 1
 		}
 		else if (face == 1) { // right
-			vertices.push_back(SetVoxelVertex(x, y + length, z, face, type));
-			vertices.push_back(SetVoxelVertex(x, y + length, z + merged, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));
+			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
+			vertices.push_back(
+				SetVoxelVertex(x, y + length, z + merged, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 2) { // bottom
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z + length, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z + length, face, type));
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
+			vertices.push_back(
+				SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z + length, face, textureIndex));
 		}
 		else if (face == 3) { // top
-			vertices.push_back(SetVoxelVertex(x, y, z + length, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z + length, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));
+			vertices.push_back(SetVoxelVertex(x, y, z + length, face, textureIndex));
+			vertices.push_back(
+				SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 4) { // front
-			vertices.push_back(SetVoxelVertex(x, y + length, z, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y + length, z, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));
+			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
+			vertices.push_back(
+				SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 5) { // back
-			vertices.push_back(SetVoxelVertex(x + merged, y + length, z, face, type));
-			vertices.push_back(SetVoxelVertex(x, y + length, z, face, type));
-			vertices.push_back(SetVoxelVertex(x, y, z, face, type));
-			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, type));
+			vertices.push_back(
+				SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
 		}
 
 		SetSquareIndices(indices, originVertexSize);

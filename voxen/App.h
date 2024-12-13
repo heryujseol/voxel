@@ -8,6 +8,7 @@
 #include "Cloud.h"
 #include "Light.h"
 #include "PostEffect.h"
+#include "WorldMap.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -76,10 +77,11 @@ private:
 	Cloud m_cloud;
 	Light m_light;
 	PostEffect m_postEffect;
+	WorldMap m_worldMap;
 
 	UINT m_dateTime;
 	float m_mouseNdcX;
 	float m_mouseNdcY;
 	bool m_keyPressed[256];
-	bool m_keyToggle[256];
+	bool m_keyToggled[256];
 };

@@ -22,7 +22,6 @@ SamplerState pointClampSS : register(s2);
 SamplerState linearClampSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 
-
 Texture2D shadowTex : register(t11);
 
 cbuffer CameraConstantBuffer : register(b7)
@@ -147,11 +146,11 @@ float getFaceAmbient(float3 normal)
     }
     else if (normal.x == 0.0 && normal.y == 0.0) // front or back
     {
-        faceAmbient = 0.83;
+        faceAmbient = 0.85;
     }
     else if (normal.x == 0.0 && normal.z == 0.0 && normal.y < 0.0) // bottom
     {
-        faceAmbient = 0.75;
+        faceAmbient = 0.80;
     }
     
     return faceAmbient;
