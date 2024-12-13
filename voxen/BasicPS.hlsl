@@ -51,7 +51,7 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
         // bias를 사용하지 않으면 depthFighting같은 효과가 나타남
         // 1.0000001, 0.99999999가 서로 완전 다른 결과이기 때문
         float2 diffOffsetPos = floor(worldPos.xz + faceBiasPos.xz) - floor(eyePos.xz);
-        
+                
         float texelSize = 1.0 / (17.0 * 32.0); // TODO
         float2 climateTexcoord = float2(0.5 + diffOffsetPos.x * texelSize, 0.5 - diffOffsetPos.y * texelSize);
         climateTexcoord += float2(texelSize * 0.5, texelSize * 0.5);
@@ -61,7 +61,7 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
         
         float2 th = climateNoiseMap.SampleLevel(pointClampSS, climateTexcoord, 0.0);
         
-        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(th.x, 1.0-th.y), 0.0).rgb;
+        float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(th.x, 1.0 - th.y), 0.0).rgb;
         albedo.rgb *= grassColor;
     }
     

@@ -13,6 +13,7 @@ public:
 
 	static inline INSTANCE_TYPE GetInstanceType(uint8_t texIndex)
 	{
+		// 임시 데이터
 		if (128 <= texIndex && texIndex < 128 + 16)
 			return INSTANCE_TYPE::INSTANCE_CROSS;
 		else if (128 + 16 <= texIndex && texIndex < 128 + 16 * 2)
