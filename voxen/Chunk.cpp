@@ -45,9 +45,11 @@ ChunkInitMemory* Chunk::Initialize(ChunkInitMemory* memory)
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 	sum += duration.count();
 	count++;
+	/*
 	std::cout << "duration: " << duration.count() << " micro s"
 			  << " | "
 			  << "average: " << (float)sum / (float)count << " micro s" << std::endl;
+	*/
 	////////////////////////////////////
 
 	return memory;

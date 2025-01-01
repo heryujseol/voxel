@@ -19,7 +19,7 @@ public:
 
 	bool Initialize(Vector3 pos);
 
-	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
+	void Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouseDeltaY);
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
@@ -43,7 +43,7 @@ public:
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
-	void UpdateViewDirection(float mouseX, float mouseY);
+	void UpdateViewDirection(LONG mouseDeltaX, LONG mouseDeltaY);
 
 	void MoveForward(float dt);
 	void MoveRight(float dt);
@@ -60,14 +60,17 @@ private:
 	Vector3 m_forward;
 	Vector3 m_up;
 	Vector3 m_right;
-	Matrix m_mirrorPlaneMatrix;
 
-	float m_viewNdcX;
-	float m_viewNdcY;
+	Matrix m_mirrorPlaneMatrix;
 
 	float m_speed;
 
 	bool m_isUnderWater;
+
+	float m_mouseSensitiveX;
+	float m_mouseSensitiveY;
+	float m_yaw;
+	float m_pitch;
 
 	//CameraConstantData m_constantData;
 

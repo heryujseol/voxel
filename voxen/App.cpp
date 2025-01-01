@@ -22,13 +22,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 App::App()
 	: m_hwnd(), m_constantBuffer(nullptr), m_constantData(), m_camera(), m_skybox(), m_cloud(),
-	  m_light(), m_postEffect(), m_dateTime(0), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
+	  m_light(), m_postEffect(), m_dateTime(0),
 	  m_keyPressed{
 		  false,
 	  },
 	  m_keyToggled{
 		  false,
-	  }
+	  },
+	  m_mouseDeltaX(0), m_mouseDeltaY(0)
 {
 	g_app = this;
 }
@@ -48,6 +49,7 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return true;
 
 	switch (uMsg) {
+
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
@@ -57,8 +59,10 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			DestroyWindow(hwnd);
 			return 0;
 		}
+
 		m_keyPressed[UINT(wParam)] = true;
 		m_keyToggled[UINT(wParam)] = !m_keyToggled[UINT(wParam)];
+
 		break;
 
 	case WM_KEYUP:
@@ -66,9 +70,25 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
-		m_mouseNdcX = (float)LOWORD(lParam) / (float)WIDTH * 2 - 1;
-		m_mouseNdcY = -((float)HIWORD(lParam) / (float)HEIGHT * 2 - 1);
+		break;
 
+	case WM_INPUT:
+		UINT dwSize;
+		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+		LPBYTE lpb = new BYTE[dwSize];
+		if (lpb == NULL) {
+			break;
+		}
+
+		if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) ==
+			dwSize) {
+			RAWINPUT* raw = (RAWINPUT*)lpb;
+			if (raw->header.dwType == RIM_TYPEMOUSE) {
+				m_mouseDeltaX += raw->data.mouse.lLastX;
+				m_mouseDeltaY += raw->data.mouse.lLastY;
+			}
+		}
+		delete[] lpb;
 		break;
 	}
 
@@ -199,15 +219,14 @@ void App::Run()
 void App::Update(float dt)
 {
 	static float acc = 0.0f;
-	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	m_camera.Update(dt, m_keyPressed, m_mouseDeltaX, m_mouseDeltaY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater());
 
 	ChunkManager::GetInstance()->Update(dt, m_camera, m_light);
-	
+
 	m_worldMap.Update(m_camera.GetPosition());
 
-	
 	if (m_keyToggled['F']) {
 		acc += DAY_CYCLE_TIME_SPEED * dt;
 		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
@@ -221,6 +240,9 @@ void App::Update(float dt)
 		m_light.Update(m_dateTime, m_camera);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 	}
+
+	m_mouseDeltaX = 0;
+	m_mouseDeltaY = 0;
 }
 
 void App::Render()
@@ -304,11 +326,10 @@ bool App::InitWindow()
 	if (!RegisterClassEx(&wc))
 		return false;
 
-
 	RECT wr = { 0, 0, (LONG)WIDTH, (LONG)HEIGHT };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
-	m_hwnd = CreateWindow(wc.lpszClassName, L"Voxen", WS_OVERLAPPEDWINDOW, 50, 50,
+	m_hwnd = CreateWindow(wc.lpszClassName, L"Voxen", WS_OVERLAPPEDWINDOW, 100, 100,
 		wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hInstance, NULL);
 
 	if (m_hwnd == NULL)
@@ -316,6 +337,22 @@ bool App::InitWindow()
 
 	ShowWindow(m_hwnd, SW_SHOWDEFAULT);
 	UpdateWindow(m_hwnd);
+
+	POINT topLeft = { 0, 0 };
+	POINT bottomRight = { 1920, 1080 };
+	ClientToScreen(m_hwnd, &topLeft);	  // 좌측상단 포인터
+	ClientToScreen(m_hwnd, &bottomRight); // 우측하단 포인터
+
+	RECT clipRect = { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y };
+	ClipCursor(&clipRect);
+	ShowCursor(false);
+
+	RAWINPUTDEVICE rid;
+	rid.usUsagePage = 0x01; // HID_USAGE_PAGE_GENERIC
+	rid.usUsage = 0x02;		// HID_USAGE_GENERIC_MOUSE
+	rid.dwFlags = RIDEV_INPUTSINK;
+	rid.hwndTarget = m_hwnd;
+	RegisterRawInputDevices(&rid, 1, sizeof(rid));
 
 	return true;
 }

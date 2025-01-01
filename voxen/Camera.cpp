@@ -5,9 +5,10 @@
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.1f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
-	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(20.0f), m_isUnderWater(false), m_isOnConstantDirtyFlag(false),
-	  m_isOnChunkDirtyFlag(false)
+	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_speed(20.0f), m_isUnderWater(false),
+	  m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false), m_mouseSensitiveX(0.0005f),
+	  m_mouseSensitiveY(0.001f),
+	  m_yaw(0.0f), m_pitch(0.0f)
 {
 }
 
@@ -44,10 +45,10 @@ bool Camera::Initialize(Vector3 pos)
 	return true;
 }
 
-void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
+void Camera::Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouseDeltaY)
 {
 	UpdatePosition(keyPressed, dt);
-	UpdateViewDirection(mouseX, mouseY);
+	UpdateViewDirection(mouseDeltaX, mouseDeltaY);
 	/////////////////////////////
 	if (keyPressed['R']) {
 		m_constantData.dummy.x = 0.0f;
@@ -117,31 +118,30 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 	}
 }
 
-void Camera::UpdateViewDirection(float ndcX, float ndcY)
+void Camera::UpdateViewDirection(LONG mouseDeltaX, LONG mouseDeltaY)
 {
-	if (m_viewNdcX == ndcX && m_viewNdcY == ndcY)
+	if (mouseDeltaX == 0 && mouseDeltaY == 0)
 		return;
 
 	m_isOnConstantDirtyFlag = true;
 
-	m_viewNdcX = ndcX;
-	m_viewNdcY = ndcY;
+	m_yaw += mouseDeltaX * m_mouseSensitiveX;
+	m_pitch += mouseDeltaY * m_mouseSensitiveY;
 
-	float thetaHorizontal = DirectX::XM_PI * m_viewNdcX;
-	float thetaVertical = -DirectX::XM_PIDIV2 * m_viewNdcY;
-
+	float thetaHorizontal = DirectX::XM_PI * m_yaw;
+	float thetaVertical = DirectX::XM_PIDIV2 * m_pitch;
 	// using Quaternion not Euler
 	Vector3 basisX = Vector3(1.0f, 0.0f, 0.0f);
 	Vector3 basisY = Vector3(0.0f, 1.0f, 0.0f);
 	Vector3 basisZ = Vector3(0.0f, 0.0f, 1.0f);
 
-	Quaternion q = Quaternion(basisY * sinf(thetaHorizontal * 0.5f), cosf(thetaHorizontal * 0.5f));
-	m_forward = Vector3::Transform(basisZ, Matrix::CreateFromQuaternion(q));
-	m_right = Vector3::Transform(basisX, Matrix::CreateFromQuaternion(q));
+	Quaternion qYaw = Quaternion(basisY * sinf(thetaHorizontal * 0.5f), cosf(thetaHorizontal * 0.5f));
+	m_forward = Vector3::Transform(basisZ, Matrix::CreateFromQuaternion(qYaw));
+	m_right = Vector3::Transform(basisX, Matrix::CreateFromQuaternion(qYaw));
 
-	q = Quaternion(m_right * sinf(thetaVertical * 0.5f), cosf(thetaVertical * 0.5f));
-	m_forward = Vector3::Transform(m_forward, Matrix::CreateFromQuaternion(q));
-	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
+	Quaternion qPitch = Quaternion(m_right * sinf(thetaVertical * 0.5f), cosf(thetaVertical * 0.5f));
+	m_forward = Vector3::Transform(m_forward, Matrix::CreateFromQuaternion(qPitch));
+	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(qPitch));
 }
 
 void Camera::MoveForward(float dt) { m_eyePos += m_forward * m_speed * dt; }

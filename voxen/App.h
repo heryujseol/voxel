@@ -80,8 +80,8 @@ private:
 	WorldMap m_worldMap;
 
 	UINT m_dateTime;
-	float m_mouseNdcX;
-	float m_mouseNdcY;
 	bool m_keyPressed[256];
 	bool m_keyToggled[256];
+	LONG m_mouseDeltaX;
+	LONG m_mouseDeltaY;
 };
