@@ -29,7 +29,7 @@ App::App()
 	  m_keyToggled{
 		  false,
 	  },
-	  m_mouseDeltaX(0), m_mouseDeltaY(0)
+	  m_mouseDeltaX(0), m_mouseDeltaY(0), m_isActive(false)
 {
 	g_app = this;
 }
@@ -50,29 +50,54 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 
-	case WM_DESTROY:
+	case WM_DESTROY: {
+		UnlockCursor();
 		PostQuitMessage(0);
-		return 0;
+		break;
+	}
 
-	case WM_KEYDOWN:
+	case WM_ACTIVATEAPP: {
+		if (LOWORD(wParam) == false) { // inactive
+			UnlockCursor();
+		}
+		else {
+			LockCursor();
+		}
+
+		break;
+	}
+
+	case WM_ENTERSIZEMOVE: {
+		UnlockCursor();
+		break;
+	}
+
+	case WM_EXITSIZEMOVE: {
+		LockCursor();
+		break;
+	}
+
+	case WM_KEYDOWN: {
 		if (UINT(wParam) == VK_ESCAPE) {
 			DestroyWindow(hwnd);
-			return 0;
+			break;
 		}
 
 		m_keyPressed[UINT(wParam)] = true;
 		m_keyToggled[UINT(wParam)] = !m_keyToggled[UINT(wParam)];
 
 		break;
+	}
 
-	case WM_KEYUP:
+	case WM_KEYUP: {
 		m_keyPressed[UINT(wParam)] = false;
 		break;
+	}
 
-	case WM_MOUSEMOVE:
-		break;
+	case WM_INPUT: {
+		if (!m_isActive)
+			break;
 
-	case WM_INPUT:
 		UINT dwSize;
 		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
 		LPBYTE lpb = new BYTE[dwSize];
@@ -92,22 +117,9 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-bool App::Initialize()
-{
-	if (!InitWindow())
-		return false;
-
-	if (!InitDirectX())
-		return false;
-
-	if (!InitGUI())
-		return false;
-
-	if (!InitScene())
-		return false;
+	default:
+		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	}
 
 	return true;
 }
@@ -313,46 +325,62 @@ void App::Render()
 	}
 }
 
+bool App::Initialize()
+{
+	if (!InitWindow())
+		return false;
+
+	if (!InitDirectX())
+		return false;
+
+	if (!InitGUI())
+		return false;
+
+	if (!InitScene())
+		return false;
+
+	return true;
+}
+
 bool App::InitWindow()
 {
-	const wchar_t CLASS_NAME[] = L"Voxen Class";
-	HINSTANCE hInstance = GetModuleHandle(0);
+	// Window 초기화
+	{
+		const wchar_t CLASS_NAME[] = L"Voxen Class";
+		HINSTANCE hInstance = GetModuleHandle(0);
 
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WindowProc, 0L, 0L, GetModuleHandle(NULL),
-		NULL, NULL, NULL, NULL,
-		CLASS_NAME, // lpszClassName, L-string
-		NULL };
+		WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WindowProc, 0L, 0L, GetModuleHandle(NULL),
+			NULL, NULL, NULL, NULL,
+			CLASS_NAME, // lpszClassName, L-string
+			NULL };
 
-	if (!RegisterClassEx(&wc))
-		return false;
+		if (!RegisterClassEx(&wc))
+			return false;
 
-	RECT wr = { 0, 0, (LONG)WIDTH, (LONG)HEIGHT };
-	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
+		RECT wr = { 0, 0, (LONG)WIDTH, (LONG)HEIGHT };
+		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
-	m_hwnd = CreateWindow(wc.lpszClassName, L"Voxen", WS_OVERLAPPEDWINDOW, 100, 100,
-		wr.right - wr.left, wr.bottom - wr.top, NULL, NULL, hInstance, NULL);
+		DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		m_hwnd = CreateWindow(wc.lpszClassName, L"Voxen", dwStyle, 100, 100, wr.right - wr.left,
+			wr.bottom - wr.top, NULL, NULL, hInstance, NULL);
 
-	if (m_hwnd == NULL)
-		return false;
+		if (m_hwnd == NULL)
+			return false;
 
-	ShowWindow(m_hwnd, SW_SHOWDEFAULT);
-	UpdateWindow(m_hwnd);
+		ShowWindow(m_hwnd, SW_SHOWDEFAULT);
+		UpdateWindow(m_hwnd);
+	}
 
-	POINT topLeft = { 0, 0 };
-	POINT bottomRight = { 1920, 1080 };
-	ClientToScreen(m_hwnd, &topLeft);	  // 좌측상단 포인터
-	ClientToScreen(m_hwnd, &bottomRight); // 우측하단 포인터
+	// RAW INPUT 등록
+	{
+		RAWINPUTDEVICE rid;
+		rid.usUsagePage = 0x01; // HID_USAGE_PAGE_GENERIC
+		rid.usUsage = 0x02;		// HID_USAGE_GENERIC_MOUSE
+		rid.dwFlags = RIDEV_INPUTSINK;
+		rid.hwndTarget = m_hwnd;
 
-	RECT clipRect = { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y };
-	ClipCursor(&clipRect);
-	ShowCursor(false);
-
-	RAWINPUTDEVICE rid;
-	rid.usUsagePage = 0x01; // HID_USAGE_PAGE_GENERIC
-	rid.usUsage = 0x02;		// HID_USAGE_GENERIC_MOUSE
-	rid.dwFlags = RIDEV_INPUTSINK;
-	rid.hwndTarget = m_hwnd;
-	RegisterRawInputDevices(&rid, 1, sizeof(rid));
+		RegisterRawInputDevices(&rid, 1, sizeof(rid));
+	}
 
 	return true;
 }
@@ -706,4 +734,32 @@ void App::RenderShadowMap()
 	}
 
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+}
+
+void App::LockCursor()
+{
+	if (!m_isActive) {
+		POINT topLeft = { 0, 0 };
+		POINT bottomRight = { WIDTH, HEIGHT };
+		ClientToScreen(m_hwnd, &topLeft);	  // 좌측상단 포인터
+		ClientToScreen(m_hwnd, &bottomRight); // 우측하단 포인터
+		RECT clipRect = { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y };
+
+		ClipCursor(&clipRect);
+
+		ShowCursor(false); // 전역 카운트로 동작하기 때문에 m_isActive를 이용한 flag 처리 필요
+
+		m_isActive = true;
+	}
+}
+
+void App::UnlockCursor()
+{
+	if (m_isActive) {
+		ClipCursor(nullptr);
+
+		ShowCursor(true);
+
+		m_isActive = false;
+	}
 }

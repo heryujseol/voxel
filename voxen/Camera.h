@@ -38,7 +38,7 @@ public:
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
-	
+
 	CameraConstantData m_constantData;
 
 private:
@@ -72,7 +72,7 @@ private:
 	float m_yaw;
 	float m_pitch;
 
-	//CameraConstantData m_constantData;
+	// CameraConstantData m_constantData;
 
 	Vector3 lookTo[6] = {
 		Vector3(1.0f, 0.0f, 0.0f),
