@@ -197,5 +197,11 @@
     <FxCompile Include="BiomeMapPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
+    <FxCompile Include="PickingBlockVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="PickingBlockPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

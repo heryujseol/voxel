@@ -306,7 +306,14 @@ void App::Render()
 		}
 	}
 
-	// 4. Post Effect
+	// 4. Picking Block
+	{
+		if (m_camera.IsPicking()) {
+			m_camera.RenderPickingBlock();
+		}
+	}
+
+	// 5. Post Effect
 	{
 		Graphics::context->ResolveSubresource(Graphics::basicBuffer.Get(), 0,
 			Graphics::basicMSBuffer.Get(), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
@@ -318,7 +325,7 @@ void App::Render()
 		m_postEffect.Bloom();
 	}
 
-	// 5. Biome Map
+	// 6. Biome Map
 	{
 		if (m_keyToggled['M'])
 			m_worldMap.RenderBiomeMap();

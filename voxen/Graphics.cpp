@@ -17,6 +17,7 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
+	ComPtr<ID3D11InputLayout> pickingBlockIL;
 
 
 	// Vertex Shader
@@ -27,6 +28,7 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> basicShadowVS;
 	ComPtr<ID3D11VertexShader> instanceShadowVS;
+	ComPtr<ID3D11VertexShader> pickingBlockVS;
 
 
 	// Geometry Shader
@@ -59,6 +61,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> combineBloomPS;
 	ComPtr<ID3D11PixelShader> instanceShadowPS;
 	ComPtr<ID3D11PixelShader> biomeMapPS;
+	ComPtr<ID3D11PixelShader> pickingBlockPS;
+
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
@@ -246,6 +250,7 @@ namespace Graphics {
 	GraphicsPSO bloomUpPSO;
 	GraphicsPSO combineBloomPSO;
 	GraphicsPSO biomeMapPSO;
+	GraphicsPSO pickingBlockPSO;
 }
 
 
@@ -871,6 +876,17 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Picking Block
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc7 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"PickingBlockVS.hlsl", pickingBlockVS, pickingBlockIL, elementDesc7)) {
+		std::cout << "failed create picking block vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -1064,6 +1080,12 @@ bool Graphics::InitPixelShaders()
 	// biomeMapPS
 	if (!DXUtils::CreatePixelShader(L"BiomeMapPS.hlsl", biomeMapPS)) {
 		std::cout << "failed create biome map ps" << std::endl;
+		return false;
+	}
+	
+	// pickingBlockPS
+	if (!DXUtils::CreatePixelShader(L"PickingBlockPS.hlsl", pickingBlockPS)) {
+		std::cout << "failed create picking block ps" << std::endl;
 		return false;
 	}
 
@@ -1477,6 +1499,13 @@ void Graphics::InitGraphicsPSO()
 	// biomeMapPSO
 	biomeMapPSO = samplingPSO;
 	biomeMapPSO.pixelShader = biomeMapPS;
+
+	// pickingBlockPSO
+	pickingBlockPSO = basicPSO;
+	pickingBlockPSO.topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+	pickingBlockPSO.inputLayout = pickingBlockIL;
+	pickingBlockPSO.vertexShader = pickingBlockVS;
+	pickingBlockPSO.pixelShader = pickingBlockPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

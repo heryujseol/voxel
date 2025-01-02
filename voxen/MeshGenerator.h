@@ -194,8 +194,7 @@ namespace MeshGenerator {
 		indices.push_back(offset + 3);
 	}
 
-	static VoxelVertex SetVoxelVertex(
-		int x, int y, int z, int face, TEXTURE_INDEX textureIndex)
+	static VoxelVertex SetVoxelVertex(int x, int y, int z, int face, TEXTURE_INDEX textureIndex)
 	{
 		VoxelVertex v{};
 
@@ -214,42 +213,37 @@ namespace MeshGenerator {
 		// order by vertexID for texcoord
 		if (face == 0) { // left
 			vertices.push_back(
-				SetVoxelVertex(x, y + length, z + merged, face, textureIndex));		 // 0, 0
+				SetVoxelVertex(x, y + length, z + merged, face, textureIndex));		  // 0, 0
 			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex)); // 1, 0
-			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));			 // 1, 1
+			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));		  // 1, 1
 			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, textureIndex)); // 0, 1
 		}
 		else if (face == 1) { // right
 			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
-			vertices.push_back(
-				SetVoxelVertex(x, y + length, z + merged, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x, y + length, z + merged, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z + merged, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 2) { // bottom
 			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
-			vertices.push_back(
-				SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z + length, face, textureIndex));
 		}
 		else if (face == 3) { // top
 			vertices.push_back(SetVoxelVertex(x, y, z + length, face, textureIndex));
-			vertices.push_back(
-				SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y, z + length, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 4) { // front
 			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
-			vertices.push_back(
-				SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 		}
 		else if (face == 5) { // back
-			vertices.push_back(
-				SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
+			vertices.push_back(SetVoxelVertex(x + merged, y + length, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y + length, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x, y, z, face, textureIndex));
 			vertices.push_back(SetVoxelVertex(x + merged, y, z, face, textureIndex));
@@ -448,5 +442,81 @@ namespace MeshGenerator {
 		vertices.push_back(vertex);
 
 		SetSquareIndices(indices, 0);
+	}
+
+	static void CreatePickingBlockLineMesh(
+		std::vector<PickingBlockVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		PickingBlockVertex vertex;
+
+		vertex.color = Vector3(1.0f, 0.0f, 0.0f);
+		
+		// ¾Æ·¡
+		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		// À§
+		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		// ±âµÕ
+		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
+		vertices.push_back(vertex);
+
+		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
+		vertices.push_back(vertex);
+		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
+		vertices.push_back(vertex);
+
+		for (int i = 0; i < 24; ++i)
+		{
+			indices.push_back(i);
+		}
 	}
 }

@@ -18,11 +18,8 @@ public:
 	~Camera();
 
 	bool Initialize(Vector3 pos);
-
 	void Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouseDeltaY);
-
-	ComPtr<ID3D11Buffer> m_constantBuffer;
-	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
+	void RenderPickingBlock();
 
 	inline Vector3 GetPosition() { return m_eyePos; }
 	inline Vector3 GetChunkPosition() { return m_chunkPos; }
@@ -35,10 +32,13 @@ public:
 	}
 	inline Matrix GetMirrorPlaneMatrix() { return m_mirrorPlaneMatrix; }
 	inline bool IsUnderWater() { return m_isUnderWater; }
+	inline bool IsPicking() { return (m_pickingBlock != nullptr); }
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
 
+	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
 	CameraConstantData m_constantData;
 
 private:
@@ -73,4 +73,13 @@ private:
 	float m_mouseSensitiveY;
 	float m_yaw;
 	float m_pitch;
+
+	const Block* m_pickingBlock;
+	std::vector<PickingBlockVertex> m_pickingBlockVertices;
+	std::vector<uint32_t> m_pickingBlockIndices;
+	ChunkConstantData m_pickingBlockConstantData;
+
+	ComPtr<ID3D11Buffer> m_pickingBlockVertexBuffer;
+	ComPtr<ID3D11Buffer> m_pickingBlockIndexBuffer;
+	ComPtr<ID3D11Buffer> m_pickingBlockConstantBuffer;
 };

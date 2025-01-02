@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include "DXUtils.h"
 #include "ChunkManager.h"
+#include "MeshGenerator.h"
 
 #include <algorithm>
 
@@ -17,30 +18,59 @@ Camera::~Camera() {}
 
 bool Camera::Initialize(Vector3 pos)
 {
-	m_eyePos = pos;
-	m_chunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
+	// Camera Data
+	{
+		m_eyePos = pos;
+		m_chunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 
-	m_constantData.view = GetViewMatrix().Transpose();
-	m_constantData.proj = GetProjectionMatrix().Transpose();
-	m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
-	m_constantData.eyePos = m_eyePos;
-	m_constantData.eyeDir = m_forward;
-	m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
-	m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
-	m_constantData.isUnderWater = m_isUnderWater;
+		m_constantData.view = GetViewMatrix().Transpose();
+		m_constantData.proj = GetProjectionMatrix().Transpose();
+		m_constantData.invProj = GetProjectionMatrix().Invert().Transpose();
+		m_constantData.eyePos = m_eyePos;
+		m_constantData.eyeDir = m_forward;
+		m_constantData.maxRenderDistance = (float)MAX_RENDER_DISTANCE;
+		m_constantData.lodRenderDistance = (float)LOD_RENDER_DISTANCE;
+		m_constantData.isUnderWater = m_isUnderWater;
 
-	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
-		std::cout << "failed create camera constant buffer" << std::endl;
-		return false;
+		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
+			std::cout << "failed create camera constant buffer" << std::endl;
+			return false;
+		}
 	}
 
-	Plane mirrorPlane = Plane(Vector3(0.0f, 64.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
-	m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
-	m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
-	m_constantData.view = m_constantData.view.Transpose();
-	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, m_constantData)) {
-		std::cout << "failed create camera mirror constant buffer" << std::endl;
-		return false;
+	// Mirror Plane
+	{
+		Plane mirrorPlane = Plane(Vector3(0.0f, 64.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
+		m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
+
+		m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
+		m_constantData.view = m_constantData.view.Transpose();
+
+		if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, m_constantData)) {
+			std::cout << "failed create camera mirror constant buffer" << std::endl;
+			return false;
+		}
+	}
+
+	// Picking Block Buffer
+	{
+		MeshGenerator::CreatePickingBlockLineMesh(m_pickingBlockVertices, m_pickingBlockIndices);
+		if (!DXUtils::CreateVertexBuffer(m_pickingBlockVertexBuffer, m_pickingBlockVertices)) {
+			std::cout << "failed create picking block vertex buffer in camera" << std::endl;
+			return false;
+		}
+
+		if (!DXUtils::CreateIndexBuffer(m_pickingBlockIndexBuffer, m_pickingBlockIndices)) {
+			std::cout << "failed create picking block index buffer in camera" << std::endl;
+			return false;
+		}
+
+		m_pickingBlockConstantData.world = Matrix();
+		if (!DXUtils::CreateConstantBuffer(
+				m_pickingBlockConstantBuffer, m_pickingBlockConstantData)) {
+			std::cout << "failed create picking block constant buffer in camera" << std::endl;
+			return false;
+		}
 	}
 
 	return true;
@@ -87,6 +117,8 @@ void Camera::Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouse
 		m_constantData.view = m_mirrorPlaneMatrix * GetViewMatrix();
 		m_constantData.view = m_constantData.view.Transpose();
 		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, m_constantData);
+
+		DXUtils::UpdateConstantBuffer(m_pickingBlockConstantBuffer, m_pickingBlockConstantData);
 
 		m_isOnConstantDirtyFlag = false;
 	}
@@ -202,7 +234,7 @@ void Camera::DDAPickingBlock()
 							  : (m_eyePos.z - floorf(m_eyePos.z)) * deltaZ;
 
 	while (min(min(sideX, sideY), sideZ) < 5.0f) {
-		// 가장 작은 side 찾기 -> 가장 가까움
+		// 가장 가까운 side 찾기
 		if (sideX < sideY && sideX < sideZ) {
 			curX += stepX;
 			sideX += deltaX;
@@ -216,11 +248,36 @@ void Camera::DDAPickingBlock()
 			sideZ += deltaZ;
 		}
 
-		const Block* block =
+		m_pickingBlock =
 			ChunkManager::GetInstance()->GetBlockByPosition(Vector3(curX, curY, curZ));
-		if (block != nullptr && !Block::IsTransparency(block->GetType())) {
-			std::cout << (int)block->GetType() << std::endl;
+		if (m_pickingBlock != nullptr && !Block::IsTransparency(m_pickingBlock->GetType())) {
+			m_pickingBlockConstantData.world =
+				Matrix::CreateScale(1.001f) * Matrix::CreateTranslation(Vector3(curX, curY, curZ));
+			m_pickingBlockConstantData.world = m_pickingBlockConstantData.world.Transpose();
+
+			m_isOnConstantDirtyFlag = true;
+
 			return;
 		}
 	}
+
+	m_pickingBlock = nullptr;
+}
+
+void Camera::RenderPickingBlock() 
+{ 
+	Graphics::SetPipelineStates(Graphics::pickingBlockPSO);
+
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicMSRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+	UINT stride = sizeof(PickingBlockVertex);
+	UINT offset = 0;
+	Graphics::context->IASetIndexBuffer(m_pickingBlockIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_pickingBlockVertexBuffer.GetAddressOf(), &stride, &offset);
+
+	Graphics::context->VSSetConstantBuffers(0, 1, m_pickingBlockConstantBuffer.GetAddressOf());
+
+	Graphics::context->DrawIndexed((UINT)m_pickingBlockIndices.size(), 0, 0);
 }

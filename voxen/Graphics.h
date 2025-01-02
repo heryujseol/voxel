@@ -21,6 +21,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
 	extern ComPtr<ID3D11InputLayout> instanceIL;
+	extern ComPtr<ID3D11InputLayout> pickingBlockIL;
 
 
 	// Vertex Shader
@@ -31,6 +32,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> instanceVS;
 	extern ComPtr<ID3D11VertexShader> basicShadowVS;
 	extern ComPtr<ID3D11VertexShader> instanceShadowVS;
+	extern ComPtr<ID3D11VertexShader> pickingBlockVS;
 
 
 	// Geometry Shader
@@ -63,6 +65,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> combineBloomPS;
 	extern ComPtr<ID3D11PixelShader> instanceShadowPS;
 	extern ComPtr<ID3D11PixelShader> biomeMapPS;
+	extern ComPtr<ID3D11PixelShader> pickingBlockPS;
 
 
 	// Rasterizer State
@@ -250,4 +253,5 @@ namespace Graphics {
 	extern GraphicsPSO bloomUpPSO;
 	extern GraphicsPSO combineBloomPSO;
 	extern GraphicsPSO biomeMapPSO;
+	extern GraphicsPSO pickingBlockPSO;
 }
