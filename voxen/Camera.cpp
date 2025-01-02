@@ -10,7 +10,7 @@ Camera::Camera()
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_speed(20.0f), m_isUnderWater(false),
 	  m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false), m_mouseSensitiveX(0.0005f),
-	  m_mouseSensitiveY(0.001f), m_yaw(0.0f), m_pitch(0.0f)
+	  m_mouseSensitiveY(0.001f), m_yaw(0.0f), m_pitch(0.0f), m_pickingBlock(nullptr)
 {
 }
 
@@ -248,11 +248,11 @@ void Camera::DDAPickingBlock()
 			sideZ += deltaZ;
 		}
 
-		m_pickingBlock =
-			ChunkManager::GetInstance()->GetBlockByPosition(Vector3(curX, curY, curZ));
+		m_pickingBlock = ChunkManager::GetInstance()->GetBlockByPosition(
+			Vector3((float)curX, (float)curY, (float)curZ));
 		if (m_pickingBlock != nullptr && !Block::IsTransparency(m_pickingBlock->GetType())) {
 			m_pickingBlockConstantData.world =
-				Matrix::CreateScale(1.001f) * Matrix::CreateTranslation(Vector3(curX, curY, curZ));
+				Matrix::CreateTranslation(Vector3((float)curX, (float)curY, (float)curZ));
 			m_pickingBlockConstantData.world = m_pickingBlockConstantData.world.Transpose();
 
 			m_isOnConstantDirtyFlag = true;

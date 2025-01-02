@@ -444,79 +444,76 @@ namespace MeshGenerator {
 		SetSquareIndices(indices, 0);
 	}
 
+	static void CreateLineToThickLine(const Vector3& start, const Vector3& end,
+		std::vector<PickingBlockVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		float thickness = 0.003f;
+
+		PickingBlockVertex vertex;
+		vertex.color = Vector3(0.0f, 0.0f, 0.0f);
+
+		Vector3 dir = end - start;
+		dir.Normalize();
+
+		Vector3 basis[3] = { Vector3(1.0f, 0.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f),
+			Vector3(0.0f, 0.0f, 1.0f) };
+
+		for (int d = 0; d < 3; ++d) {
+			if (dir.Dot(basis[d]) == 0) {
+				Vector3 corner[4] = {
+					start - basis[d] * thickness,
+					start + basis[d] * thickness,
+					end + basis[d] * thickness,
+					end - basis[d] * thickness,
+				};
+
+				SetSquareIndices(indices, (uint32_t)vertices.size());
+
+				vertex.position = corner[0];
+				vertices.push_back(vertex);
+
+				vertex.position = corner[1];
+				vertices.push_back(vertex);
+
+				vertex.position = corner[2];
+				vertices.push_back(vertex);
+
+				vertex.position = corner[3];
+				vertices.push_back(vertex);
+			}
+		}
+	}
+
 	static void CreatePickingBlockLineMesh(
 		std::vector<PickingBlockVertex>& vertices, std::vector<uint32_t>& indices)
 	{
-		PickingBlockVertex vertex;
+		Vector3 corner[8] = {
+			Vector3(0.0f, 0.0f, 0.0f),
+			Vector3(0.0f, 0.0f, 1.0f),
+			Vector3(1.0f, 0.0f, 0.0f),
+			Vector3(1.0f, 0.0f, 1.0f),
+			Vector3(0.0f, 1.0f, 0.0f),
+			Vector3(0.0f, 1.0f, 1.0f),
+			Vector3(1.0f, 1.0f, 0.0f),
+			Vector3(1.0f, 1.0f, 1.0f),
+		};
 
-		vertex.color = Vector3(1.0f, 0.0f, 0.0f);
-		
 		// ¾Æ·¡
-		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
+		CreateLineToThickLine(corner[0], corner[2], vertices, indices);
+		CreateLineToThickLine(corner[1], corner[3], vertices, indices);
+		CreateLineToThickLine(corner[0], corner[1], vertices, indices);
+		CreateLineToThickLine(corner[2], corner[3], vertices, indices);
 
 		// À§
-		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
+		CreateLineToThickLine(corner[4], corner[6], vertices, indices);
+		CreateLineToThickLine(corner[5], corner[7], vertices, indices);
+		CreateLineToThickLine(corner[4], corner[5], vertices, indices);
+		CreateLineToThickLine(corner[6], corner[7], vertices, indices);
 
 		// ±âµÕ
-		vertex.position = Vector3(0.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(0.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(0.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 0.0f, 1.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 1.0f, 1.0f);
-		vertices.push_back(vertex);
-
-		vertex.position = Vector3(1.0f, 0.0f, 0.0f);
-		vertices.push_back(vertex);
-		vertex.position = Vector3(1.0f, 1.0f, 0.0f);
-		vertices.push_back(vertex);
-
-		for (int i = 0; i < 24; ++i)
-		{
-			indices.push_back(i);
-		}
+		CreateLineToThickLine(corner[0], corner[4], vertices, indices);
+		CreateLineToThickLine(corner[1], corner[5], vertices, indices);
+		CreateLineToThickLine(corner[2], corner[6], vertices, indices);
+		CreateLineToThickLine(corner[3], corner[7], vertices, indices);
 	}
 }

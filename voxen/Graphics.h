@@ -74,6 +74,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
 	extern ComPtr<ID3D11RasterizerState> mirrorRS;
 	extern ComPtr<ID3D11RasterizerState> shadowRS;
+	extern ComPtr<ID3D11RasterizerState> noneCullDepthBiasRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
