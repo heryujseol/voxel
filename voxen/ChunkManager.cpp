@@ -606,12 +606,26 @@ bool ChunkManager::MakeInstanceInfoBuffer()
 	return true;
 }
 
-Chunk* ChunkManager::GetChunkByPosition(int x, int y, int z)
+const Chunk* ChunkManager::GetChunkByPosition(Vector3 position)
 {
-	auto iter = m_chunkMap.find(std::make_tuple(x, y, z));
+	Vector3 chunkPos = Utils::CalcOffsetPos(position, Chunk::CHUNK_SIZE);
+
+	auto iter = m_chunkMap.find(std::make_tuple((int)chunkPos.x, (int)chunkPos.y, (int)chunkPos.z));
 
 	if (iter == m_chunkMap.end())
 		return nullptr;
 
 	return iter->second;
+}
+
+const Block* ChunkManager::GetBlockByPosition(Vector3 position)
+{
+	const Chunk* c = GetChunkByPosition(position);
+
+	if (c != nullptr && c->IsLoaded()) {
+		Vector3 blockPos = position - Utils::CalcOffsetPos(position, Chunk::CHUNK_SIZE);
+		return c->GetBlock(blockPos);
+	}
+
+	return nullptr;
 }

@@ -2,6 +2,8 @@
 #include "DXUtils.h"
 #include "ChunkManager.h"
 
+#include <algorithm>
+
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.1f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
@@ -48,6 +50,9 @@ void Camera::Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouse
 {
 	UpdatePosition(keyPressed, dt);
 	UpdateViewDirection(mouseDeltaX, mouseDeltaY);
+
+	DDAPickingBlock();
+
 	/////////////////////////////
 	if (keyPressed['R']) {
 		m_constantData.dummy.x = 0.0f;
@@ -153,22 +158,68 @@ void Camera::SetIsUnderWater()
 {
 	m_isUnderWater = false;
 
-	int x = (int)m_chunkPos.x;
-	int y = (int)m_chunkPos.y;
-	int z = (int)m_chunkPos.z;
+	const Block* block = ChunkManager::GetInstance()->GetBlockByPosition(m_eyePos);
+	if (block != nullptr && block->GetType() == BLOCK_TYPE::BLOCK_WATER) {
+		m_isUnderWater = true;
+		return;
+	}
 
-	Chunk* c = ChunkManager::GetInstance()->GetChunkByPosition(x, y, z);
-	if (c != nullptr && c->IsLoaded()) {
-		Vector3 chunkOffset = m_eyePos - m_chunkPos;
-		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::BLOCK_WATER) {
-			m_isUnderWater = true;
-			return;
+	float bias = 0.125f;
+	block = ChunkManager::GetInstance()->GetBlockByPosition(m_eyePos - Vector3(0.0f, bias, 0.0f));
+	if (block != nullptr && block->GetType() == BLOCK_TYPE::BLOCK_WATER) {
+		m_isUnderWater = true;
+		return;
+	}
+}
+
+void Camera::DDAPickingBlock()
+{
+	// 현재 월드 위치
+	int curX = (int)floorf(m_eyePos.x);
+	int curY = (int)floorf(m_eyePos.y);
+	int curZ = (int)floorf(m_eyePos.z);
+
+	// DDA의 진행 방향
+	int stepX = (m_forward.x > 0) ? 1 : -1;
+	int stepY = (m_forward.y > 0) ? 1 : -1;
+	int stepZ = (m_forward.z > 0) ? 1 : -1;
+
+	// deltaX는 x가 1만큼 이동할 때의 벡터의 이동거리
+	// 방향벡터와의 닮은비로 구함 -> 1 : deltaX == dirX : 1
+	// 해당 방향의 방향벡터 성분이 없을 경우 최댓값을 두어 연산에 제외
+	float deltaX = (m_forward.x != 0) ? fabs(1.0f / m_forward.x) : FLT_MAX;
+	float deltaY = (m_forward.y != 0) ? fabs(1.0f / m_forward.y) : FLT_MAX;
+	float deltaZ = (m_forward.z != 0) ? fabs(1.0f / m_forward.z) : FLT_MAX;
+
+	// sideX는 현재 위치에서 Picking할 블록까지의 현재의 최댓값
+	// 마찬가지로 성분 방향으로 거리를 구하고 닮은비로 구할 수 있음
+	// sideX : (nextPos.x - pos.x) == deltaX : 1
+	float sideX = (stepX > 0) ? (floorf(m_eyePos.x + 1) - m_eyePos.x) * deltaX
+							  : (m_eyePos.x - floorf(m_eyePos.x)) * deltaX;
+	float sideY = (stepY > 0) ? (floorf(m_eyePos.y + 1) - m_eyePos.y) * deltaY
+							  : (m_eyePos.y - floorf(m_eyePos.y)) * deltaY;
+	float sideZ = (stepZ > 0) ? (floorf(m_eyePos.z + 1) - m_eyePos.z) * deltaZ
+							  : (m_eyePos.z - floorf(m_eyePos.z)) * deltaZ;
+
+	while (min(min(sideX, sideY), sideZ) < 5.0f) {
+		// 가장 작은 side 찾기 -> 가장 가까움
+		if (sideX < sideY && sideX < sideZ) {
+			curX += stepX;
+			sideX += deltaX;
+		}
+		else if (sideY < sideZ) {
+			curY += stepY;
+			sideY += deltaY;
+		}
+		else {
+			curZ += stepZ;
+			sideZ += deltaZ;
 		}
 
-		float bias = 0.15f;
-		chunkOffset.y -= bias;
-		if (c->GetBlockTypeByPosition(chunkOffset) == BLOCK_TYPE::BLOCK_WATER) {
-			m_isUnderWater = true;
+		const Block* block =
+			ChunkManager::GetInstance()->GetBlockByPosition(Vector3(curX, curY, curZ));
+		if (block != nullptr && !Block::IsTransparency(block->GetType())) {
+			std::cout << (int)block->GetType() << std::endl;
 			return;
 		}
 	}

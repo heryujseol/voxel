@@ -50,6 +50,8 @@ private:
 
 	void SetIsUnderWater();
 
+	void DDAPickingBlock();
+
 	float m_projFovAngleY;
 	float m_nearZ;
 	float m_farZ;
@@ -71,23 +73,4 @@ private:
 	float m_mouseSensitiveY;
 	float m_yaw;
 	float m_pitch;
-
-	// CameraConstantData m_constantData;
-
-	Vector3 lookTo[6] = {
-		Vector3(1.0f, 0.0f, 0.0f),
-		Vector3(-1.0f, 0.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, -1.0f, 0.0f),
-		Vector3(0.0f, 0.0f, 1.0f),
-		Vector3(0.0f, 0.0f, -1.0f),
-	};
-	Vector3 up[6] = {
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 0.0f, -1.0f),
-		Vector3(0.0f, 0.0f, 1.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-	};
 };
