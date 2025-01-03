@@ -22,7 +22,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 App::App()
 	: m_hwnd(), m_constantBuffer(nullptr), m_constantData(), m_camera(), m_skybox(), m_cloud(),
-	  m_light(), m_postEffect(), m_dateTime(0),
+	  m_light(), m_postEffect(),
 	  m_keyPressed{
 		  false,
 	  },
@@ -230,7 +230,13 @@ void App::Run()
 
 void App::Update(float dt)
 {
-	static float acc = 0.0f;
+	if (m_keyToggled['F']) {
+		m_date.Update(dt);
+	}
+	else {
+		m_date.Update(0.0f);
+	}
+
 	m_camera.Update(dt, m_keyPressed, m_mouseDeltaX, m_mouseDeltaY);
 
 	m_postEffect.Update(dt, m_camera.IsUnderWater());
@@ -239,19 +245,11 @@ void App::Update(float dt)
 
 	m_worldMap.Update(m_camera.GetPosition());
 
-	if (m_keyToggled['F']) {
-		acc += DAY_CYCLE_TIME_SPEED * dt;
-		m_dateTime = (uint32_t)acc % DAY_CYCLE_AMOUNT;
+	m_skybox.Update(m_date.GetDateTime());
 
-		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime, m_camera);
-		m_cloud.Update(dt, m_camera.GetPosition());
-	}
-	else {
-		m_skybox.Update(m_dateTime);
-		m_light.Update(m_dateTime, m_camera);
-		m_cloud.Update(0.0f, m_camera.GetPosition());
-	}
+	m_light.Update(m_date.GetDateTime(), m_camera);
+
+	m_cloud.Update(dt, m_camera.GetPosition());
 
 	m_mouseDeltaX = 0;
 	m_mouseDeltaY = 0;
@@ -260,11 +258,12 @@ void App::Update(float dt)
 void App::Render()
 {
 	std::vector<ID3D11Buffer*> ppConstantBuffers;
+	ppConstantBuffers.push_back(m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_camera.m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_skybox.m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_light.m_lightConstantBuffer.Get());
-	ppConstantBuffers.push_back(m_constantBuffer.Get());
 	ppConstantBuffers.push_back(m_light.m_shadowConstantBuffer.Get());
+	ppConstantBuffers.push_back(m_date.m_constantBuffer.Get());
 
 	Graphics::context->VSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
@@ -364,7 +363,7 @@ bool App::InitWindow()
 		if (!RegisterClassEx(&wc))
 			return false;
 
-		RECT wr = { 0, 0, (LONG)WIDTH, (LONG)HEIGHT };
+		RECT wr = { 0, 0, (LONG)APP_WIDTH, (LONG)APP_HEIGHT };
 		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
 		DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
@@ -418,7 +417,7 @@ bool App::InitGUI()
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
-	io.DisplaySize = ImVec2(float(WIDTH), float(HEIGHT));
+	io.DisplaySize = ImVec2(float(APP_WIDTH), float(APP_HEIGHT));
 	ImGui::StyleColorsLight();
 
 	// Setup Platform/Renderer backends
@@ -456,8 +455,12 @@ bool App::InitScene()
 	if (!m_worldMap.Initialize(m_camera.GetPosition()))
 		return false;
 
-	m_constantData.appWidth = WIDTH;
-	m_constantData.appHeight = HEIGHT;
+	if (!m_date.Initialize()) {
+		return false;
+	}
+
+	m_constantData.appWidth = APP_WIDTH;
+	m_constantData.appHeight = APP_HEIGHT;
 	m_constantData.mirrorWidth = MIRROR_WIDTH;
 	m_constantData.mirrorHeight = MIRROR_HEIGHT;
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
@@ -712,6 +715,7 @@ void App::RenderWaterPlane()
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::waterColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::climateMapSRV.Get());
+	ppSRVs.push_back(Graphics::waterStillAtlasMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
@@ -749,7 +753,7 @@ void App::LockCursor()
 {
 	if (!m_isActive) {
 		POINT topLeft = { 0, 0 };
-		POINT bottomRight = { WIDTH, HEIGHT };
+		POINT bottomRight = { APP_WIDTH, APP_HEIGHT };
 		ClientToScreen(m_hwnd, &topLeft);	  // 좌측상단 포인터
 		ClientToScreen(m_hwnd, &bottomRight); // 우측하단 포인터
 		RECT clipRect = { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y };

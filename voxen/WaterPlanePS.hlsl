@@ -6,6 +6,7 @@ Texture2D mirrorWorldTex : register(t2);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t3);
 Texture2D waterColorMapTex : register(t4);
 Texture2D climateNoiseMapTex : register(t5);
+Texture2DArray waterStillAtlasTextureArray : register(t6);
 
 struct psInput
 {
@@ -27,7 +28,12 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
 
 float3 getWaterAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
 {
-    float3 albedo = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, texIndex)).rgb;
+    uint waterStillTextureArraySize = 32;
+    uint dateAmountPerSecond = dayCycleAmount / dayCycleRealTime; // 24000 / 30 -> 800
+    uint dateAmountPerIndex = dateAmountPerSecond / waterStillTextureArraySize; // 800 / 32 -> 25
+    uint waterStillTextureIndex = (dateTime % dateAmountPerSecond) / dateAmountPerIndex;
+    
+    float alpha = waterStillAtlasTextureArray.Sample(pointWrapSS, float3(texcoord, waterStillTextureIndex)).a;
     
     float3 faceBiasPos = -normal * 1e-4;
     
@@ -37,13 +43,13 @@ float3 getWaterAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 no
     float2 climateTexcoord = float2(0.5 + diffOffsetPos.x * texelSize, 0.5 - diffOffsetPos.y * texelSize);
     climateTexcoord += float2(texelSize * 0.5, texelSize * 0.5);
     
-    float2 th = climateNoiseMapTex.SampleLevel(pointClampSS, climateTexcoord, 0.0);
+    float2 th = climateNoiseMapTex.SampleLevel(pointClampSS, climateTexcoord, 0.0).rg;
     
     float3 waterColor = waterColorMapTex.SampleLevel(pointClampSS, float2(th.x, 1.0 - th.y), 0.0).rgb;
     
-    albedo *= waterColor;
+    waterColor *= alpha;
     
-    return albedo;
+    return waterColor;
 }
 
 float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET

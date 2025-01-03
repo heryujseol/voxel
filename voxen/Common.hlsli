@@ -27,7 +27,15 @@ SamplerComparisonState shadowCompareSS : register(s4);
 
 Texture2D shadowTex : register(t11);
 
-cbuffer CameraConstantBuffer : register(b7)
+cbuffer AppConstantBuffer : register(b7)
+{
+    float appWidth;
+    float appHeight;
+    float mirrorWidth;
+    float mirrorHeight;
+}
+
+cbuffer CameraConstantBuffer : register(b8)
 {
     Matrix view;
     Matrix proj;
@@ -40,7 +48,7 @@ cbuffer CameraConstantBuffer : register(b7)
     float3 cameraDummyData;
 };
 
-cbuffer SkyboxConstantBuffer : register(b8)
+cbuffer SkyboxConstantBuffer : register(b9)
 {
     float3 normalHorizonColor;
     float skyScale;
@@ -52,7 +60,7 @@ cbuffer SkyboxConstantBuffer : register(b8)
     float skyboxDummyData3;
 };
 
-cbuffer LightConstantBuffer : register(b9)
+cbuffer LightConstantBuffer : register(b10)
 {
     float3 lightDir;
     float radianceWeight;
@@ -60,19 +68,19 @@ cbuffer LightConstantBuffer : register(b9)
     float maxRadianceWeight;
 }
 
-cbuffer AppConstantBuffer : register(b10)
-{
-    float appWidth;
-    float appHeight;
-    float mirrorWidth;
-    float mirrorHeight;
-}
-
 cbuffer ShadowConstantBuffer : register(b11)
 {
     Matrix shadowViewProj[3];
     float4 topLX;
     float4 viewPortW;
+}
+
+cbuffer DateConstantBuffer : register(b12)
+{
+    uint days;
+    uint dateTime;
+    uint dayCycleRealTime;
+    uint dayCycleAmount;
 }
 
 float3 sRGB2Linear(float3 color)

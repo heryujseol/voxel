@@ -18,7 +18,6 @@ public:
 	void Update(uint32_t dateTime);
 	void Render();
 
-	SkyboxConstantData m_constantData;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 
 private:
@@ -40,6 +39,8 @@ private:
 	const Vector3 SUN_SUNSET_HORIZON = Vector3(0.64f, 0.26f, 0.04f);
 	const Vector3 SUN_SUNSET_ZENITH =
 		Utils::Lerp(SUN_DAY_ZENITH, NORMAL_NIGHT_ZENITH, 15.0f / 27.0f);
+
+	SkyboxConstantData m_constantData;
 
 	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;

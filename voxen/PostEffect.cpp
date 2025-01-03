@@ -143,7 +143,7 @@ void PostEffect::Bloom()
 			int div = (int)std::pow(2, i + 1);
 
 			DXUtils::UpdateViewport(
-				Graphics::bloomViewport, 0, 0, App::WIDTH / div, App::HEIGHT / div);
+				Graphics::bloomViewport, 0, 0, App::APP_WIDTH / div, App::APP_HEIGHT / div);
 			Graphics::context->RSSetViewports(1, &Graphics::bloomViewport);
 
 			Graphics::context->OMSetRenderTargets(
@@ -165,7 +165,7 @@ void PostEffect::Bloom()
 			int div = (int)std::pow(2, i);
 
 			DXUtils::UpdateViewport(
-				Graphics::bloomViewport, 0, 0, App::WIDTH / div, App::HEIGHT / div);
+				Graphics::bloomViewport, 0, 0, App::APP_WIDTH / div, App::APP_HEIGHT / div);
 			Graphics::context->RSSetViewports(1, &Graphics::bloomViewport);
 
 			Graphics::context->OMSetRenderTargets(1, Graphics::bloomRTV[i].GetAddressOf(), nullptr);

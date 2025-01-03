@@ -24,11 +24,8 @@ public:
 	inline float GetRadianceWeight() const { return m_radianceWeight; }
 
 	ComPtr<ID3D11Buffer> m_lightConstantBuffer;
-	LightConstantData m_lightConstantData;
-
 	ComPtr<ID3D11Buffer> m_shadowConstantBuffer;
-	ShadowConstantData m_shadowConstantData;
-
+	
 	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(Vector3::Zero, -m_dir, m_up); }
 	inline Matrix GetProjectionMatrixFromCascade(int i) { return m_proj[i]; };
 
@@ -40,6 +37,9 @@ private:
 
 	Vector3 m_up;
 	Matrix m_proj[CASCADE_NUM];
+
+	LightConstantData m_lightConstantData;
+	ShadowConstantData m_shadowConstantData;
 
 	const Vector3 RADIANCE_DAY_COLOR = Vector3(1.0f, 1.0f, 1.0f);
 	const Vector3 RADIANCE_SUNRISE_COLOR = Vector3(0.72f, 0.60f, 0.34f);

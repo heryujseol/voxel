@@ -165,6 +165,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
+	ComPtr<ID3D11Texture2D> waterStillAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> waterStillAtlasMapSRV;
+
 	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
@@ -284,8 +287,8 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd)
 
 	DXGI_SWAP_CHAIN_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
-	desc.BufferDesc.Width = App::WIDTH;
-	desc.BufferDesc.Height = App::HEIGHT;
+	desc.BufferDesc.Width = App::APP_WIDTH;
+	desc.BufferDesc.Height = App::APP_HEIGHT;
 	desc.BufferDesc.RefreshRate.Numerator = 60;
 	desc.BufferDesc.RefreshRate.Denominator = 1;
 	desc.BufferDesc.Format = pixelFormat;
@@ -339,7 +342,7 @@ bool Graphics::InitRenderTargetBuffers()
 	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			basicBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			basicBuffer, App::APP_WIDTH, App::APP_HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create basic buffer" << std::endl;
 		return false;
 	}
@@ -358,7 +361,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			basicMSBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			basicMSBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create basic MS buffer" << std::endl;
 		return false;
 	}
@@ -377,7 +380,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			normalEdgeBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			normalEdgeBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create normal edge buffer" << std::endl;
 		return false;
 	}
@@ -398,7 +401,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			positionBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			positionBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create position buffer" << std::endl;
 		return false;
 	}
@@ -418,7 +421,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			albedoBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			albedoBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create albedo buffer" << std::endl;
 		return false;
 	}
@@ -437,7 +440,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R32_UINT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			coverageBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			coverageBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create coverage buffer" << std::endl;
 		return false;
 	}
@@ -457,7 +460,7 @@ bool Graphics::InitRenderTargetBuffers()
 	format = DXGI_FORMAT_R32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			ssaoBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			ssaoBuffer, App::APP_WIDTH, App::APP_HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create ssao buffer" << std::endl;
 		return false;
 	}
@@ -477,7 +480,7 @@ bool Graphics::InitRenderTargetBuffers()
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	for (int i = 0; i < 2; ++i) {
 		if (!DXUtils::CreateTextureBuffer(
-				ssaoBlurBuffer[i], App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+				ssaoBlurBuffer[i], App::APP_WIDTH, App::APP_HEIGHT, false, format, bindFlag)) {
 			std::cout << "failed create ssao blur buffer" << std::endl;
 			return false;
 		}
@@ -561,8 +564,8 @@ bool Graphics::InitRenderTargetBuffers()
 	}
 
 	// bloom buffer
-	UINT bloomWidth = App::WIDTH;
-	UINT bloomHeight = App::HEIGHT;
+	UINT bloomWidth = App::APP_WIDTH;
+	UINT bloomHeight = App::APP_HEIGHT;
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	for (int i = 0; i < 5; ++i) {
@@ -597,7 +600,7 @@ bool Graphics::InitDepthStencilBuffers()
 	DXGI_FORMAT format = DXGI_FORMAT_R32_TYPELESS;
 	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			basicDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			basicDepthBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create basic depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -625,7 +628,7 @@ bool Graphics::InitDepthStencilBuffers()
 	format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	bindFlag = D3D11_BIND_DEPTH_STENCIL;
 	if (!DXUtils::CreateTextureBuffer(
-			deferredDepthBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+			deferredDepthBuffer, App::APP_WIDTH, App::APP_HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create deferred depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -692,6 +695,12 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(waterStillAtlasMapBuffer, waterStillAtlasMapSRV,
+		"../assets/water_still.png", format, 4, 16, 16, 1, 32)) {
+		std::cout << "failed create texture from water still atlas file" << std::endl;
+		return false;
+	}
+
 	if (!DXUtils::CreateTexture2DFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass2_blur.png", format)) {
 		std::cout << "failed create texture from grass file" << std::endl;
@@ -724,7 +733,7 @@ bool Graphics::InitShaderResourceBuffers()
 	format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	UINT bindFlag = D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			copyForwardRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
+			copyForwardRenderBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create copy forward render buffer" << std::endl;
 		return false;
 	}
@@ -1350,15 +1359,15 @@ bool Graphics::InitBlendStates()
 void Graphics::InitViewports()
 {
 	// basicViewport;
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, App::WIDTH, App::HEIGHT);
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, App::APP_WIDTH, App::APP_HEIGHT);
 
 	// mirrorWorldViewPort
 	DXUtils::UpdateViewport(
 		Graphics::mirrorWorldViewPort, 0, 0, App::MIRROR_WIDTH, App::MIRROR_HEIGHT);
 
 	// worldMapViewport
-	UINT worldMapTopX = (App::WIDTH / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
-	UINT worldMapTopY = (App::HEIGHT / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
+	UINT worldMapTopX = (App::APP_WIDTH / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
+	UINT worldMapTopY = (App::APP_HEIGHT / 2) - (WorldMap::BIOME_MAP_UI_SIZE / 2);
 	DXUtils::UpdateViewport(Graphics::worldMapViewport, worldMapTopX, worldMapTopY,
 		WorldMap::BIOME_MAP_UI_SIZE, WorldMap::BIOME_MAP_UI_SIZE);
 
