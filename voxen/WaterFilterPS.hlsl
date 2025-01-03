@@ -18,7 +18,7 @@ float4 main(psInput input) : SV_TARGET
 {
     float3 renderColor = renderTex.Sample(linearClampSS, input.texcoord).rgb;
    
-    float3 blendColor = lerp(renderColor, filterColor, filterStrength);
+    float3 blendColor = lerp(renderColor, filterColor * clamp(radianceWeight, 0.1, 1.0), filterStrength);
     
     return float4(blendColor, 1.0);
 }

@@ -82,19 +82,19 @@ void PostEffect::Update(float dt, bool isUnderWater)
 		m_waterAdaptationTime += dt;
 		m_waterAdaptationTime = min(m_waterMaxDuration, m_waterAdaptationTime);
 
-		float percetage = m_waterAdaptationTime / m_waterMaxDuration;
+		float duration = m_waterAdaptationTime / m_waterMaxDuration;
 
-		m_waterFilterConstantData.filterColor.x = 0.075f + 0.075f * percetage;
-		m_waterFilterConstantData.filterColor.y = 0.125f + 0.125f * percetage;
-		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * percetage;
+		m_waterFilterConstantData.filterColor.x = 0.075f + 0.075f * duration;
+		m_waterFilterConstantData.filterColor.y = 0.125f + 0.125f * duration;
+		m_waterFilterConstantData.filterColor.z = 0.48f + 0.48f * duration;
 		m_waterFilterConstantData.filterColor =
 			Utils::SRGB2Linear(m_waterFilterConstantData.filterColor);
 
-		m_waterFilterConstantData.filterStrength = (0.9f - (0.5f * percetage));
+		m_waterFilterConstantData.filterStrength = (0.9f - (0.5f * duration));
 
-		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * percetage);
-		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * percetage);
-		m_fogFilterConstantData.fogStrength = 5.0f - percetage;
+		m_fogFilterConstantData.fogDistMin = 15.0f + (15.0f * duration);
+		m_fogFilterConstantData.fogDistMax = 30.0f + (90.0f * duration);
+		m_fogFilterConstantData.fogStrength = 5.0f - duration;
 	}
 	else {
 		m_waterAdaptationTime = 0.0f;
