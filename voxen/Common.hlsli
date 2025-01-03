@@ -4,6 +4,9 @@
 #define PI 3.14159265
 #define SAMPLE_COUNT 4
 
+#define CHUNK_SIZE 32
+#define CHUNK_COUNT 17
+
 static const float2 poissonDisk[16] =
 {
     float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),

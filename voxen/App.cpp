@@ -710,6 +710,8 @@ void App::RenderWaterPlane()
 	ppSRVs.push_back(Graphics::copyForwardSRV.Get());
 	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
 	ppSRVs.push_back(Graphics::positionSRV.Get());
+	ppSRVs.push_back(Graphics::waterColorMapSRV.Get());
+	ppSRVs.push_back(Graphics::climateMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);

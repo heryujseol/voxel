@@ -174,6 +174,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> foliageColorMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> foliageColorMapSRV;
 
+	extern ComPtr<ID3D11Texture2D> waterColorMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> waterColorMapSRV;
+
 	extern ComPtr<ID3D11Texture2D> sunBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> sunSRV;
 

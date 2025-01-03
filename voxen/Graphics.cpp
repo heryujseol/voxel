@@ -171,6 +171,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> foliageColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> foliageColorMapSRV;
 
+	ComPtr<ID3D11Texture2D> waterColorMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> waterColorMapSRV;
+
 	ComPtr<ID3D11Texture2D> sunBuffer;
 	ComPtr<ID3D11ShaderResourceView> sunSRV;
 
@@ -698,6 +701,12 @@ bool Graphics::InitShaderResourceBuffers()
 	if (!DXUtils::CreateTexture2DFromFile(
 			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage2_blur.png", format)) {
 		std::cout << "failed create texture from foliage file" << std::endl;
+		return false;
+	}
+
+	if (!DXUtils::CreateTexture2DFromFile(
+			waterColorMapBuffer, waterColorMapSRV, "../assets/water_blur.png", format)) {
+		std::cout << "failed create texture from water file" << std::endl;
 		return false;
 	}
 
