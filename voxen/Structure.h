@@ -163,6 +163,11 @@ struct InstanceInfoVertex {
 	uint32_t texIndex;
 };
 
+struct PickingBlockVertex {
+	Vector3 position;
+	Vector3 color;
+};
+
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;

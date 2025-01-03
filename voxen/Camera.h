@@ -18,11 +18,8 @@ public:
 	~Camera();
 
 	bool Initialize(Vector3 pos);
-
-	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
-
-	ComPtr<ID3D11Buffer> m_constantBuffer;
-	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
+	void Update(float dt, bool keyPressed[256], LONG mouseDeltaX, LONG mouseDeltaY);
+	void RenderPickingBlock();
 
 	inline Vector3 GetPosition() { return m_eyePos; }
 	inline Vector3 GetChunkPosition() { return m_chunkPos; }
@@ -35,20 +32,25 @@ public:
 	}
 	inline Matrix GetMirrorPlaneMatrix() { return m_mirrorPlaneMatrix; }
 	inline bool IsUnderWater() { return m_isUnderWater; }
+	inline bool IsPicking() { return (m_pickingBlock != nullptr); }
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
-	
+
+	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
 	CameraConstantData m_constantData;
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
-	void UpdateViewDirection(float mouseX, float mouseY);
+	void UpdateViewDirection(LONG mouseDeltaX, LONG mouseDeltaY);
 
 	void MoveForward(float dt);
 	void MoveRight(float dt);
 
 	void SetIsUnderWater();
+
+	void DDAPickingBlock();
 
 	float m_projFovAngleY;
 	float m_nearZ;
@@ -60,31 +62,24 @@ private:
 	Vector3 m_forward;
 	Vector3 m_up;
 	Vector3 m_right;
-	Matrix m_mirrorPlaneMatrix;
 
-	float m_viewNdcX;
-	float m_viewNdcY;
+	Matrix m_mirrorPlaneMatrix;
 
 	float m_speed;
 
 	bool m_isUnderWater;
 
-	//CameraConstantData m_constantData;
+	float m_mouseSensitiveX;
+	float m_mouseSensitiveY;
+	float m_yaw;
+	float m_pitch;
 
-	Vector3 lookTo[6] = {
-		Vector3(1.0f, 0.0f, 0.0f),
-		Vector3(-1.0f, 0.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, -1.0f, 0.0f),
-		Vector3(0.0f, 0.0f, 1.0f),
-		Vector3(0.0f, 0.0f, -1.0f),
-	};
-	Vector3 up[6] = {
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 0.0f, -1.0f),
-		Vector3(0.0f, 0.0f, 1.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-		Vector3(0.0f, 1.0f, 0.0f),
-	};
+	const Block* m_pickingBlock;
+	std::vector<PickingBlockVertex> m_pickingBlockVertices;
+	std::vector<uint32_t> m_pickingBlockIndices;
+	ChunkConstantData m_pickingBlockConstantData;
+
+	ComPtr<ID3D11Buffer> m_pickingBlockVertexBuffer;
+	ComPtr<ID3D11Buffer> m_pickingBlockIndexBuffer;
+	ComPtr<ID3D11Buffer> m_pickingBlockConstantBuffer;
 };

@@ -41,7 +41,8 @@ public:
 	void RenderTransparency();
 	void RenderBasicShadowMap();
 
-	Chunk* GetChunkByPosition(int x, int y, int z);
+	const Chunk* GetChunkByPosition(Vector3 position);
+	const Block* GetBlockByPosition(Vector3 position);
 	
 
 private:

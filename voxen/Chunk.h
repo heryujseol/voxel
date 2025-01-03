@@ -34,19 +34,19 @@ public:
 	inline UINT GetID() { return m_id; }
 
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
-	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
+	inline bool IsLoaded() const { return m_isLoaded; }
+	inline bool IsEmpty() const { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
 
-	inline Vector3 GetOffsetPosition() { return m_offsetPosition; }
+	inline Vector3 GetOffsetPosition() const { return m_offsetPosition; }
 	inline void SetOffsetPosition(Vector3 offsetPosition) { m_offsetPosition = offsetPosition; }
-	inline Vector3 GetPosition() { return m_position; }
+	inline Vector3 GetPosition() const { return m_position; }
 	inline void SetUpdateRequired(bool isRequired) { m_isUpdateRequired = isRequired; }
-	inline bool IsUpdateRequired() { return m_isUpdateRequired; }
+	inline bool IsUpdateRequired() const { return m_isUpdateRequired; }
 
-	inline bool IsEmptyLowLod() { return m_lowLodVertices.empty(); }
-	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
-	inline bool IsEmptyTransparency() { return m_transparencyVertices.empty(); }
-	inline bool IsEmptySemiAlpha() { return m_semiAlphaVertices.empty(); }
+	inline bool IsEmptyLowLod() const { return m_lowLodVertices.empty(); }
+	inline bool IsEmptyOpaque() const { return m_opaqueVertices.empty(); }
+	inline bool IsEmptyTransparency() const { return m_transparencyVertices.empty(); }
+	inline bool IsEmptySemiAlpha() const { return m_semiAlphaVertices.empty(); }
 
 	inline const std::vector<VoxelVertex>& GetLowLodVertices() const { return m_lowLodVertices; }
 	inline const std::vector<uint32_t>& GetLowLodIndices() const { return m_lowLodIndices; }
@@ -76,7 +76,12 @@ public:
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 
-	BLOCK_TYPE GetBlockTypeByPosition(Vector3 pos);
+	inline const Block* GetBlock(Vector3 pos) const
+	{
+		return &m_blocks[(int)std::floor(pos.x) % CHUNK_SIZE + 1]
+						[(int)std::floor(pos.y) % CHUNK_SIZE + 1]
+						[(int)std::floor(pos.z) % CHUNK_SIZE + 1];
+	}
 
 private:
 	void InitChunkData();

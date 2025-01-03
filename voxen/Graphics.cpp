@@ -17,6 +17,7 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
+	ComPtr<ID3D11InputLayout> pickingBlockIL;
 
 
 	// Vertex Shader
@@ -27,6 +28,7 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> basicShadowVS;
 	ComPtr<ID3D11VertexShader> instanceShadowVS;
+	ComPtr<ID3D11VertexShader> pickingBlockVS;
 
 
 	// Geometry Shader
@@ -59,6 +61,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> combineBloomPS;
 	ComPtr<ID3D11PixelShader> instanceShadowPS;
 	ComPtr<ID3D11PixelShader> biomeMapPS;
+	ComPtr<ID3D11PixelShader> pickingBlockPS;
+
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
@@ -66,6 +70,7 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> noneCullRS;
 	ComPtr<ID3D11RasterizerState> mirrorRS;
 	ComPtr<ID3D11RasterizerState> shadowRS;
+	ComPtr<ID3D11RasterizerState> noneCullDepthBiasRS;
 
 
 	// Sampler State
@@ -246,6 +251,7 @@ namespace Graphics {
 	GraphicsPSO bloomUpPSO;
 	GraphicsPSO combineBloomPSO;
 	GraphicsPSO biomeMapPSO;
+	GraphicsPSO pickingBlockPSO;
 }
 
 
@@ -871,6 +877,17 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Picking Block
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc7 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"PickingBlockVS.hlsl", pickingBlockVS, pickingBlockIL, elementDesc7)) {
+		std::cout << "failed create picking block vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -1066,61 +1083,77 @@ bool Graphics::InitPixelShaders()
 		std::cout << "failed create biome map ps" << std::endl;
 		return false;
 	}
+	
+	// pickingBlockPS
+	if (!DXUtils::CreatePixelShader(L"PickingBlockPS.hlsl", pickingBlockPS)) {
+		std::cout << "failed create picking block ps" << std::endl;
+		return false;
+	}
 
 	return true;
 }
 
 bool Graphics::InitRasterizerStates()
 {
-	D3D11_RASTERIZER_DESC rastDesc;
-	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
-	rastDesc.FrontCounterClockwise = false;
-	rastDesc.DepthClipEnable = true;
-	rastDesc.MultisampleEnable = true;
+	D3D11_RASTERIZER_DESC solidRSDesc;
+	ZeroMemory(&solidRSDesc, sizeof(D3D11_RASTERIZER_DESC));
+	solidRSDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+	solidRSDesc.FrontCounterClockwise = false;
+	solidRSDesc.DepthClipEnable = true;
+	solidRSDesc.MultisampleEnable = true;
+	solidRSDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 
 	// solidRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	HRESULT ret = Graphics::device->CreateRasterizerState(&rastDesc, solidRS.GetAddressOf());
+	HRESULT ret = Graphics::device->CreateRasterizerState(&solidRSDesc, solidRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create solid RS" << std::endl;
 		return false;
 	}
 
 	// wireRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, wireRS.GetAddressOf());
+	D3D11_RASTERIZER_DESC wireRSDesc = solidRSDesc;
+	wireRSDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
+	ret = Graphics::device->CreateRasterizerState(&wireRSDesc, wireRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create wire RS" << std::endl;
 		return false;
 	}
 
 	// noneCullRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, noneCullRS.GetAddressOf());
+	D3D11_RASTERIZER_DESC noneCullRSDesc = solidRSDesc;
+	noneCullRSDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+	ret = Graphics::device->CreateRasterizerState(&noneCullRSDesc, noneCullRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create noneCull RS" << std::endl;
 		return false;
 	}
 
 	// mirrorRS
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
-	rastDesc.FrontCounterClockwise = true;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, mirrorRS.GetAddressOf());
+	D3D11_RASTERIZER_DESC mirrorRSDesc = solidRSDesc;
+	mirrorRSDesc.FrontCounterClockwise = true;
+	ret = Graphics::device->CreateRasterizerState(&mirrorRSDesc, mirrorRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create mirror RS" << std::endl;
 		return false;
 	}
 
 	// shadowRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-	rastDesc.DepthClipEnable = false;
-	rastDesc.FrontCounterClockwise = false;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, shadowRS.GetAddressOf());
+	D3D11_RASTERIZER_DESC shadowRSDesc = noneCullRSDesc;
+	shadowRSDesc.DepthClipEnable = false;
+	ret = Graphics::device->CreateRasterizerState(&shadowRSDesc, shadowRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shadow RS" << std::endl;
+		return false;
+	}
+
+	// noneCullDepthBiasRS
+	D3D11_RASTERIZER_DESC noneCullDepthBiasRSDesc = noneCullRSDesc;
+	noneCullDepthBiasRSDesc.DepthBias = -100;
+	noneCullDepthBiasRSDesc.SlopeScaledDepthBias = -1.0f;
+	ret = Graphics::device->CreateRasterizerState(
+		&noneCullDepthBiasRSDesc, noneCullDepthBiasRS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create noneCull depth bias RS" << std::endl;
 		return false;
 	}
 
@@ -1477,6 +1510,13 @@ void Graphics::InitGraphicsPSO()
 	// biomeMapPSO
 	biomeMapPSO = samplingPSO;
 	biomeMapPSO.pixelShader = biomeMapPS;
+
+	// pickingBlockPSO
+	pickingBlockPSO = basicPSO;
+	pickingBlockPSO.inputLayout = pickingBlockIL;
+	pickingBlockPSO.vertexShader = pickingBlockVS;
+	pickingBlockPSO.pixelShader = pickingBlockPS;
+	pickingBlockPSO.rasterizerState = noneCullDepthBiasRS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
