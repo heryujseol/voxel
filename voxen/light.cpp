@@ -1,7 +1,7 @@
 #include "Light.h"
 #include "DXUtils.h"
 #include "MeshGenerator.h"
-#include "App.h"
+#include "Date.h"
 
 #include <algorithm>
 
@@ -34,7 +34,7 @@ bool Light::Initialize()
 void Light::Update(UINT dateTime, Camera& camera)
 {
 	const float MAX_RADIANCE_WEIGHT = 1.5;
-	float angle = (float)dateTime / App::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
+	float angle = (float)dateTime / Date::DAY_CYCLE_AMOUNT * 2.0f * Utils::PI;
 
 	// light
 	{
@@ -49,7 +49,7 @@ void Light::Update(UINT dateTime, Camera& camera)
 		m_up = XMVector3TransformNormal(Vector3(0.0f, 1.0f, 0.0f), rotationAxisMatrix);
 
 		// strength
-		if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
+		if (Date::NIGHT_START <= dateTime && dateTime < Date::NIGHT_END) {
 			m_radianceWeight = 0.0f;
 		}
 		else {
@@ -62,46 +62,46 @@ void Light::Update(UINT dateTime, Camera& camera)
 		}
 
 		// color
-		if (dateTime < App::DAY_START)
-			dateTime += App::DAY_CYCLE_AMOUNT;
+		if (dateTime < Date::DAY_START)
+			dateTime += Date::DAY_CYCLE_AMOUNT;
 
-		if (App::DAY_START <= dateTime && dateTime < App::DAY_END) {
+		if (Date::DAY_START <= dateTime && dateTime < Date::DAY_END) {
 			m_radianceColor = RADIANCE_DAY_COLOR;
 		}
-		else if (App::DAY_END <= dateTime && dateTime < App::NIGHT_START) {
-			if (App::DAY_END <= dateTime && dateTime < App::MAX_SUNSET) {
+		else if (Date::DAY_END <= dateTime && dateTime < Date::NIGHT_START) {
+			if (Date::DAY_END <= dateTime && dateTime < Date::MAX_SUNSET) {
 				float radianceColorFactor =
-					(float)(dateTime - App::DAY_END) / (App::MAX_SUNSET - App::DAY_END);
+					(float)(dateTime - Date::DAY_END) / (Date::MAX_SUNSET - Date::DAY_END);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_DAY_COLOR, RADIANCE_SUNSET_COLOR, radianceColorFactor);
 			}
 
-			if (App::MAX_SUNSET <= dateTime && dateTime < App::NIGHT_START) {
+			if (Date::MAX_SUNSET <= dateTime && dateTime < Date::NIGHT_START) {
 				float radianceColorFactor =
-					(float)(dateTime - App::MAX_SUNSET) / (App::NIGHT_START - App::MAX_SUNSET);
+					(float)(dateTime - Date::MAX_SUNSET) / (Date::NIGHT_START - Date::MAX_SUNSET);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_SUNSET_COLOR, RADIANCE_NIGHT_COLOR, radianceColorFactor);
 			}
 		}
-		else if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) {
+		else if (Date::NIGHT_START <= dateTime && dateTime < Date::NIGHT_END) {
 			m_radianceColor = RADIANCE_NIGHT_COLOR;
 		}
-		else if (App::NIGHT_END <= dateTime && dateTime <= App::DAY_START + App::DAY_CYCLE_AMOUNT) {
+		else if (Date::NIGHT_END <= dateTime && dateTime <= Date::DAY_START + Date::DAY_CYCLE_AMOUNT) {
 
-			if (App::NIGHT_END <= dateTime && dateTime < App::MAX_SUNRISE) {
+			if (Date::NIGHT_END <= dateTime && dateTime < Date::MAX_SUNRISE) {
 				float radianceColorFactor =
-					(float)(dateTime - App::NIGHT_END) / (App::MAX_SUNRISE - App::NIGHT_END);
+					(float)(dateTime - Date::NIGHT_END) / (Date::MAX_SUNRISE - Date::NIGHT_END);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_NIGHT_COLOR, RADIANCE_SUNRISE_COLOR, radianceColorFactor);
 			}
 
-			if (App::MAX_SUNRISE <= dateTime && dateTime < App::DAY_START + App::DAY_CYCLE_AMOUNT) {
+			if (Date::MAX_SUNRISE <= dateTime && dateTime < Date::DAY_START + Date::DAY_CYCLE_AMOUNT) {
 				float radianceColorFactor =
-					(float)(dateTime - App::MAX_SUNRISE) /
-					(App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
+					(float)(dateTime - Date::MAX_SUNRISE) /
+					(Date::DAY_START + Date::DAY_CYCLE_AMOUNT - Date::MAX_SUNRISE);
 
 				m_radianceColor =
 					Utils::Lerp(RADIANCE_SUNRISE_COLOR, RADIANCE_DAY_COLOR, radianceColorFactor);

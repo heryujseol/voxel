@@ -176,7 +176,7 @@ struct CameraConstantData {
 	float maxRenderDistance;
 	Vector3 eyeDir;
 	float lodRenderDistance;
-	int isUnderWater;
+	uint32_t isUnderWater;
 	Vector3 dummy;
 };
 
@@ -247,4 +247,11 @@ struct AppConstantData {
 	float appHeight;
 	float mirrorWidth;
 	float mirrorHeight;
+};
+
+struct DateConstantData {
+	uint32_t days;
+	uint32_t dateTime;
+	uint32_t dayCycleRealTime;
+	uint32_t dayCycleAmount;
 };

@@ -68,8 +68,7 @@ float4 main(psInput input) : SV_TARGET
         uint col = 4;
         uint row = 2;
         
-        uint day = 0;
-        uint index = day % 8; // 0 ~ 7
+        uint index = days % 8; // 0 ~ 7
 
         uint2 indexUV = uint2(index % col, index / col); // [0,0]~[3,1]
         

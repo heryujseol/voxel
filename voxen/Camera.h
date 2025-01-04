@@ -39,7 +39,7 @@ public:
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
-	CameraConstantData m_constantData;
+
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
@@ -78,6 +78,8 @@ private:
 	std::vector<PickingBlockVertex> m_pickingBlockVertices;
 	std::vector<uint32_t> m_pickingBlockIndices;
 	ChunkConstantData m_pickingBlockConstantData;
+
+	CameraConstantData m_constantData;
 
 	ComPtr<ID3D11Buffer> m_pickingBlockVertexBuffer;
 	ComPtr<ID3D11Buffer> m_pickingBlockIndexBuffer;

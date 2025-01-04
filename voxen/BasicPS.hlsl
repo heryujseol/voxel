@@ -52,14 +52,14 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
         // 1.0000001, 0.99999999가 서로 완전 다른 결과이기 때문
         float2 diffOffsetPos = floor(worldPos.xz + faceBiasPos.xz) - floor(eyePos.xz);
                 
-        float texelSize = 1.0 / (17.0 * 32.0); // TODO
+        float texelSize = 1.0 / (CHUNK_COUNT * CHUNK_SIZE);
         float2 climateTexcoord = float2(0.5 + diffOffsetPos.x * texelSize, 0.5 - diffOffsetPos.y * texelSize);
         climateTexcoord += float2(texelSize * 0.5, texelSize * 0.5);
         // texelSize * 0.5 만큼 더해주는 이유
         // 텍스쳐가 4x4의 형태에서 텍스쳐 좌표가 0.5, 0.5라면 (2, 2)의 중간에서 샘플링해야 함
         // 그렇지 않으면 diffOffsetPos의 연산 오차로 인해서 조금만 변해도 다른 텍셀을 샘플링하게 됨
         
-        float2 th = climateNoiseMap.SampleLevel(pointClampSS, climateTexcoord, 0.0);
+        float2 th = climateNoiseMap.SampleLevel(pointClampSS, climateTexcoord, 0.0).rg;
         
         float3 grassColor = grassColorMap.SampleLevel(pointClampSS, float2(th.x, 1.0 - th.y), 0.0).rgb;
         albedo.rgb *= grassColor;

@@ -4,6 +4,9 @@ Texture2DArray atlasTextureArray : register(t0);
 Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t1);
 Texture2D mirrorWorldTex : register(t2);
 Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t3);
+Texture2D waterColorMapTex : register(t4);
+Texture2D climateNoiseMapTex : register(t5);
+Texture2DArray waterStillAtlasTextureArray : register(t6);
 
 struct psInput
 {
@@ -23,6 +26,32 @@ float3 schlickFresnel(float3 N, float3 E, float3 R)
     return R + (1 - R) * pow((1 - max(dot(N, E), 0.0)), 5.0);
 }
 
+float3 getWaterAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
+{
+    uint waterStillTextureArraySize = 32;
+    uint dateAmountPerSecond = dayCycleAmount / dayCycleRealTime; // 24000 / 30 -> 800
+    uint dateAmountPerIndex = dateAmountPerSecond / waterStillTextureArraySize; // 800 / 32 -> 25
+    uint waterStillTextureIndex = (dateTime % dateAmountPerSecond) / dateAmountPerIndex;
+    
+    float alpha = waterStillAtlasTextureArray.Sample(pointWrapSS, float3(texcoord, waterStillTextureIndex)).a;
+    
+    float3 faceBiasPos = -normal * 1e-4;
+    
+    float2 diffOffsetPos = floor(worldPos.xz + faceBiasPos.xz) - floor(eyePos.xz);
+    
+    float texelSize = 1.0 / (CHUNK_COUNT * CHUNK_SIZE);
+    float2 climateTexcoord = float2(0.5 + diffOffsetPos.x * texelSize, 0.5 - diffOffsetPos.y * texelSize);
+    climateTexcoord += float2(texelSize * 0.5, texelSize * 0.5);
+    
+    float2 th = climateNoiseMapTex.SampleLevel(pointClampSS, climateTexcoord, 0.0).rg;
+    
+    float3 waterColor = waterColorMapTex.SampleLevel(pointClampSS, float2(th.x, 1.0 - th.y), 0.0).rgb;
+    
+    waterColor *= alpha;
+    
+    return waterColor;
+}
+
 float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
 {
     float3 normal = input.normal;
@@ -30,10 +59,11 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
         discard;
     
     // absorption color
-    float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex)).rgb;
-    float3 ambientLighting = getAmbientLighting(1.0, textureColor, input.normal);
+    float3 albedo = getWaterAlbedo(input.texcoord, input.texIndex, input.posWorld, normal);
     
-    float3 directLighting = getDirectLighting(input.normal, input.posWorld, textureColor, 0.0, 0.05, true);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo, input.normal);
+    
+    float3 directLighting = getDirectLighting(input.normal, input.posWorld, albedo, 0.0, 0.05, true);
     
     float3 waterColor = ambientLighting + directLighting;
     
@@ -53,7 +83,7 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
         float objectDistance = length(eyePos - originPosition);
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
-        float absorptionCoeff = 0.1;
+        float absorptionCoeff = 0.125;
         float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
     
         float3 projColor = lerp(originColor, waterColor, absorptionFactor);

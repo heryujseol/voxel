@@ -1,4 +1,4 @@
-#include "App.h"
+#include "Date.h"
 #include "Skybox.h"
 #include "Graphics.h"
 #include "DXUtils.h"
@@ -45,59 +45,59 @@ void Skybox::Update(uint32_t dateTime)
 	Vector3 sunHorizonColor = Vector3(0.0f);
 	Vector3 sunZenithColor = Vector3(0.0f);
 
-	if (App::DAY_START <= dateTime && dateTime < App::DAY_END) { // day
+	if (Date::DAY_START <= dateTime && dateTime < Date::DAY_END) { // day
 		normalHorizonColor = NORMAL_DAY_HORIZON;
 		normalZenithColor = NORMAL_DAY_ZENITH;
 		sunHorizonColor = SUN_DAY_HORIZON;
 		sunZenithColor = SUN_DAY_ZENITH;
 	}
-	else if (App::NIGHT_START <= dateTime && dateTime < App::NIGHT_END) { // night
+	else if (Date::NIGHT_START <= dateTime && dateTime < Date::NIGHT_END) { // night
 		normalHorizonColor = NORMAL_NIGHT_HORIZON;
 		normalZenithColor = NORMAL_NIGHT_ZENITH;
 		sunHorizonColor = NORMAL_NIGHT_HORIZON;
 		sunZenithColor = NORMAL_NIGHT_ZENITH;
 	}
 	else { // mix
-		if (dateTime < App::DAY_START)
-			dateTime += App::DAY_CYCLE_AMOUNT;
+		if (dateTime < Date::DAY_START)
+			dateTime += Date::DAY_CYCLE_AMOUNT;
 
 		// normal color
-		if (App::DAY_END <= dateTime && dateTime < App::NIGHT_START) {
-			float w = (float)(dateTime - App::DAY_END) / (App::NIGHT_START - App::DAY_END);
+		if (Date::DAY_END <= dateTime && dateTime < Date::NIGHT_START) {
+			float w = (float)(dateTime - Date::DAY_END) / (Date::NIGHT_START - Date::DAY_END);
 
 			normalHorizonColor = Utils::Lerp(NORMAL_DAY_HORIZON, NORMAL_NIGHT_HORIZON, w);
 			normalZenithColor = Utils::Lerp(NORMAL_DAY_ZENITH, NORMAL_NIGHT_ZENITH, w);
 		} // 11000 ~ 13700 | 22300 ~ 25000
-		else if (App::NIGHT_END <= dateTime && dateTime <= App::DAY_START + App::DAY_CYCLE_AMOUNT) {
-			float w = (float)(dateTime - App::NIGHT_END) /
-					  (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::NIGHT_END);
+		else if (Date::NIGHT_END <= dateTime && dateTime <= Date::DAY_START + Date::DAY_CYCLE_AMOUNT) {
+			float w = (float)(dateTime - Date::NIGHT_END) /
+					  (Date::DAY_START + Date::DAY_CYCLE_AMOUNT - Date::NIGHT_END);
 
 			normalHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, NORMAL_DAY_HORIZON, w);
 			normalZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, NORMAL_DAY_ZENITH, w);
 		}
 
 		// sun color
-		if (App::DAY_END <= dateTime && dateTime < App::MAX_SUNSET) { // day ~ sunset
-			float w = (float)(dateTime - App::DAY_END) / (App::MAX_SUNSET - App::DAY_END);
+		if (Date::DAY_END <= dateTime && dateTime < Date::MAX_SUNSET) { // day ~ sunset
+			float w = (float)(dateTime - Date::DAY_END) / (Date::MAX_SUNSET - Date::DAY_END);
 
 			sunHorizonColor = Utils::Lerp(SUN_DAY_HORIZON, SUN_SUNSET_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_DAY_ZENITH, SUN_SUNSET_ZENITH, w);
 		}
-		else if (App::MAX_SUNSET <= dateTime && dateTime < App::NIGHT_START) { // sunset ~ night
-			float w = (float)(dateTime - App::MAX_SUNSET) / (App::NIGHT_START - App::MAX_SUNSET);
+		else if (Date::MAX_SUNSET <= dateTime && dateTime < Date::NIGHT_START) { // sunset ~ night
+			float w = (float)(dateTime - Date::MAX_SUNSET) / (Date::NIGHT_START - Date::MAX_SUNSET);
 
 			sunHorizonColor = Utils::Lerp(SUN_SUNSET_HORIZON, NORMAL_NIGHT_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_SUNSET_ZENITH, NORMAL_NIGHT_ZENITH, w);
 		}
-		else if (App::NIGHT_END <= dateTime && dateTime < App::MAX_SUNRISE) { // night ~ sunrise
-			float w = (float)(dateTime - App::NIGHT_END) / (App::MAX_SUNRISE - App::NIGHT_END);
+		else if (Date::NIGHT_END <= dateTime && dateTime < Date::MAX_SUNRISE) { // night ~ sunrise
+			float w = (float)(dateTime - Date::NIGHT_END) / (Date::MAX_SUNRISE - Date::NIGHT_END);
 
 			sunHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, SUN_SUNRISE_HORIZON, w);
 			sunZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, SUN_SUNRISE_ZENITH, w);
 		}
 		else { // sunrise ~ day
-			float w = (float)(dateTime - App::MAX_SUNRISE) /
-					  (App::DAY_START + App::DAY_CYCLE_AMOUNT - App::MAX_SUNRISE);
+			float w = (float)(dateTime - Date::MAX_SUNRISE) /
+					  (Date::DAY_START + Date::DAY_CYCLE_AMOUNT - Date::MAX_SUNRISE);
 
 			sunHorizonColor = Utils::Lerp(SUN_SUNRISE_HORIZON, SUN_DAY_HORIZON, w);
 			sunZenithColor = Utils::Lerp(SUN_SUNRISE_ZENITH, SUN_DAY_ZENITH, w);
