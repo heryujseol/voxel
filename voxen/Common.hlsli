@@ -147,27 +147,7 @@ uint4 coverageAnalysis(uint4 coverage)
     return sampleWeight;
 }
 
-float getFaceAmbient(float3 normal)
-{
-    float faceAmbient = 1.0; // top or else
-    
-    if (normal.y == 0.0 && normal.z == 0.0) // left or right
-    {
-        faceAmbient = 0.90;
-    }
-    else if (normal.x == 0.0 && normal.y == 0.0) // front or back
-    {
-        faceAmbient = 0.85;
-    }
-    else if (normal.x == 0.0 && normal.z == 0.0 && normal.y < 0.0) // bottom
-    {
-        faceAmbient = 0.80;
-    }
-    
-    return faceAmbient;
-}
-
-float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
+float3 getAmbientLighting(float ao, float3 albedo)
 {
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
@@ -183,9 +163,8 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
     }
     
     float ambientWeight = 0.5;
-    float faceAmbient = getFaceAmbient(normal);
     
-    return ao * albedo * ambientColor * faceAmbient * ambientWeight;
+    return ao * albedo * ambientColor * ambientWeight;
 }
 
 float3 schlickFresnel(float3 F0, float NdotH)

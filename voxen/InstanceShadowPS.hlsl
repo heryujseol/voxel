@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-Texture2DArray atlasTextureArray : register(t0);
+Texture2DArray blockAtlasTextureArray : register(t0);
 
 struct psInput
 {
@@ -12,7 +12,7 @@ struct psInput
 
 float4 main(psInput input) : SV_TARGET
 {
-    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
+    if (blockAtlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
         discard;
     
     return float4(1, 1, 1, 1);

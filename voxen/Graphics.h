@@ -123,6 +123,10 @@ namespace Graphics {
 	extern ComPtr<ID3D11RenderTargetView> coverageRTV;
 	extern ComPtr<ID3D11ShaderResourceView> coverageSRV;
 
+	extern ComPtr<ID3D11Texture2D> merBuffer;
+	extern ComPtr<ID3D11RenderTargetView> merRTV;
+	extern ComPtr<ID3D11ShaderResourceView> merSRV;
+
 	extern ComPtr<ID3D11Texture2D> ssaoBuffer;
 	extern ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	extern ComPtr<ID3D11ShaderResourceView> ssaoSRV;
@@ -165,8 +169,14 @@ namespace Graphics {
 
 
 	// Shadow Resource Buffer
-	extern ComPtr<ID3D11Texture2D> atlasMapBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
+	extern ComPtr<ID3D11Texture2D> blockAtlasMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> blockAtlasMapSRV;
+
+	extern ComPtr<ID3D11Texture2D> normalAtlasMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> normalAtlasMapSRV;
+
+	extern ComPtr<ID3D11Texture2D> merAtlasMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> merAtlasMapSRV;
 
 	extern ComPtr<ID3D11Texture2D> waterStillAtlasMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> waterStillAtlasMapSRV;

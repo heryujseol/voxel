@@ -478,6 +478,7 @@ void App::FillGBuffer()
 	Graphics::context->ClearRenderTargetView(Graphics::positionRTV.Get(), clearColor);
 	Graphics::context->ClearRenderTargetView(Graphics::albedoRTV.Get(), clearColor);
 	Graphics::context->ClearRenderTargetView(Graphics::coverageRTV.Get(), clearColor);
+	Graphics::context->ClearRenderTargetView(Graphics::merRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
 		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
@@ -486,11 +487,14 @@ void App::FillGBuffer()
 	ppRTVs.push_back(Graphics::positionRTV.Get());
 	ppRTVs.push_back(Graphics::albedoRTV.Get());
 	ppRTVs.push_back(Graphics::coverageRTV.Get());
+	ppRTVs.push_back(Graphics::merRTV.Get());
 	Graphics::context->OMSetRenderTargets(
 		(UINT)ppRTVs.size(), ppRTVs.data(), Graphics::basicDSV.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::blockAtlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::normalAtlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::merAtlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::climateMapSRV.Get());
@@ -561,6 +565,7 @@ void App::ShadingBasic()
 	ppSRVs.push_back(Graphics::normalEdgeSRV.Get());
 	ppSRVs.push_back(Graphics::positionSRV.Get());
 	ppSRVs.push_back(Graphics::albedoSRV.Get());
+	ppSRVs.push_back(Graphics::merSRV.Get());
 	ppSRVs.push_back(Graphics::ssaoSRV.Get());
 
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
@@ -679,7 +684,9 @@ void App::RenderMirrorWorld()
 	// mirror low lod world
 	{
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
-		ppSRVs.push_back(Graphics::atlasMapSRV.Get());
+		ppSRVs.push_back(Graphics::blockAtlasMapSRV.Get());
+		ppSRVs.push_back(nullptr);
+		ppSRVs.push_back(nullptr);
 		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::climateMapSRV.Get());
@@ -709,7 +716,6 @@ void App::RenderWaterPlane()
 		Graphics::copyForwardRenderBuffer.Get(), Graphics::basicMSBuffer.Get());
 
 	std::vector<ID3D11ShaderResourceView*> ppSRVs;
-	ppSRVs.push_back(Graphics::atlasMapSRV.Get());
 	ppSRVs.push_back(Graphics::copyForwardSRV.Get());
 	ppSRVs.push_back(Graphics::mirrorWorldSRV.Get());
 	ppSRVs.push_back(Graphics::positionSRV.Get());
@@ -740,7 +746,7 @@ void App::RenderShadowMap()
 
 	// Instance Shadow Map
 	{
-		Graphics::context->PSSetShaderResources(0, 1, Graphics::atlasMapSRV.GetAddressOf());
+		Graphics::context->PSSetShaderResources(0, 1, Graphics::blockAtlasMapSRV.GetAddressOf());
 
 		Graphics::SetPipelineStates(Graphics::instanceShadowPSO);
 		ChunkManager::GetInstance()->RenderInstance();

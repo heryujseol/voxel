@@ -1,12 +1,11 @@
 #include "Common.hlsli"
 
-Texture2DArray atlasTextureArray : register(t0);
-Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t1);
-Texture2D mirrorWorldTex : register(t2);
-Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t3);
-Texture2D waterColorMapTex : register(t4);
-Texture2D climateNoiseMapTex : register(t5);
-Texture2DArray waterStillAtlasTextureArray : register(t6);
+Texture2DMS<float4, SAMPLE_COUNT> msaaRenderTex : register(t0);
+Texture2D mirrorWorldTex : register(t1);
+Texture2DMS<float4, SAMPLE_COUNT> positionTex : register(t2);
+Texture2D waterColorMapTex : register(t3);
+Texture2D climateNoiseMapTex : register(t4);
+Texture2DArray waterStillAtlasTextureArray : register(t5);
 
 struct psInput
 {
@@ -61,7 +60,7 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     // absorption color
     float3 albedo = getWaterAlbedo(input.texcoord, input.texIndex, input.posWorld, normal);
     
-    float3 ambientLighting = getAmbientLighting(1.0, albedo, input.normal);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo);
     
     float3 directLighting = getDirectLighting(input.normal, input.posWorld, albedo, 0.0, 0.05, true);
     
