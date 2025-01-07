@@ -205,6 +205,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> worldPointBuffer;
 	ComPtr<ID3D11ShaderResourceView> worldPointSRV;
 
+	ComPtr<ID3D11Texture2D> brdfBuffer;
+	ComPtr<ID3D11ShaderResourceView> brdfSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -776,6 +779,12 @@ bool Graphics::InitShaderResourceBuffers()
 	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png", format)) {
 		std::cout << "failed create texture from moon file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTexture2DFromFile(brdfBuffer, brdfSRV, "../assets/brdf.png", format)) {
+		std::cout << "failed create texture from brdf file" << std::endl;
 		return false;
 	}
 

@@ -270,6 +270,8 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(
 		7, (UINT)ppConstantBuffers.size(), ppConstantBuffers.data());
 
+	Graphics::context->PSGetShaderResources(10, 1, Graphics::brdfSRV.GetAddressOf());
+
 	// 0. Shadow Map
 	{
 		RenderShadowMap();
@@ -685,8 +687,8 @@ void App::RenderMirrorWorld()
 	{
 		std::vector<ID3D11ShaderResourceView*> ppSRVs;
 		ppSRVs.push_back(Graphics::blockAtlasMapSRV.Get());
-		ppSRVs.push_back(nullptr);
-		ppSRVs.push_back(nullptr);
+		ppSRVs.push_back(Graphics::normalAtlasMapSRV.Get());
+		ppSRVs.push_back(Graphics::merAtlasMapSRV.Get());
 		ppSRVs.push_back(Graphics::grassColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::foliageColorMapSRV.Get());
 		ppSRVs.push_back(Graphics::climateMapSRV.Get());
@@ -723,9 +725,15 @@ void App::RenderWaterPlane()
 	ppSRVs.push_back(Graphics::climateMapSRV.Get());
 	ppSRVs.push_back(Graphics::waterStillAtlasMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
+	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 
 	Graphics::SetPipelineStates(Graphics::waterPlanePSO);
 	ChunkManager::GetInstance()->RenderTransparency();
+
+	ID3D11ShaderResourceView* nullSRV[] = {
+		0,
+	};
+	Graphics::context->PSSetShaderResources(11, 1, nullSRV);
 }
 
 void App::RenderShadowMap()

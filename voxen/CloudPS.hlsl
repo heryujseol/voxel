@@ -28,10 +28,10 @@ float4 main(psInput input) : SV_TARGET
     
     // ambient lighting
     float3 normal = getNormal(input.face);
-    float3 ambientLighting = getAmbientLighting(1.0, albedo);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo, input.posWorld, normal, 0.0, 0.75);
     
     // direct lighting
-    float3 directLighting = getDirectLighting(normal, input.posWorld, albedo, 0.0, 0.96, false);
+    float3 directLighting = getDirectLighting(normal, input.posWorld, albedo, 0.0, 0.75, false);
     
     // distance alpha
     float alphaWeight = smoothstep(maxRenderDistance, cloudScale, clamp(distance, maxRenderDistance, cloudScale));

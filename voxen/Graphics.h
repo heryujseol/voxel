@@ -207,6 +207,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> worldPointBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> worldPointSRV;
+
+	extern ComPtr<ID3D11Texture2D> brdfBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> brdfSRV;
 		
 
 	// Viewport

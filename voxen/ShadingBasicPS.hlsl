@@ -14,7 +14,7 @@ struct psInput
 
 float4 main(psInput input) : SV_TARGET
 {
-    float3 normal = float3(0.0, 0.0, 0.0);
+    float3 normal = float3(0.0, 0.0, 0.0); // Texture Normal Edge 贸府 -> 乞闭蔼
     normal += normalEdgeTex.Load(input.posProj.xy, 0).xyz;
     normal += normalEdgeTex.Load(input.posProj.xy, 1).xyz;
     normal += normalEdgeTex.Load(input.posProj.xy, 2).xyz;
@@ -30,7 +30,7 @@ float4 main(psInput input) : SV_TARGET
     albedo += albedoTex.Load(input.posProj.xy, 3).rgb;
     albedo /= SAMPLE_COUNT;
     
-    float3 mer = float3(0.0, 0.0, 0.0); // // Texture MER Edge 贸府 -> 乞闭蔼
+    float3 mer = float3(0.0, 0.0, 0.0); // Texture MER Edge 贸府 -> 乞闭蔼
     mer += merTex.Load(input.posProj.xy, 0).rgb;
     mer += merTex.Load(input.posProj.xy, 1).rgb;
     mer += merTex.Load(input.posProj.xy, 2).rgb;
@@ -43,7 +43,7 @@ float4 main(psInput input) : SV_TARGET
     float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
     ao = pow(abs(ao), 1.5);
     
-    float3 ambientLighting = getAmbientLighting(ao, albedo);
+    float3 ambientLighting = getAmbientLighting(ao, albedo, position.xyz, normal, metallic, roughness);
     float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
     
     float3 lighting = ambientLighting + directLighting;
@@ -76,7 +76,7 @@ float4 mainMSAA(psInput input) : SV_TARGET
         float ao = ssaoTex.Sample(pointClampSS, input.texcoord).r;
         ao = pow(ao, 1.5);
         
-        float3 ambientLighting = getAmbientLighting(ao, albedo);
+        float3 ambientLighting = getAmbientLighting(ao, albedo, position.xyz, normal, metallic, roughness);
         float3 directLighting = getDirectLighting(normal, position.xyz, albedo, metallic, roughness, true);
         
         float3 lighting = ambientLighting + directLighting;

@@ -536,7 +536,12 @@ namespace Terrain {
 	static BLOCK_TYPE GetBlockTypeForBiome(BIOME_TYPE biomeType, int y, float h, float d)
 	{
 		int baseHeight = (int)floor(h);
-
+		/*
+		if (d <= 0.5)
+			return BLOCK_GOLD_ORE;
+		else
+			return BLOCK_GOLD;
+		*/
 		switch (biomeType) {
 
 		case BIOME_OCEAN:
@@ -786,6 +791,9 @@ namespace Terrain {
 
 		case BLOCK_ICE:
 			return TEXTURE_ICE;
+
+		case BLOCK_GOLD:
+			return TEXTURE_GOLD;
 
 		default:
 			return TEXTURE_STONE;

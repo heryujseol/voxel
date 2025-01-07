@@ -124,7 +124,7 @@ float3 normalMapping(float2 texcoord, uint texIndex, float3 normal)
     float3 N = normal; // N` 
     float3 T = getTangent(normal); // T`
     float3 B = cross(N, T); // B`
-    
+        
     float3x3 TBN = float3x3(T, B, N); // T`B`N`
     
     // Review
@@ -164,7 +164,7 @@ psOutput
     float3 normal = normalMapping(input.texcoord, input.texIndex, input.normal);
     if (cameraDummyData.x == 0)
     {
-        normal = input.normal;
+        normal = normalize(input.normal);
     }
     
     output.normalEdge = float4(normalize(normal), float(edge));
@@ -176,7 +176,7 @@ psOutput
     output.albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
     output.mer = merAtlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
-    
+    //output.mer = float4(1.0, 0.0, 0.2, 1);
     return output;
 }
 
@@ -196,7 +196,9 @@ float4 mainMirror(psInput input) : SV_TARGET
     
     float4 albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
-    float3 ambient = getAmbientLighting(1.0, albedo.rgb);
+    float3 mer = merAtlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex)).rgb;
+    
+    float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.posWorld, input.normal, mer.r, mer.b);
     
     return float4(ambient, albedo.a);
 }

@@ -60,7 +60,7 @@ float4 main(psInput input, uint sampleIndex : SV_SampleIndex) : SV_TARGET
     // absorption color
     float3 albedo = getWaterAlbedo(input.texcoord, input.texIndex, input.posWorld, normal);
     
-    float3 ambientLighting = getAmbientLighting(1.0, albedo);
+    float3 ambientLighting = getAmbientLighting(1.0, albedo, input.posWorld, normal, 0.0, 0.05);
     
     float3 directLighting = getDirectLighting(input.normal, input.posWorld, albedo, 0.0, 0.05, true);
     
