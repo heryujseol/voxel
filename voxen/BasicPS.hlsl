@@ -162,10 +162,6 @@ psOutput
     bool edge = (coverage != 0xf); // 0b1111 -> 1111은 모서리가 아닌 픽셀임
     
     float3 normal = normalMapping(input.texcoord, input.texIndex, input.normal);
-    if (cameraDummyData.x == 0)
-    {
-        normal = normalize(input.normal);
-    }
     
     output.normalEdge = float4(normalize(normal), float(edge));
     
@@ -176,7 +172,7 @@ psOutput
     output.albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
     output.mer = merAtlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
-    //output.mer = float4(1.0, 0.0, 0.2, 1);
+    
     return output;
 }
 

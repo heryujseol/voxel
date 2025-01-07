@@ -199,22 +199,21 @@ float3 getDiffuseTerm(float3 albedo, float3 pixelToEye, float3 normal, float met
 
 float3 getSpecularTerm(float3 albedo, float3 pixelToEye, float3 normal, float metallic, float roughness)
 {
-    // TODO
     float2 specularBRDF = brdfTex.Sample(pointClampSS, float2(dot(pixelToEye, normal), 1 - roughness)).rg;
-    //float2 specularBRDF = float2(lerp(151.0 / 255.0, 75.0 / 255.0, max(dot(pixelToEye, normal), 0.0)), 0.05);
     
     // 언리얼 PBR 코스노트 코드
     // float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normal), roughness * 5.0f).rgb;
     // 내 코드와 이유
-    // float3 specularIrradiance = lerp(radianceColor, getAmbientColor(), roughness) * max(dot(lightDir, reflectDir), 0.0);
+    // float3 specularIrradiance = lerp(reflectRadiance, ambientColor, roughness);
     // - 모든 방향에서 오는 간접광에 대한 specular를 모아 둔 것
     // - 코스노트 코드는 반사 방향에 대해 샘플링하고 거칠기에 대해서는 더 뿌옇게 표현함
     // - 즉, 거칠기가 적으면 반대 방향의 환경맵과 유사한 색을 샘플링, 반대로 거칠기가 크면 주변광을 샘플링
     //   ->lerp(radianceColor, getAmbientColor(), roughness)
-    // - Reflect 방향은 사용하지 않음
-    // - 반사 방향에 대한 색이 모두 동일하다는 가정
+    float3 ambientColor = getAmbientColor();
     float3 reflectDir = normalize(reflect(-pixelToEye, normal));
-    float3 specularIrradiance = lerp(radianceColor, getAmbientColor(), roughness);
+    float reflectRadianceWeight = max(dot(reflectDir, lightDir), 0.0);
+    float3 reflectRadiance = lerp(ambientColor, radianceColor, reflectRadianceWeight);
+    float3 specularIrradiance = lerp(reflectRadiance, ambientColor, roughness);
     
     float3 Fdielectric = float3(0.04, 0.04, 0.04);
     float3 F0 = lerp(Fdielectric, albedo, metallic);
@@ -223,31 +222,7 @@ float3 getSpecularTerm(float3 albedo, float3 pixelToEye, float3 normal, float me
 }
 
 float3 getAmbientLighting(float ao, float3 albedo, float3 position, float3 normal, float metallic, float roughness)
-{   
-    if (cameraDummyData.x == 0)
-    {
-        float sunAniso = max(dot(lightDir, eyeDir), 0.0);
-        float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
-    
-        float3 ambientColor = float3(1.0, 1.0, 1.0);
-        float sunAltitude = lightDir.y;
-        float dayAltitude = PI / 12.0;
-        float maxHorizonAltitude = -PI / 24.0;
-        if (sunAltitude <= dayAltitude)
-        {
-            float w = smoothstep(maxHorizonAltitude, dayAltitude, sunAltitude);
-            ambientColor = lerp(eyeHorizonColor, ambientColor, w);
-        }
-    
-        float ambientWeight = 0.5;
-    
-        return ao * albedo * ambientColor * ambientWeight;
-    }
-    else if (cameraDummyData.z == 0)
-    {
-        return ao * albedo;
-    }
-    
+{  
     float3 pixelToEye = normalize(eyePos - position);
     
     float3 diffuseTerm = getDiffuseTerm(albedo, pixelToEye, normal, metallic);
