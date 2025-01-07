@@ -147,7 +147,7 @@ float ndfGGX(float NdotH, float roughness)
 {
     float alpha = roughness * roughness;
     float alpha2 = alpha * alpha;
-    return alpha2 / (3.141592 * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2));
+    return alpha2 / max(1e-5, (3.141592 * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2)));
 }
 
 float schlickGGX(float NdotI, float NdotO, float roughness)

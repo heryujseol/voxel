@@ -181,6 +181,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> waterStillAtlasMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> waterStillAtlasMapSRV;
 
+	extern ComPtr<ID3D11Texture2D> waterStillNormalAtlasMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> waterStillNormalAtlasMapSRV;
+
 	extern ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 

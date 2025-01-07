@@ -724,6 +724,7 @@ void App::RenderWaterPlane()
 	ppSRVs.push_back(Graphics::waterColorMapSRV.Get());
 	ppSRVs.push_back(Graphics::climateMapSRV.Get());
 	ppSRVs.push_back(Graphics::waterStillAtlasMapSRV.Get());
+	ppSRVs.push_back(Graphics::waterStillNormalAtlasMapSRV.Get());
 	Graphics::context->PSSetShaderResources(0, (UINT)ppSRVs.size(), ppSRVs.data());
 	Graphics::context->PSSetShaderResources(11, 1, Graphics::shadowSRV.GetAddressOf());
 

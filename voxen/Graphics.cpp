@@ -178,6 +178,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> waterStillAtlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> waterStillAtlasMapSRV;
 
+	ComPtr<ID3D11Texture2D> waterStillNormalAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> waterStillNormalAtlasMapSRV;
+
 	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
@@ -742,10 +745,17 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(waterStillAtlasMapBuffer, waterStillAtlasMapSRV,
 		"../assets/water_still_atlas.png", format, 4, 16, 16, 1, 32)) {
 		std::cout << "failed create texture from water still atlas file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(waterStillNormalAtlasMapBuffer, waterStillNormalAtlasMapSRV,
+			"../assets/water_still_normal_atlas.png", format, 4, 16, 16, 1, 32)) {
+		std::cout << "failed create texture from water still normal atlas file" << std::endl;
 		return false;
 	}
 
