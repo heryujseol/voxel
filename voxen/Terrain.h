@@ -787,31 +787,8 @@ namespace Terrain {
 		case BLOCK_ICE:
 			return TEXTURE_ICE;
 
-		// TESTING
-		case BLOCK_A:
-			return TEXTURE_A;
-		case BLOCK_B:
-			return TEXTURE_B;
-		case BLOCK_C:
-			return TEXTURE_C;
-		case BLOCK_D:
-			return TEXTURE_D;
-		case BLOCK_E:
-			return TEXTURE_E;
-		case BLOCK_F:
-			return TEXTURE_F;
-		case BLOCK_G:
-			return TEXTURE_G;
-		case BLOCK_H:
-			return TEXTURE_H;
-		case BLOCK_I:
-			return TEXTURE_I;
-		case BLOCK_J:
-			return TEXTURE_J;
-		case BLOCK_K:
-			return TEXTURE_K;
-		case BLOCK_L:
-			return TEXTURE_L;
+		case BLOCK_GOLD:
+			return TEXTURE_GOLD;
 
 		default:
 			return TEXTURE_STONE;

@@ -120,6 +120,10 @@ namespace Graphics {
 	ComPtr<ID3D11RenderTargetView> coverageRTV;
 	ComPtr<ID3D11ShaderResourceView> coverageSRV;
 
+	ComPtr<ID3D11Texture2D> merBuffer;
+	ComPtr<ID3D11RenderTargetView> merRTV;
+	ComPtr<ID3D11ShaderResourceView> merSRV;
+
 	ComPtr<ID3D11Texture2D> ssaoBuffer;
 	ComPtr<ID3D11RenderTargetView> ssaoRTV;
 	ComPtr<ID3D11ShaderResourceView> ssaoSRV;
@@ -162,11 +166,20 @@ namespace Graphics {
 
 
 	// Shader Resource Buffer
-	ComPtr<ID3D11Texture2D> atlasMapBuffer;
-	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
+	ComPtr<ID3D11Texture2D> blockAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> blockAtlasMapSRV;
+
+	ComPtr<ID3D11Texture2D> normalAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> normalAtlasMapSRV;
+
+	ComPtr<ID3D11Texture2D> merAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> merAtlasMapSRV;
 
 	ComPtr<ID3D11Texture2D> waterStillAtlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> waterStillAtlasMapSRV;
+
+	ComPtr<ID3D11Texture2D> waterStillNormalAtlasMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> waterStillNormalAtlasMapSRV;
 
 	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
@@ -194,6 +207,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> worldPointBuffer;
 	ComPtr<ID3D11ShaderResourceView> worldPointSRV;
+
+	ComPtr<ID3D11Texture2D> brdfBuffer;
+	ComPtr<ID3D11ShaderResourceView> brdfSRV;
 
 
 	// Viewport
@@ -456,6 +472,26 @@ bool Graphics::InitRenderTargetBuffers()
 		return false;
 	}
 
+	// mer
+	format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			merBuffer, App::APP_WIDTH, App::APP_HEIGHT, true, format, bindFlag)) {
+		std::cout << "failed create mer buffer" << std::endl;
+		return false;
+	}
+	ret = device->CreateRenderTargetView(merBuffer.Get(), nullptr, merRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mer rtv" << std::endl;
+		return false;
+	}
+	ret =
+		device->CreateShaderResourceView(merBuffer.Get(), nullptr, merSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mer srv" << std::endl;
+		return false;
+	}
+
 	// ssao
 	format = DXGI_FORMAT_R32_FLOAT;
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -690,42 +726,75 @@ bool Graphics::InitShaderResourceBuffers()
 	// Asset Files
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas2.png", format)) {
-		std::cout << "failed create texture from atlas file" << std::endl;
+			blockAtlasMapBuffer, blockAtlasMapSRV, "../assets/block_atlas.png", format)) {
+		std::cout << "failed create texture from block atlas file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			normalAtlasMapBuffer, normalAtlasMapSRV, "../assets/normal_atlas.png", format)) {
+		std::cout << "failed create texture from normal atlas file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			merAtlasMapBuffer, merAtlasMapSRV, "../assets/mer_atlas.png", format)) {
+		std::cout << "failed create texture from mer atlas file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(waterStillAtlasMapBuffer, waterStillAtlasMapSRV,
-		"../assets/water_still.png", format, 4, 16, 16, 1, 32)) {
+		"../assets/water_still_atlas.png", format, 4, 16, 16, 1, 32)) {
 		std::cout << "failed create texture from water still atlas file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(waterStillNormalAtlasMapBuffer, waterStillNormalAtlasMapSRV,
+			"../assets/water_still_normal_atlas.png", format, 4, 16, 16, 1, 32)) {
+		std::cout << "failed create texture from water still normal atlas file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(
-			grassColorMapBuffer, grassColorMapSRV, "../assets/grass2_blur.png", format)) {
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_colormap.png", format)) {
 		std::cout << "failed create texture from grass file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(
-			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage2_blur.png", format)) {
+			foliageColorMapBuffer, foliageColorMapSRV, "../assets/foliage_colormap.png", format)) {
 		std::cout << "failed create texture from foliage file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(
-			waterColorMapBuffer, waterColorMapSRV, "../assets/water_blur.png", format)) {
+			waterColorMapBuffer, waterColorMapSRV, "../assets/water_colormap.png", format)) {
 		std::cout << "failed create texture from water file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png", format)) {
 		std::cout << "failed create texture from sun file" << std::endl;
 		return false;
 	}
 
+	format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png", format)) {
 		std::cout << "failed create texture from moon file" << std::endl;
+		return false;
+	}
+
+	format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!DXUtils::CreateTexture2DFromFile(brdfBuffer, brdfSRV, "../assets/brdf.png", format)) {
+		std::cout << "failed create texture from brdf file" << std::endl;
 		return false;
 	}
 

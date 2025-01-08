@@ -7,24 +7,13 @@
 #define CHUNK_SIZE 32
 #define CHUNK_COUNT 17
 
-static const float2 poissonDisk[16] =
-{
-    float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
-    float2(-0.094184101, -0.92938870), float2(0.34495938, 0.29387760),
-    float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
-    float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
-    float2(0.44323325, -0.97511554), float2(0.53742981, -0.47373420),
-    float2(-0.26496911, -0.41893023), float2(0.79197514, 0.19090188),
-    float2(-0.24188840, 0.99706507), float2(-0.81409955, 0.91437590),
-    float2(0.19984126, 0.78641367), float2(0.14383161, -0.14100790)
-};
-
 SamplerState pointWrapSS : register(s0);
 SamplerState linearWrapSS : register(s1);
 SamplerState pointClampSS : register(s2);
 SamplerState linearClampSS : register(s3);
 SamplerComparisonState shadowCompareSS : register(s4);
 
+Texture2D brdfTex : register(t10);
 Texture2D shadowTex : register(t11);
 
 cbuffer AppConstantBuffer : register(b7)
@@ -147,27 +136,29 @@ uint4 coverageAnalysis(uint4 coverage)
     return sampleWeight;
 }
 
-float getFaceAmbient(float3 normal)
+// https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+// F, G, D 함수
+float3 schlickFresnel(float3 F0, float NdotH)
 {
-    float faceAmbient = 1.0; // top or else
-    
-    if (normal.y == 0.0 && normal.z == 0.0) // left or right
-    {
-        faceAmbient = 0.90;
-    }
-    else if (normal.x == 0.0 && normal.y == 0.0) // front or back
-    {
-        faceAmbient = 0.85;
-    }
-    else if (normal.x == 0.0 && normal.z == 0.0 && normal.y < 0.0) // bottom
-    {
-        faceAmbient = 0.80;
-    }
-    
-    return faceAmbient;
+    return F0 + (1 - F0) * pow(2, (-5.55473 * (NdotH) - 6.98316) * NdotH);
 }
 
-float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
+float ndfGGX(float NdotH, float roughness)
+{
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    return alpha2 / max(1e-5, (3.141592 * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2)));
+}
+
+float schlickGGX(float NdotI, float NdotO, float roughness)
+{
+    float k = (roughness + 1) * (roughness + 1) / 8;
+    float gl = NdotI / (NdotI * (1 - k) + k);
+    float gv = NdotO / (NdotO * (1 - k) + k);
+    return gl * gv;
+}
+
+float3 getAmbientColor()
 {
     float sunAniso = max(dot(lightDir, eyeDir), 0.0);
     float3 eyeHorizonColor = lerp(normalHorizonColor, sunHorizonColor, sunAniso);
@@ -182,37 +173,63 @@ float3 getAmbientLighting(float ao, float3 albedo, float3 normal)
         ambientColor = lerp(eyeHorizonColor, ambientColor, w);
     }
     
-    float ambientWeight = 0.5;
-    float faceAmbient = getFaceAmbient(normal);
+    return ambientColor;
+}
+
+float3 getDiffuseTerm(float3 albedo, float3 pixelToEye, float3 normal, float metallic)
+{
+    float3 Fdielectric = float3(0.04, 0.04, 0.04);
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+    float3 F = schlickFresnel(F0, max(0.0, dot(normal, pixelToEye)));
     
-    return ao * albedo * ambientColor * faceAmbient * ambientWeight;
+    float3 kd = lerp(1.0 - F, 0.0, metallic);
+    
+    // 언리얼 PBR 코스노트 코드
+    // float3 diffuseIrradiance = irradianceIBLTex.Sample(linearSampler, normalWorld);
+    // 내 코드와 이유
+    // float3 diffuseIrradiance = (radianceColor * max(dot(normal, lightDir), 0.0)) + getAmbientColor();
+    // - diffuseIBL은 모든 방향에서 오는 간접광에 대한 diffuse를 모아 둔 것
+    // - 기본적으로 밝은 이미지에 노멀 방향이 라이트 방향과 유사하면 다른 곳 대비 더 밝음
+    // - 그래서 기본색(getAmbientColor)에 노멀방향에 대한 라이트색을 "더해서" 더 밝게 표현
+    // - roughness는 사용되지 않음 -> 모든 방향에서 오는 빛을 모으는 과정이라 결국 모든 방향에서 더하면 거칠든 매끄럽든 동일하다는 가정
+    float3 diffuseIrradiance = (radianceColor * max(dot(normal, lightDir), 0.0)) + getAmbientColor();
+    
+    return kd * albedo * diffuseIrradiance;
 }
 
-float3 schlickFresnel(float3 F0, float NdotH)
+float3 getSpecularTerm(float3 albedo, float3 pixelToEye, float3 normal, float metallic, float roughness)
 {
-    return F0 + (1 - F0) * pow(2, (-5.55473 * (NdotH) - 6.98316) * NdotH);
+    float2 specularBRDF = brdfTex.Sample(pointClampSS, float2(dot(pixelToEye, normal), 1 - roughness)).rg;
+    
+    // 언리얼 PBR 코스노트 코드
+    // float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normal), roughness * 5.0f).rgb;
+    // 내 코드와 이유
+    // float3 specularIrradiance = lerp(reflectRadiance, ambientColor, roughness);
+    // - 모든 방향에서 오는 간접광에 대한 specular를 모아 둔 것
+    // - 코스노트 코드는 반사 방향에 대해 샘플링하고 거칠기에 대해서는 더 뿌옇게 표현함
+    // - 즉, 거칠기가 적으면 반대 방향의 환경맵과 유사한 색을 샘플링, 반대로 거칠기가 크면 주변광을 샘플링
+    //   ->lerp(radianceColor, getAmbientColor(), roughness)
+    float3 ambientColor = getAmbientColor();
+    float3 reflectDir = normalize(reflect(-pixelToEye, normal));
+    float reflectRadianceWeight = max(dot(reflectDir, lightDir), 0.0);
+    float3 reflectRadiance = lerp(ambientColor, radianceColor, reflectRadianceWeight);
+    float3 specularIrradiance = lerp(reflectRadiance, ambientColor, roughness);
+    
+    float3 Fdielectric = float3(0.04, 0.04, 0.04);
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+
+    return specularIrradiance * (specularBRDF.r * F0 + specularBRDF.g);
 }
 
-float ndfGGX(float NdotH, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    return alpha2 / (3.141592 * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2));
-}
-
-float schlickGGX(float NdotI, float NdotO, float roughness)
-{
-    float k = (roughness + 1) * (roughness + 1) / 8;
-    float gl = NdotI / (NdotI * (1 - k) + k);
-    float gv = NdotO / (NdotO * (1 - k) + k);
-    return gl * gv;
-}
-
-float getRandom(float3 seed, int i)
-{
-    float4 seed4 = float4(seed, i);
-    float dot_product = dot(seed4, float4(12.9898, 78.233, 45.164, 94.673));
-    return frac(sin(dot_product) * 43758.5453);
+float3 getAmbientLighting(float ao, float3 albedo, float3 position, float3 normal, float metallic, float roughness)
+{  
+    float3 pixelToEye = normalize(eyePos - position);
+    
+    float3 diffuseTerm = getDiffuseTerm(albedo, pixelToEye, normal, metallic);
+    float3 specularTerm = getSpecularTerm(albedo, pixelToEye, normal, metallic, roughness);
+    
+    float weight = 0.75;
+    return ao * (diffuseTerm + specularTerm) * weight;
 }
 
 float getShadowFactor(float3 posWorld, float3 normal)
@@ -235,7 +252,7 @@ float getShadowFactor(float3 posWorld, float3 normal)
             lightProj.z < 0.0 + pcfMargin  || lightProj.z > 1.0 - pcfMargin)
         {
             continue;
-        }
+        } 
         
         float bias = 0.001 + 0.01 * pow(1.0 - max(dot(lightDir, normal), 0.0), 3.0);
         float2 lightTexcoord = float2(lightProj.x * 0.5 + 0.5, lightProj.y * -0.5 + 0.5);
@@ -280,7 +297,7 @@ float3 getDirectLighting(float3 normal, float3 position, float3 albedo, float me
     float D = ndfGGX(NdotH, roughness);
     float3 G = schlickGGX(NdotI, NdotO, roughness);
     float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
-
+    
     float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
     float3 diffuseBRDF = kd * albedo;
     

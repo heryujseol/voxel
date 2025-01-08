@@ -1,10 +1,12 @@
 #include "Common.hlsli"
 
-Texture2DArray atlasTextureArray : register(t0);
-Texture2D grassColorMap : register(t1);
-Texture2D foliageColorMap : register(t2);
-Texture2D climateNoiseMap : register(t3);
-Texture2D mirrorDepthTex : register(t4);
+Texture2DArray blockAtlasTextureArray : register(t0);
+Texture2DArray normalAtlasTextureArray : register(t1);
+Texture2DArray merAtlasTextureArray : register(t2);
+Texture2D grassColorMap : register(t3);
+Texture2D foliageColorMap : register(t4);
+Texture2D climateNoiseMap : register(t5);
+Texture2D mirrorDepthTex : register(t6);
 
 struct psInput
 {
@@ -21,6 +23,7 @@ struct psOutput
     float4 position : SV_Target1;
     float4 albedo : SV_Target2;
     uint coverage : SV_Target3;
+    float4 mer : SV_Target4;
 };
 
 // TODO : 특이한 TEXTURE 정리 -> grass, foliage, side overlay
@@ -42,7 +45,7 @@ bool useFoliageColor(uint texIndex)
 
 float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
 {
-    float4 albedo = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, texIndex));
+    float4 albedo = blockAtlasTextureArray.Sample(pointWrapSS, float3(texcoord, texIndex));
     
     if (useGrassColor(texIndex))
     {
@@ -67,7 +70,7 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
     
     if (useDirtOverlay(texIndex))
     {
-        float4 dirt = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, 3));
+        float4 dirt = blockAtlasTextureArray.Sample(pointWrapSS, float3(texcoord, 3));
         albedo = lerp(dirt, albedo, albedo.a);
     }
     
@@ -79,13 +82,64 @@ float4 getAlbedo(float2 texcoord, uint texIndex, float3 worldPos, float3 normal)
     return albedo;
 }
 
+float3 getTangent(float3 normal)
+{
+    if (normal.x > 0 && normal.y == 0 && normal.z == 0)
+    {
+        return float3(0.0, 0.0, 1.0);
+    }
+    else if (normal.x < 0 && normal.y == 0 && normal.z == 0)
+    {
+        return float3(0.0, 0.0, -1.0);
+    }
+    else if (normal.y < 0 && normal.x == 0 && normal.z == 0)
+    {
+        return float3(1.0, 0.0, 0.0);
+    }
+    else if (normal.y > 0 && normal.x == 0 && normal.z == 0)
+    {
+        return float3(1.0, 0.0, 0.0);
+    }
+    else if (normal.z < 0 && normal.x == 0 && normal.y == 0)
+    {
+        return float3(1.0, 0.0, 0.0);
+
+    }
+    else if (normal.z > 0 && normal.x == 0 && normal.y == 0)
+    {
+        return float3(-1.0, 0.0, 0.0);
+    }
+    else
+    {
+        return float3(0.0, 0.0, 0.0);
+    }
+}
+
+float3 normalMapping(float2 texcoord, uint texIndex, float3 normal)
+{
+    float3 normalTex = normalAtlasTextureArray.Sample(pointWrapSS, float3(texcoord, texIndex)).rgb;
+    normalTex = normalize(2.0 * normalTex - 1.0); // TBN 스페이스에 존재하는 TBN 좌표
+    
+    // 월드 좌표를 기준으로 TBN축을 정의
+    float3 N = normal; // N` 
+    float3 T = getTangent(normal); // T`
+    float3 B = cross(N, T); // B`
+        
+    float3x3 TBN = float3x3(T, B, N); // T`B`N`
+    
+    // Review
+    // 월드 좌표를 기준으로 정의한 TBN축에 TBN스페이스 좌표를 곱하면 월드 좌표
+    // 기하적으로 직접 해보면 됨
+    return normalize(mul(normalTex, TBN)); // TS * TBN * M --> W
+}
+
 psOutput
     main(psInput
     input, 
     uint coverage : SV_COVERAGE, uint sampleIndex : SV_SampleIndex)
 {
 #ifdef USE_ALPHA_CLIP 
-    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
+    if (blockAtlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
         discard;
     
     [unroll]
@@ -96,7 +150,7 @@ psOutput
         // 정확한 coverage값은 아님
         // SSAO에서는 coverage에 따라 weight를 두고 연산하지만 weight가 모두 1인 상태라고 보면 됨
         // Lighting에서는 coverage 구분 없이 그냥 4번 연산함 -> albedo가 다르기 때문
-        if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0, offsets[i]).a != 1.0)
+        if (blockAtlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0, offsets[i]).a != 1.0)
         {
             coverage = (1 << sampleIndex);
         }
@@ -107,7 +161,9 @@ psOutput
     
     bool edge = (coverage != 0xf); // 0b1111 -> 1111은 모서리가 아닌 픽셀임
     
-    output.normalEdge = float4(normalize(input.normal), float(edge));
+    float3 normal = normalMapping(input.texcoord, input.texIndex, input.normal);
+    
+    output.normalEdge = float4(normalize(normal), float(edge));
     
     output.position = float4(input.posWorld, 1.0);
     
@@ -115,13 +171,15 @@ psOutput
     
     output.albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
+    output.mer = merAtlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex));
+    
     return output;
 }
 
 float4 mainMirror(psInput input) : SV_TARGET
 {
 #ifdef USE_ALPHA_CLIP 
-    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
+    if (blockAtlasTextureArray.SampleLevel(pointWrapSS, float3(input.texcoord, input.texIndex), 0.0).a != 1.0)
         discard;
 #endif
     
@@ -134,7 +192,9 @@ float4 mainMirror(psInput input) : SV_TARGET
     
     float4 albedo = getAlbedo(input.texcoord, input.texIndex, input.posWorld, input.normal);
     
-    float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.normal);
+    float3 mer = merAtlasTextureArray.Sample(pointWrapSS, float3(input.texcoord, input.texIndex)).rgb;
+    
+    float3 ambient = getAmbientLighting(1.0, albedo.rgb, input.posWorld, input.normal, mer.r, mer.b);
     
     return float4(ambient, albedo.a);
 }
