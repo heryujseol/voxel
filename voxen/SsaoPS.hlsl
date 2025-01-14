@@ -44,7 +44,7 @@ float getOcclusionFactor(float2 texcoord, float3 viewPos, float3 normal)
     float bias = 0.025;
     
     [unroll]
-    for (uint i = 0; i < 64; ++i)
+    for (uint i = 0; i < 16; ++i)
     {
         float3 sampleOffset = mul(sampleKernel[i].xyz, TBN);
         float3 samplePos = viewPos + sampleOffset * radius;
